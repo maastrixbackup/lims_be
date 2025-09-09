@@ -5,6 +5,17 @@ const User = {
         const [rows] = await db.query("SELECT * FROM users WHERE email = ?", [email]);
         return rows[0];
     },
+
+    async create(name, email, password_hash, role_id, accessed_projects = null) {
+        const accessedProjectsJson = accessed_projects ? JSON.stringify(accessed_projects) : null;
+
+        const [result] = await db.query(
+            "INSERT INTO users (name, email, password_hash, role_id, accessed_projects) VALUES (?,?,?,?,?)", [name, email, password_hash, role_id, accessedProjectsJson]
+        );
+
+        return { id : result.insertId, name, email, role_id, accessed_projects };
+    }
+    
 };
 
 module.exports = User;
