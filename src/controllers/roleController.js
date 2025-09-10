@@ -5,6 +5,7 @@ const getRoles = async (req, res) => {
     const roles = await Role.findAll();
     return res.status(200).json({
       success: true,
+      message: "Roles fetched successfully",
       roles: roles,
     });
   } catch (err) {

@@ -1,15 +1,7 @@
 const bcrypt = require("bcrypt");
-const jwt = require("jsonwebtoken");
 const User = require("../models/userModel");
 const Role = require("../models/roleModel");
-
-const generateToken = (user) => {
-  return jwt.sign(
-    { id: user.id, role_id: user.role_id },
-    process.env.JWT_SECRET,
-    { expiresIn: "1h" }
-  );
-};
+const { generateToken } = require("../utils/jwt");
 
 const signup = async (req, res) => {
   try {
@@ -82,6 +74,9 @@ const login = async (req, res) => {
         message: "Invalid email or password",
       });
     }
+
+    const role = await Role.findById(user.role_id);
+    user.role_name = role ? role.name : null;
 
     const token = generateToken(user);
     res.status(200).json({
