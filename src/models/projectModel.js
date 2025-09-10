@@ -15,7 +15,10 @@ const Project = {
   },
 
   async findByName(project_name) {
-    const [rows] = await db.query("SELECT * FROM projects WHERE project_name = ?", [project_name]);
+    const [rows] = await db.query(
+      "SELECT * FROM projects WHERE project_name = ?",
+      [project_name]
+    );
     return rows;
   },
 };
