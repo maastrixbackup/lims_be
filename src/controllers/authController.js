@@ -91,4 +91,61 @@ const login = async (req, res) => {
   }
 };
 
+const forgotPassword = async (req, res) => {
+  try {
+    const { email } = req.body;
+    if (!email) {
+      return res.status(400).json({
+        success: false,
+        message: "Email is required",
+      });
+    }
+
+    const user = await User.findByEmail(email);
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: "User not found",
+      });
+    }
+  } catch (err) {
+    console.error("Forgot Password Error:", err);
+    return res.status(500).json({
+      success: false,
+      message: "Server error",
+    });
+  }
+};
+
+// const forgotPassword = async (req, res) => {
+//   try {
+//     const { email } = req.body;
+//     if (!email) {
+//       return res.status(400).json({ success: false, message: "Email is required" });
+//     }
+
+//     const user = await User.findByEmail(email);
+//     if (!user) {
+//       return res.status(404).json({ success: false, message: "User not found" });
+//     }
+
+//     // Generate reset token (valid for 15 min)
+//     const resetToken = jwt.sign({ id: user.id }, process.env.JWT_SECRET, { expiresIn: "15m" });
+
+//     // Store token in DB (or a reset_tokens table)
+//     await User.saveResetToken(user.id, resetToken);
+
+//     // Send email (pseudo-code, implement with nodemailer)
+//     console.log(`Password reset link: https://yourapp.com/reset-password?token=${resetToken}`);
+
+//     return res.status(200).json({
+//       success: true,
+//       message: "Password reset link sent to email",
+//     });
+//   } catch (err) {
+//     console.error("Forgot Password Error:", err);
+//     return res.status(500).json({ success: false, message: "Server error" });
+//   }
+// };
+
 module.exports = { signup, login };
