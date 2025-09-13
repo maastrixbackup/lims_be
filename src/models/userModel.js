@@ -8,17 +8,13 @@ const User = {
     return rows[0];
   },
 
-  async create(name, email, password_hash, role_id, accessed_projects = null) {
-    const accessedProjectsJson = accessed_projects
-      ? JSON.stringify(accessed_projects)
-      : null;
-
+  async create(name, email, password_hash, role_id) {
     const [result] = await db.query(
-      "INSERT INTO users (name, email, password_hash, role_id, accessed_projects) VALUES (?,?,?,?,?)",
-      [name, email, password_hash, role_id, accessedProjectsJson]
+      "INSERT INTO users (name, email, password_hash, role_id) VALUES (?,?,?,?)",
+      [name, email, password_hash, role_id]
     );
 
-    return { id: result.insertId, name, email, role_id, accessed_projects };
+    return { id: result.insertId, name, email, role_id };
   },
 
   async findById(id) {
@@ -41,16 +37,12 @@ const User = {
         u.email,
         u.role_id,
         r.name AS role_name,
-        u.accessed_projects,
         u.created_at,
         GROUP_CONCAT(p.project_name ORDER BY p.id) AS accessed_projects_name
         FROM users u
         JOIN roles r ON u.role_id = r.id
-        LEFT JOIN projects p 
-          ON FIND_IN_SET(
-              p.id,
-              REPLACE(REPLACE(REPLACE(REPLACE(u.accessed_projects, '[',''), ']',''), '"',''), ' ', '')
-            )
+        LEFT JOIN user_projects up ON u.id = up.user_id
+        LEFT JOIN projects p ON up.project_id = p.id
     `;
 
     let params = [];
@@ -72,6 +64,27 @@ const User = {
     );
 
     return { id, name, email };
+  },
+
+  async saveResetToken(userId, token) {
+    return db.query("UPDATE users SET reset_token = ? WHERE id = ?", [
+      token,
+      userId,
+    ]);
+  },
+
+  async getResetToken(userId) {
+    const [rows] = await db.query(
+      "SELECT reset_token FROM users WHERE id = ?",
+      [userId]
+    );
+    return rows[0]?.reset_token || null;
+  },
+
+  async clearResetToken(userId) {
+    return db.query("UPDATE users SET reset_token = NULL WHERE id = ?", [
+      userId,
+    ]);
   },
 };
 
