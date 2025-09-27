@@ -2,6 +2,7 @@ const bcrypt = require("bcrypt");
 const User = require("../models/userModel");
 const UserProject = require("../models/userProjectModel");
 const Role = require("../models/roleModel");
+const logAction = require("../utils/logger");
 const {
   generateToken,
   generateResetToken,
@@ -10,8 +11,14 @@ const {
 const transporter = require("../utils/mailer");
 
 const signup = async (req, res) => {
+  const safeRequestPayload = {
+    name: req.body?.name,
+    email: req.body?.email,
+    role_id: req.body?.role_id,
+    accessed_projects: req.body?.accessed_projects,
+  };
+  const { name, email, password, role_id, accessed_projects } = req.body;
   try {
-    const { name, email, password, role_id, accessed_projects } = req.body;
     if (!name || !email || !password || !role_id) {
       return res.status(400).json({
         success: false,
@@ -42,18 +49,46 @@ const signup = async (req, res) => {
       await UserProject.assignProjects(newUser.id, accessed_projects);
     }
 
+    const assignedProjects = await UserProject.getProjectsByUserId(newUser.id);
+    const responsePayload = {
+      id: newUser.id,
+      name: newUser.name,
+      email: newUser.email,
+      accessed_projects: assignedProjects,
+    };
+    await logAction(
+      newUser.id,
+      "signup",
+      "success",
+      "User registered successfully",
+      safeRequestPayload,
+      responsePayload
+    );
+
     return res.status(201).json({
       success: true,
       message: "User registered successfully",
       user: newUser,
     });
   } catch (error) {
+    await logAction(
+      null,
+      "signup",
+      "failure",
+      error.message,
+      safeRequestPayload,
+      null
+    );
     console.error("Signup Error:", error);
     res.status(500).json({ message: "Server error" });
   }
 };
 
 const login = async (req, res) => {
+  const safeRequestPayload = {
+    email: req.body?.email,
+    // password: req.body?.password ? "****" : undefined,
+  };
   try {
     const { email, password } = req.body;
     if (!email || !password) {
@@ -64,6 +99,14 @@ const login = async (req, res) => {
     }
     const user = await User.findByEmail(email);
     if (!user) {
+      await logAction(
+        null,
+        "login",
+        "failure",
+        "Invalid email or password",
+        safeRequestPayload,
+        null
+      );
       return res.status(400).json({
         success: false,
         message: "Invalid email or password",
@@ -72,6 +115,15 @@ const login = async (req, res) => {
 
     const isMatch = await bcrypt.compare(password, user.password_hash);
     if (!isMatch) {
+      await logAction(
+        user.id,
+        "login",
+        "failure",
+        "Invalid email or password",
+        safeRequestPayload,
+        null
+      );
+
       return res.status(400).json({
         success: false,
         message: "Invalid email or password",
@@ -82,6 +134,22 @@ const login = async (req, res) => {
     user.role_name = role ? role.name : null;
 
     const token = generateToken(user);
+
+    const responsePayload = {
+      // id: user.id,
+      name: user.name,
+      email: user.email,
+      role_name: user.role_name,
+    };
+    await logAction(
+      user.id,
+      "login",
+      "success",
+      "Login successful",
+      safeRequestPayload,
+      responsePayload
+    );
+
     res.status(200).json({
       success: true,
       message: "Login successful",
@@ -89,12 +157,23 @@ const login = async (req, res) => {
       token: token,
     });
   } catch (error) {
+    await logAction(
+      null,
+      "login",
+      "failure",
+      error.message,
+      safeRequestPayload,
+      null
+    );
     console.error("Login Error:", error);
     return res.status(500).json({ message: "Server error" });
   }
 };
 
 const forgotPassword = async (req, res) => {
+  const safeRequestPayload = {
+    email: req.body?.email,
+  };
   try {
     const { email } = req.body;
     if (!email) {
@@ -106,6 +185,14 @@ const forgotPassword = async (req, res) => {
 
     const user = await User.findByEmail(email);
     if (!user) {
+      await logAction(
+        null,
+        "forgot password",
+        "failure",
+        "User not found",
+        safeRequestPayload,
+        null
+      );
       return res.status(404).json({
         success: false,
         message: "User not found",
@@ -131,11 +218,28 @@ const forgotPassword = async (req, res) => {
       `,
     });
 
+    await logAction(
+      user.id,
+      "forgot password",
+      "success",
+      "Password reset link sent",
+      safeRequestPayload,
+      null
+    );
+
     return res.status(200).json({
       success: true,
       message: "Password reset link sent to email",
     });
   } catch (err) {
+    await logAction(
+      null,
+      "forgot password",
+      "failure",
+      err.message,
+      safeRequestPayload,
+      null
+    );
     console.error("Forgot Password Error:", err);
     return res.status(500).json({
       success: false,
@@ -145,6 +249,10 @@ const forgotPassword = async (req, res) => {
 };
 
 const resetPassword = async (req, res) => {
+  const safeRequestPayload = {
+    token: req.body?.token,
+    // newPassword: req.body?.newPassword ? "****" : undefined,
+  };
   try {
     const { token, newPassword } = req.body;
     if (!token || !newPassword) {
@@ -158,12 +266,30 @@ const resetPassword = async (req, res) => {
     try {
       decoded = verifyToken(token);
       if (!decoded) {
+        await logAction(
+          null,
+          "reset password",
+          "failure",
+          "Invalid or expired token",
+          safeRequestPayload,
+          null
+        );
+
         return res.status(400).json({
           success: false,
           message: "Invalid or expired token",
         });
       }
     } catch (err) {
+      await logAction(
+        null,
+        "reset_password",
+        "failure",
+        "Invalid or expired token",
+        safeRequestPayload,
+        null
+      );
+
       return res.status(400).json({
         success: false,
         message: "Invalid or expired token",
@@ -180,6 +306,15 @@ const resetPassword = async (req, res) => {
 
     const storedToken = await User.getResetToken(user.id);
     if (storedToken !== token) {
+      await logAction(
+        user.id,
+        "reset_password",
+        "failure",
+        "Invalid reset token",
+        safeRequestPayload,
+        null
+      );
+
       return res.status(400).json({
         success: false,
         message: "Invalid reset token",
@@ -191,11 +326,28 @@ const resetPassword = async (req, res) => {
     await User.updatePassword(user.id, hashedPassword);
     await User.clearResetToken(user.id);
 
+    await logAction(
+      user.id,
+      "reset password",
+      "success",
+      "Password reset successfully",
+      safeRequestPayload,
+      null
+    );
+
     return res.status(200).json({
       success: true,
       message: "Password reset successfully",
     });
   } catch (err) {
+    await logAction(
+      null,
+      "reset password",
+      "failure",
+      err.message,
+      safeRequestPayload,
+      null
+    );
     console.error("Reset Password Error:", err);
     return res.status(500).json({
       success: false,

@@ -1,5 +1,6 @@
 const bcrypt = require("bcrypt");
 const User = require("../models/userModel");
+const logAction = require("../utils/logger");
 
 const usersList = async (req, res) => {
   try {
@@ -21,8 +22,8 @@ const usersList = async (req, res) => {
 };
 
 const changePassword = async (req, res) => {
+  const userId = req.user.id; //comes from authMiddleware
   try {
-    const userId = req.user.id; //comes from authMiddleware
     const { currentPassword, newPassword } = req.body;
 
     if (!currentPassword || !newPassword) {
@@ -58,11 +59,27 @@ const changePassword = async (req, res) => {
     const hashedPassword = await bcrypt.hash(newPassword, 10);
     await User.updatePassword(userId, hashedPassword);
 
+    await logAction(
+      userId,
+      "change password",
+      "success",
+      "Password changed successfully",
+      null,
+      null
+    );
     return res.status(200).json({
       success: true,
       message: "Password changed successfully",
     });
   } catch (err) {
+    await logAction(
+      userId,
+      "change password",
+      "failure",
+      err.message,
+      null,
+      null
+    );
     console.error("Change Password Error:", err);
     return res.status(500).json({
       success: false,
@@ -72,8 +89,12 @@ const changePassword = async (req, res) => {
 };
 
 const updateUser = async (req, res) => {
+  const userId = req.user.id;
+  const safeRequestPayload = {
+    name: req.body?.name,
+    email: req.body?.email,
+  };
   try {
-    const userId = req.user.id;
     const { name, email } = req.body;
     if (!name && !email) {
       return res.status(400).json({
@@ -105,12 +126,28 @@ const updateUser = async (req, res) => {
       name || user.name,
       email || user.email
     );
+    await logAction(
+      userId,
+      "update user",
+      "success",
+      "User updated successfully",
+      safeRequestPayload,
+      updatedUser
+    );
     return res.status(200).json({
       success: true,
       message: "User updated successfully",
       user: updatedUser,
     });
   } catch (err) {
+    await logAction(
+      userId,
+      "update user",
+      "failure",
+      err.message,
+      safeRequestPayload,
+      null
+    );
     console.error("Update User Error:", err);
     return res.status(500).json({
       success: false,
