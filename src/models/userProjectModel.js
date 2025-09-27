@@ -9,6 +9,14 @@ const UserProject = {
       values,
     ]);
   },
+
+  async getProjectsByUserId(userId) {
+    const [rows] = await db.query(
+      "SELECT project_id FROM user_projects WHERE user_id = ?",
+      [userId]
+    );
+    return rows.map((row) => row.project_id);
+  },
 };
 
 module.exports = UserProject;
