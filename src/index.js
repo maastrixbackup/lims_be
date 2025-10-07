@@ -5,6 +5,7 @@ const userRoutes = require("./routes/userRoutes");
 const roleRoutes = require("./routes/roleRoutes");
 const projectRoutes = require("./routes/projectRoutes");
 const logRoutes = require("./routes/logRoutes");
+const plotRoutes = require("./routes/plotRoutes");
 const authMiddleware = require("./middleware/authMiddleware");
 
 const app = express();
@@ -16,6 +17,7 @@ app.use("/api/user", authMiddleware, userRoutes);
 app.use("/api/role", authMiddleware, roleRoutes);
 app.use("/api/project", authMiddleware, projectRoutes);
 app.use("/api/log", authMiddleware, logRoutes);
+app.use("/api/plots", plotRoutes);
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
