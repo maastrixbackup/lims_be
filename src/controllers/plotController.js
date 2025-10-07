@@ -1,14 +1,10 @@
-// const xlsx = require("xlsx");
-
 const xlsx = require("xlsx");
-const db = require("../config/db");
+const Plot = require("../models/plotModel");
 
 const uploadPlots = async (req, res) => {
   try {
     if (!req.file) {
-      return res
-        .status(400)
-        .json({ success: false, message: "No file uploaded" });
+      return res.status(400).json({ success: false, message: "File is required" });
     }
 
     // Read Excel file
@@ -22,24 +18,11 @@ const uploadPlots = async (req, res) => {
         .json({ success: false, message: "Excel file is empty" });
     }
 
-    // Map Excel data to DB columns
-    const values = data.map((row) => [
-      row.plot_number || null,
-      row.owner_name || null,
-      row.area || null,
-      row.location || null,
-      row.price || null,
-    ]);
-
-    await db.query(
-      `INSERT INTO plots (plot_number, owner_name, area, location, price)
-       VALUES ?`,
-      [values]
-    );
+    await Plot.bulkInsert(data);
 
     return res.status(201).json({
       success: true,
-      message: `${values.length} plots inserted successfully`,
+      message: `${data.length} plots inserted successfully`,
     });
   } catch (error) {
     console.error("Upload Plots Error:", error);

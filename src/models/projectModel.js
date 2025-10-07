@@ -1,12 +1,12 @@
 const db = require("../config/db");
 
 const Project = {
-  async create(project_name) {
+  async create(project_name, status = 0) {
     const [result] = await db.query(
-      "INSERT INTO projects (project_name) VALUES (?)",
-      [project_name]
+      "INSERT INTO projects (project_name, status) VALUES (?, ?)",
+      [project_name, status]
     );
-    return { id: result.insertId, project_name };
+    return { id: result.insertId, project_name, status };
   },
 
   async findAll() {

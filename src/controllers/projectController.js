@@ -4,9 +4,10 @@ const logAction = require("../utils/logger");
 const createProject = async (req, res) => {
   const safeRequestPayload = {
     project_name: req.body?.project_name,
+    status: req.body?.status ?? 0,
   };
   try {
-    const { project_name } = req.body;
+    const { project_name, status = 0 } = req.body;
     if (!project_name) {
       return res.status(400).json({
         success: false,
@@ -22,7 +23,7 @@ const createProject = async (req, res) => {
       });
     }
 
-    const project = await Project.create(project_name);
+    const project = await Project.create(project_name, status);
     await logAction(
       null,
       "create project",
@@ -56,10 +57,17 @@ const createProject = async (req, res) => {
 const projectList = async (req, res) => {
   try {
     const projects = await Project.findAll();
+
+    const statusMap = { 0: "Pending", 1: "Active", 2: "Closed" };
+    const formattedProjects = projects.map((project) => ({
+      ...project,
+      project_status: statusMap[project.status] || "N/A",
+    }));
+
     return res.status(200).json({
       success: true,
       message: "Project fetched successfully",
-      projects: projects,
+      projects: formattedProjects,
     });
   } catch (err) {
     console.error("Fetch projects error:", err);
