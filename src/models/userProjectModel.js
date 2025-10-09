@@ -10,6 +10,10 @@ const UserProject = {
     ]);
   },
 
+  async deleteByUserId(userId) {
+    await db.query("DELETE FROM user_projects WHERE user_id = ?", [userId]);
+  },
+
   async getProjectsByUserId(userId) {
     const [rows] = await db.query(
       "SELECT project_id FROM user_projects WHERE user_id = ?",
