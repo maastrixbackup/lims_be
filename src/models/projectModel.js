@@ -14,12 +14,29 @@ const Project = {
     return rows;
   },
 
+  async findById(id) {
+    const [rows] = await db.query("SELECT * FROM projects WHERE id = ?", [id]);
+    return rows[0];
+  },
+
   async findByName(project_name) {
     const [rows] = await db.query(
       "SELECT * FROM projects WHERE project_name = ?",
       [project_name]
     );
     return rows;
+  },
+
+  async update(id, project_name, status) {
+    await db.query(
+      "UPDATE projects SET project_name = ?, status = ?, updated_at = NOW() WHERE id = ?",
+      [project_name, status, id]
+    );
+    return { id, project_name, status };
+  },
+
+  async delete(id) {
+    await db.query("DELETE FROM projects WHERE id = ?", [id]);
   },
 };
 
