@@ -2,6 +2,7 @@ const Project = require("../models/projectModel");
 const logAction = require("../utils/logger");
 
 const createProject = async (req, res) => {
+  const userId = req.user.id;
   const safeRequestPayload = {
     project_name: req.body?.project_name,
     status: req.body?.status ?? 0,
@@ -25,7 +26,7 @@ const createProject = async (req, res) => {
 
     const project = await Project.create(project_name, status);
     await logAction(
-      null,
+      userId,
       "create project",
       "success",
       "Project created successfully",
@@ -39,7 +40,7 @@ const createProject = async (req, res) => {
     });
   } catch (err) {
     await logAction(
-      null,
+      userId,
       "create project",
       "failure",
       err.message,
@@ -78,4 +79,119 @@ const projectList = async (req, res) => {
   }
 };
 
-module.exports = { createProject, projectList };
+const updateProject = async (req, res) => {
+  const userId = req.user.id;
+  const safeRequestPayload = {
+    id: req.params.id,
+    project_name: req.body?.project_name,
+    status: req.body?.status,
+  };
+
+  try {
+    const { id } = req.params;
+    const { project_name, status } = req.body;
+    if (!id || isNaN(id)) {
+      return res.status(400).json({
+        success: false,
+        message: "Valid project ID is required",
+      });
+    }
+    if (project_name === undefined && status === undefined) {
+      return res.status(400).json({
+        success: false,
+        message: "Project name or status is required",
+      });
+    }
+    const project = await Project.findById(id);
+    if (!project) {
+      return res.status(404).json({
+        success: false,
+        message: "Project not found.",
+      });
+    }
+    if (project_name) {
+      const existing = await Project.findByName(project_name);
+      if (existing.length > 0 && existing[0].id !== parseInt(id)) {
+        return res.status(400).json({
+          success: false,
+          message: "Another project with this name already exists",
+        });
+      }
+    }
+    const updatedProject = await Project.update(id, project_name, status);
+    await logAction(
+      userId,
+      "update project",
+      "success",
+      "Project updated successfully",
+      safeRequestPayload,
+      updatedProject
+    );
+    return res.status(200).json({
+      success: true,
+      message: "Project updated successfully",
+      project: updatedProject,
+    });
+  } catch (err) {
+    await logAction(
+      userId,
+      "update project",
+      "failure",
+      err.message,
+      safeRequestPayload,
+      null
+    );
+    console.error("Edit project error:", err);
+    return res.status(500).json({
+      success: false,
+      message: "Server error",
+    });
+  }
+};
+
+const deleteProject = async (req, res) => {
+  const userId = req.user.id;
+  const safeRequestPayload = { id: req.params.id };
+
+  try {
+    const { id } = req.params;
+    const project = await Project.findById(id);
+    if (!project) {
+      return res.status(404).json({
+        success: false,
+        message: "Project not found",
+      });
+    }
+    await Project.delete(id);
+
+    await logAction(
+      userId,
+      "delete project",
+      "success",
+      "Project deleted successfully",
+      safeRequestPayload,
+      project
+    );
+
+    return res.status(200).json({
+      success: true,
+      message: "Project deleted successfully",
+    });
+  } catch (err) {
+    await logAction(
+      userId,
+      "delete project",
+      "failure",
+      err.message,
+      safeRequestPayload,
+      null
+    );
+    console.error("Delete project error:", err);
+    return res.status(500).json({
+      success: false,
+      message: "Server error",
+    });
+  }
+};
+
+module.exports = { createProject, projectList, updateProject, deleteProject };
