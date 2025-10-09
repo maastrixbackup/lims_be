@@ -17,6 +17,13 @@ const User = {
     return { id: result.insertId, name, email, role_id };
   },
 
+  async update(id, name, email, role_id) {
+    await db.query(
+      "UPDATE users SET name = ?, email = ?, role_id = ?, updated_at = NOW() WHERE id = ?",
+      [name, email, role_id, id]
+    );
+  },
+
   async findById(id) {
     const [rows] = await db.query("SELECT * FROM users WHERE id = ?", [id]);
     return rows[0];

@@ -84,6 +84,79 @@ const signup = async (req, res) => {
   }
 };
 
+const updateUser = async (req, res) => {
+  const userId = req.user.id;
+  const safeRequestPayload = {
+    id: req.params?.id,
+    name: req.body?.name,
+    email: req.body?.email,
+    role_id: req.body?.role_id,
+    accessed_projects: req.body?.accessed_projects,
+  };
+
+  try {
+    const getUserId = req.params.id;
+    const { name, email, role_id, accessed_projects } = req.body;
+    const existingUser = await User.findById(getUserId);
+    if (!existingUser) {
+      return res.status(404).json({
+        success: false,
+        message: "User not found",
+      });
+    }
+
+    if (email && email !== existingUser.email) {
+      const emailTaken = await User.findByEmail(email);
+      if (emailTaken) {
+        return res.status(400).json({
+          success: false,
+          message: "Email already in use",
+        });
+      }
+    }
+
+    await User.update(getUserId, name, email, role_id);
+    await UserProject.deleteByUserId(getUserId);
+
+    if (Array.isArray(accessed_projects) && accessed_projects.length > 0) {
+      await UserProject.assignProjects(getUserId, accessed_projects);
+    }
+    const updatedProjects = await UserProject.getProjectsByUserId(getUserId);
+    const updatedUser = await User.findById(getUserId);
+
+    const responsePayload = {
+      ...updatedUser,
+      accessed_projects: updatedProjects,
+    };
+
+    await logAction(
+      userId,
+      "update user",
+      "success",
+      "User updated successfully",
+      safeRequestPayload,
+      responsePayload
+    );
+
+    return res.status(200).json({
+      success: true,
+      message: "User updated successfully",
+      user: responsePayload,
+    });
+  } catch (err) {
+    await logAction(
+      userId,
+      "update user",
+      "failure",
+      err.message,
+      safeRequestPayload,
+      null
+    );
+    console.error("Update User Error:", err);
+    return res.status(500).json({ success: false, message: "Server error" });
+  }
+};
+
 const login = async (req, res) => {
   const safeRequestPayload = {
     email: req.body?.email,
@@ -356,4 +429,4 @@ const resetPassword = async (req, res) => {
   }
 };
 
-module.exports = { signup, login, forgotPassword, resetPassword };
+module.exports = { signup, login, forgotPassword, resetPassword, updateUser };
