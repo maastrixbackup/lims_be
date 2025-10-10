@@ -157,6 +157,53 @@ const updateUser = async (req, res) => {
   }
 };
 
+const deleteUser = async (req, res) => {
+  const userId = req.user.id;
+  const safeRequestPayload = { id: req.params.id };
+  try {
+    const getUserId = req.params.id;
+
+    const existingUser = await User.findById(getUserId);
+    if (!existingUser) {
+      return res.status(404).json({
+        success: false,
+        message: "User not found",
+      });
+    }
+
+    await UserProject.deleteByUserId(getUserId);
+    await User.delete(getUserId);
+
+    await logAction(
+      userId,
+      "delete user",
+      "success",
+      "User deleted successfully",
+      safeRequestPayload,
+      null
+    );
+
+    return res.status(200).json({
+      success: true,
+      message: "User deleted successfully",
+    });
+  } catch (err) {
+    await logAction(
+      userId,
+      "delete user",
+      "failure",
+      err.message,
+      safeRequestPayload,
+      null
+    );
+    console.error("Delete User Error:", err);
+    return res.status(500).json({
+      success: false,
+      message: "Server error",
+    });
+  }
+};
+
 const login = async (req, res) => {
   const safeRequestPayload = {
     email: req.body?.email,
@@ -429,4 +476,11 @@ const resetPassword = async (req, res) => {
   }
 };
 
-module.exports = { signup, login, forgotPassword, resetPassword, updateUser };
+module.exports = {
+  signup,
+  login,
+  forgotPassword,
+  resetPassword,
+  updateUser,
+  deleteUser,
+};

@@ -24,6 +24,10 @@ const User = {
     );
   },
 
+  async delete(id) {
+    await db.query("DELETE FROM users WHERE id = ?", [id]);
+  },
+
   async findById(id) {
     const [rows] = await db.query("SELECT * FROM users WHERE id = ?", [id]);
     return rows[0];
