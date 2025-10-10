@@ -6,6 +6,7 @@ const roleRoutes = require("./routes/roleRoutes");
 const projectRoutes = require("./routes/projectRoutes");
 const logRoutes = require("./routes/logRoutes");
 const plotRoutes = require("./routes/plotRoutes");
+const villageRoutes = require("./routes/villageRoutes");
 const authMiddleware = require("./middleware/authMiddleware");
 
 const app = express();
@@ -18,6 +19,7 @@ app.use("/api/role", authMiddleware, roleRoutes);
 app.use("/api/project", authMiddleware, projectRoutes);
 app.use("/api/log", authMiddleware, logRoutes);
 app.use("/api/plots", plotRoutes);
+app.use("/api/village", authMiddleware, villageRoutes);
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
