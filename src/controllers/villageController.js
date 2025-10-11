@@ -70,4 +70,53 @@ const villageList = async (req, res) => {
   }
 };
 
-module.exports = { addVillage, villageList };
+const updateVillage = async (req, res) => {
+  const userId = req.user.id;
+  const villageId = req.params.id;
+  const safeRequestPayload = req.body;
+  const { village_name, tahasil, district, project_id } = req.body;
+
+  try {
+    const existingVillage = await Village.findById(villageId);
+    if (!existingVillage) {
+      return res.status(404).json({
+        success: false,
+        message: "Village not found",
+      });
+    }
+
+    const updatedVillage = await Village.update(
+      villageId,
+      village_name,
+      tahasil,
+      district,
+      project_id
+    );
+    await logAction(
+      userId,
+      "update village",
+      "success",
+      "Village updated successfully",
+      safeRequestPayload,
+      updatedVillage
+    );
+    return res.status(200).json({
+      success: true,
+      message: "Village updated successfully",
+      village: updatedVillage,
+    });
+  } catch (err) {
+    await logAction(
+      userId,
+      "update village",
+      "failure",
+      err.message,
+      safeRequestPayload,
+      null
+    );
+    console.error("Update Village Error:", err);
+    return res.status(500).json({ success: false, message: "Server error" });
+  }
+};
+
+module.exports = { addVillage, villageList, updateVillage };
