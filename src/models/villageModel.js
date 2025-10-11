@@ -1,5 +1,4 @@
 const db = require("../config/db");
-const { findAll } = require("./logModel");
 
 const Village = {
   async create(village_name, tahasil, district, project_id) {
@@ -37,6 +36,19 @@ const Village = {
 
     const [rows] = await db.query(query, params);
     return rows;
+  },
+
+  async findById(id) {
+    const [rows] = await db.query("SELECT * FROM villages WHERE id = ?", [id]);
+    return rows[0];
+  },
+
+  async update(id, village_name, tahasil, district, project_id) {
+    await db.query(
+      "UPDATE villages SET village_name = ?, tahasil = ?, district = ?, project_id = ?,updated_at = NOW() WHERE id = ?",
+      [village_name, tahasil, district, project_id, id]
+    );
+    return { id, village_name, tahasil, district, project_id };
   },
 };
 
