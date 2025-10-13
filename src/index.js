@@ -7,6 +7,7 @@ const projectRoutes = require("./routes/projectRoutes");
 const logRoutes = require("./routes/logRoutes");
 const plotRoutes = require("./routes/plotRoutes");
 const villageRoutes = require("./routes/villageRoutes");
+const khataRoutes = require("./routes/khataRoutes");
 const authMiddleware = require("./middleware/authMiddleware");
 
 const app = express();
@@ -20,6 +21,7 @@ app.use("/api/project", authMiddleware, projectRoutes);
 app.use("/api/log", authMiddleware, logRoutes);
 app.use("/api/plots", plotRoutes);
 app.use("/api/village", authMiddleware, villageRoutes);
+app.use("/api/khata", authMiddleware, khataRoutes);
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
