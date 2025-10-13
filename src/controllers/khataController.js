@@ -41,4 +41,22 @@ const addKhata = async (req, res) => {
   }
 };
 
-module.exports = { addKhata };
+const khataList = async (req, res) => {
+  try {
+    const { project_id, village_id } = req.query;
+    const khatas = await Khata.findAll({ project_id, village_id });
+    return res.status(200).json({
+      success: true,
+      message: "Khata list fetched successfully",
+      khatas,
+    });
+  } catch (err) {
+    console.error("Fetch Khata Error:", err);
+    return res.status(500).json({
+      success: false,
+      message: "Server error",
+    });
+  }
+};
+
+module.exports = { addKhata, khataList };
