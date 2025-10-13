@@ -50,6 +50,10 @@ const Village = {
     );
     return { id, village_name, tahasil, district, project_id };
   },
+
+  async delete(id) {
+    await db.query("DELETE FROM villages WHERE id = ?", [id]);
+  },
 };
 
 module.exports = Village;
