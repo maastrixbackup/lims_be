@@ -119,4 +119,41 @@ const updateVillage = async (req, res) => {
   }
 };
 
-module.exports = { addVillage, villageList, updateVillage };
+const deleteVillage = async (req, res) => {
+  const userId = req.user.id;
+  const villageId = req.params.id;
+
+  try {
+    const existingVillage = await Village.findById(villageId);
+    if (!existingVillage) {
+      return res
+        .status(404)
+        .json({ success: false, message: "Village not found" });
+    }
+    await Village.delete(villageId);
+    await logAction(
+      userId,
+      "delete village",
+      "success",
+      "Village deleted successfully",
+      { id: villageId },
+      null
+    );
+    return res
+      .status(200)
+      .json({ success: true, message: "Village deleted successfully" });
+  } catch (err) {
+    await logAction(
+      userId,
+      "delete village",
+      "failure",
+      err.message,
+      { id: villageId },
+      null
+    );
+    console.error("Delete Village Error:", err);
+    return res.status(500).json({ success: false, message: "Server error" });
+  }
+};
+
+module.exports = { addVillage, villageList, updateVillage, deleteVillage };
