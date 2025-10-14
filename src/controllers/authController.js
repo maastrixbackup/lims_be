@@ -69,6 +69,7 @@ const signup = async (req, res) => {
       success: true,
       message: "User registered successfully",
       user: newUser,
+      accessed_projects: assignedProjects,
     });
   } catch (error) {
     await logAction(
@@ -253,6 +254,8 @@ const login = async (req, res) => {
     const role = await Role.findById(user.role_id);
     user.role_name = role ? role.name : null;
 
+    const accessedProjects = await UserProject.getProjectsByUserId(user.id);
+
     const token = generateToken(user);
 
     const responsePayload = {
@@ -260,6 +263,7 @@ const login = async (req, res) => {
       name: user.name,
       email: user.email,
       role_name: user.role_name,
+      accessed_projects: accessedProjects,
     };
     await logAction(
       user.id,
@@ -274,6 +278,7 @@ const login = async (req, res) => {
       success: true,
       message: "Login successful",
       user: user,
+      accessed_projects: accessedProjects,
       token: token,
     });
   } catch (error) {
