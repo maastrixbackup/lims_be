@@ -5,17 +5,23 @@ const {
   login,
   forgotPassword,
   resetPassword,
-  updateUser,
+  updateUserByAdmin,
   deleteUser,
 } = require("../controllers/authController");
 
 const authMiddleware = require("../middleware/authMiddleware");
+const { uploadProfilePic } = require("../middleware/upload");
 
-router.post("/createUser", authMiddleware, signup);
+router.post(
+  "/createUser",
+  authMiddleware,
+  uploadProfilePic.single("profile_pic"),
+  signup
+);
 router.post("/login", login);
 router.post("/forgot-password", forgotPassword);
 router.post("/reset-password", resetPassword);
-router.put("/updateUser/:id", authMiddleware, updateUser);
+router.put("/updateUser/:id", authMiddleware, updateUserByAdmin);
 router.delete("/deleteUser/:id", authMiddleware, deleteUser);
 
 module.exports = router;

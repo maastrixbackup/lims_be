@@ -13,11 +13,22 @@ const transporter = require("../utils/mailer");
 const signup = async (req, res) => {
   const safeRequestPayload = {
     name: req.body?.name,
+    username: req.body?.username,
     email: req.body?.email,
     role_id: req.body?.role_id,
+    profile_pic: req.file ? req.file.filename : null,
     accessed_projects: req.body?.accessed_projects,
   };
-  const { name, email, password, role_id, accessed_projects } = req.body;
+  const { name, username, email, password, role_id } = req.body;
+  let accessed_projects = req.body.accessed_projects;
+  if (typeof accessed_projects === "string") {
+    try {
+      accessed_projects = JSON.parse(accessed_projects); // converts string to array
+    } catch (err) {
+      accessed_projects = [];
+    }
+  }
+  const profile_pic = req.file ? req.file.filename : null;
   try {
     if (!name || !email || !password || !role_id) {
       return res.status(400).json({
@@ -43,7 +54,14 @@ const signup = async (req, res) => {
     }
 
     const hashedPassword = await bcrypt.hash(password, 10);
-    const newUser = await User.create(name, email, hashedPassword, role_id);
+    const newUser = await User.create(
+      name,
+      username,
+      email,
+      hashedPassword,
+      role_id,
+      profile_pic
+    );
 
     if (Array.isArray(accessed_projects) && accessed_projects.length > 0) {
       await UserProject.assignProjects(newUser.id, accessed_projects);
@@ -53,7 +71,9 @@ const signup = async (req, res) => {
     const responsePayload = {
       id: newUser.id,
       name: newUser.name,
+      username: newUser.username,
       email: newUser.email,
+      profile_pic: newUser.profile_pic,
       accessed_projects: assignedProjects,
     };
     await logAction(
@@ -85,7 +105,7 @@ const signup = async (req, res) => {
   }
 };
 
-const updateUser = async (req, res) => {
+const updateUserByAdmin = async (req, res) => {
   const userId = req.user.id;
   const safeRequestPayload = {
     id: req.params?.id,
@@ -486,6 +506,6 @@ module.exports = {
   login,
   forgotPassword,
   resetPassword,
-  updateUser,
+  updateUserByAdmin,
   deleteUser,
 };
