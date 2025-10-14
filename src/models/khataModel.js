@@ -30,6 +30,19 @@ const Khata = {
     const [rows] = await db.query(query, params);
     return rows;
   },
+
+  async findById(id) {
+    const [rows] = await db.query("SELECT * FROM khatas WHERE id = ?", [id]);
+    return rows[0];
+  },
+
+  async update(id, project_id, village_id, khata_no) {
+    await db.query(
+      "UPDATE khatas SET project_id = ?, village_id = ?, khata_no = ?, updated_at = NOW() WHERE id = ?",
+      [project_id, village_id, khata_no, id]
+    );
+    return { id, project_id, village_id, khata_no };
+  },
 };
 
 module.exports = Khata;

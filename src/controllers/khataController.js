@@ -59,4 +59,52 @@ const khataList = async (req, res) => {
   }
 };
 
-module.exports = { addKhata, khataList };
+const updateKhata = async (req, res) => {
+  const userId = req.user.id;
+  const khataId = req.params.id;
+  const { project_id, village_id, khata_no } = req.body;
+  const safeRequestPayload = req.body;
+
+  try {
+    const existingKhata = await Khata.findById(khataId);
+    if (!existingKhata) {
+      return res.status(404).json({
+        success: false,
+        message: "Khata not found",
+      });
+    }
+    const updatedKhata = await Khata.update(
+      khataId,
+      project_id,
+      village_id,
+      khata_no
+    );
+    await logAction(
+      userId,
+      "update khata",
+      "success",
+      "Khata updated successfully",
+      safeRequestPayload,
+      updatedKhata
+    );
+
+    return res.status(200).json({
+      success: true,
+      message: "Khata updated successfully",
+      khata: updatedKhata,
+    });
+  } catch (err) {
+    await logAction(
+      userId,
+      "update khata",
+      "failure",
+      err.message,
+      safeRequestPayload,
+      null
+    );
+    console.error("Update Khata Error:", err);
+    return res.status(500).json({ success: false, message: "Server error" });
+  }
+};
+
+module.exports = { addKhata, khataList, updateKhata };
