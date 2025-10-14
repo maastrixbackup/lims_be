@@ -8,13 +8,13 @@ const User = {
     return rows[0];
   },
 
-  async create(name, email, password_hash, role_id) {
+  async create(name, username, email, password_hash, role_id, profile_pic) {
     const [result] = await db.query(
-      "INSERT INTO users (name, email, password_hash, role_id) VALUES (?,?,?,?)",
-      [name, email, password_hash, role_id]
+      "INSERT INTO users (name, username, email, password_hash, role_id, profile_pic) VALUES (?,?,?,?,?,?)",
+      [name, username, email, password_hash, role_id, profile_pic]
     );
 
-    return { id: result.insertId, name, email, role_id };
+    return { id: result.insertId, name, username, email, role_id, profile_pic };
   },
 
   async update(id, name, email, role_id) {
