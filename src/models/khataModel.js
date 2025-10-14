@@ -43,6 +43,10 @@ const Khata = {
     );
     return { id, project_id, village_id, khata_no };
   },
+
+  async delete(id) {
+    await db.query("DELETE FROM khatas WHERE ID = ?", [id]);
+  },
 };
 
 module.exports = Khata;

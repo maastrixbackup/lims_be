@@ -107,4 +107,44 @@ const updateKhata = async (req, res) => {
   }
 };
 
-module.exports = { addKhata, khataList, updateKhata };
+const deleteKhata = async (req, res) => {
+  const userId = req.user.id;
+  const khataId = req.params.id;
+
+  try {
+    const existingKhata = await Khata.findById(khataId);
+    if (!existingKhata) {
+      return res.status(404).json({
+        success: false,
+        message: "Khata not found",
+      });
+    }
+    await Khata.delete(khataId);
+    await logAction(
+      userId,
+      "delete khata",
+      "success",
+      "Khata deleted successfully",
+      { id: khataId },
+      null
+    );
+
+    return res.status(200).json({
+      success: true,
+      message: "Khata deleted successfully",
+    });
+  } catch (err) {
+    await logAction(
+      userId,
+      "delete khata",
+      "failure",
+      err.message,
+      { id: khataId },
+      null
+    );
+    console.error("Delete Khata Error:", err);
+    return res.status(500).json({ success: false, message: "Server error" });
+  }
+};
+
+module.exports = { addKhata, khataList, updateKhata, deleteKhata };
