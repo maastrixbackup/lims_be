@@ -9,17 +9,20 @@ const {
   verifyToken,
 } = require("../utils/jwt");
 const transporter = require("../utils/mailer");
+const fs = require("fs");
+const path = require("path");
 
 const signup = async (req, res) => {
   const safeRequestPayload = {
     name: req.body?.name,
     username: req.body?.username,
     email: req.body?.email,
+    phone_number: req.body?.phone_number,
     role_id: req.body?.role_id,
     profile_pic: req.file ? req.file.filename : null,
     accessed_projects: req.body?.accessed_projects,
   };
-  const { name, username, email, password, role_id } = req.body;
+  const { name, username, email, phone_number, password, role_id } = req.body;
   let accessed_projects = req.body.accessed_projects;
   if (typeof accessed_projects === "string") {
     try {
@@ -30,7 +33,7 @@ const signup = async (req, res) => {
   }
   const profile_pic = req.file ? req.file.filename : null;
   try {
-    if (!name || !email || !password || !role_id) {
+    if (!name || !email || !phone_number || !password || !role_id) {
       return res.status(400).json({
         success: false,
         message: "All fields are required",
@@ -58,6 +61,7 @@ const signup = async (req, res) => {
       name,
       username,
       email,
+      phone_number,
       hashedPassword,
       role_id,
       profile_pic
@@ -73,6 +77,7 @@ const signup = async (req, res) => {
       name: newUser.name,
       username: newUser.username,
       email: newUser.email,
+      phone_number: newUser.phone_number,
       profile_pic: newUser.profile_pic,
       accessed_projects: assignedProjects,
     };
@@ -191,7 +196,21 @@ const deleteUser = async (req, res) => {
         message: "User not found",
       });
     }
-
+    if (existingUser.profile_pic) {
+      const picPath = path.join(
+        __dirname,
+        "../../uploads/profile_pics",
+        existingUser.profile_pic
+      );
+      fs.unlink(picPath, (err) => {
+        if (err) {
+          console.warn(
+            "Warning: Unable to delete user image (might not exist):",
+            err.message
+          );
+        }
+      });
+    }
     await UserProject.deleteByUserId(getUserId);
     await User.delete(getUserId);
 
@@ -289,6 +308,7 @@ const login = async (req, res) => {
       name: user.name,
       username: user.username,
       email: user.email,
+      phone_number: user.phone_number,
       profile_pic: profilePicUrl,
       role_id: user.role_id,
       role_name: user.role_name,
