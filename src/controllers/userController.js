@@ -4,6 +4,9 @@ const logAction = require("../utils/logger");
 const UserProject = require("../models/userProjectModel");
 const Role = require("../models/roleModel");
 
+const fs = require("fs");
+const path = require("path");
+
 const usersList = async (req, res) => {
   try {
     const { role_id } = req.query;
@@ -94,14 +97,18 @@ const updateUser = async (req, res) => {
   const userId = req.user.id;
   const safeRequestPayload = {
     name: req.body?.name,
+    username: req.body?.username,
     email: req.body?.email,
+    phone_number: req.body?.phone_number,
+    profile_pic: req.file ? req.file.filename : null,
   };
   try {
-    const { name, email } = req.body;
-    if (!name && !email) {
+    const { name, username, email, phone_number } = req.body;
+    const profile_pic = req.file ? req.file.filename : null;
+    if (!name && !email && !phone_number) {
       return res.status(400).json({
         success: false,
-        message: "Name and email are required",
+        message: "Fields are required",
       });
     }
 
@@ -123,10 +130,29 @@ const updateUser = async (req, res) => {
       }
     }
 
+    if (profile_pic && user.profile_pic) {
+      const oldPicPath = path.join(
+        __dirname,
+        "../../uploads/profile_pics",
+        user.profile_pic
+      );
+      fs.unlink(oldPicPath, (err) => {
+        if (err) {
+          console.warn(
+            "Old profile pic not found or already deleted:",
+            err.message
+          );
+        }
+      });
+    }
+
     const updatedUser = await User.updateUser(
       userId,
       name || user.name,
-      email || user.email
+      username || user.username,
+      email || user.email,
+      phone_number || user.phone_number,
+      profile_pic || user.profile_pic
     );
     await logAction(
       userId,
@@ -187,6 +213,7 @@ const getProfile = async (req, res) => {
       name: user.name,
       username: user.username,
       email: user.email,
+      phone_number: user.phone_number,
       role_id: user.role_id,
       role_name: user.role_name,
       profile_pic: profilePicUrl,

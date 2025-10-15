@@ -8,13 +8,29 @@ const User = {
     return rows[0];
   },
 
-  async create(name, username, email, password_hash, role_id, profile_pic) {
+  async create(
+    name,
+    username,
+    email,
+    phone_number,
+    password_hash,
+    role_id,
+    profile_pic
+  ) {
     const [result] = await db.query(
-      "INSERT INTO users (name, username, email, password_hash, role_id, profile_pic) VALUES (?,?,?,?,?,?)",
-      [name, username, email, password_hash, role_id, profile_pic]
+      "INSERT INTO users (name, username, email, phone_number, password_hash, role_id, profile_pic) VALUES (?,?,?,?,?,?,?)",
+      [name, username, email, phone_number, password_hash, role_id, profile_pic]
     );
 
-    return { id: result.insertId, name, username, email, role_id, profile_pic };
+    return {
+      id: result.insertId,
+      name,
+      username,
+      email,
+      phone_number,
+      role_id,
+      profile_pic,
+    };
   },
 
   async update(id, name, email, role_id) {
@@ -68,13 +84,13 @@ const User = {
     return rows;
   },
 
-  async updateUser(id, name, email) {
+  async updateUser(id, name, username, email, phone_number, profile_pic) {
     const [result] = await db.query(
-      `UPDATE users SET name = ?,email = ?, updated_at = NOW() WHERE id = ?`,
-      [name, email, id]
+      `UPDATE users SET name = ?, username = ?, email = ?, phone_number = ?, profile_pic = ?, updated_at = NOW() WHERE id = ?`,
+      [name, username, email, phone_number, profile_pic, id]
     );
 
-    return { id, name, email };
+    return { id, name, username, email, profile_pic };
   },
 
   async saveResetToken(userId, token) {
