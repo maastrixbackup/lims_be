@@ -1,6 +1,8 @@
 const bcrypt = require("bcrypt");
 const User = require("../models/userModel");
 const logAction = require("../utils/logger");
+const UserProject = require("../models/userProjectModel");
+const Role = require("../models/roleModel");
 
 const usersList = async (req, res) => {
   try {
@@ -156,4 +158,52 @@ const updateUser = async (req, res) => {
   }
 };
 
-module.exports = { changePassword, usersList, updateUser };
+const getProfile = async (req, res) => {
+  try {
+    const userId = req.user.id;
+    if (!userId) {
+      return res.status(400).json({
+        success: false,
+        message: "User ID is required",
+      });
+    }
+    const user = await User.findById(userId);
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: "User not found",
+      });
+    }
+    const accessedProjects = await UserProject.getProjectsByUserId(userId);
+    const profilePicUrl = user.profile_pic
+      ? `${req.protocol}://${req.get("host")}/uploads/profile_pics/${
+          user.profile_pic
+        }`
+      : null;
+    const role = await Role.findById(user.role_id);
+    user.role_name = role ? role.name : null;
+    const userProfile = {
+      id: user.id,
+      name: user.name,
+      username: user.username,
+      email: user.email,
+      role_id: user.role_id,
+      role_name: user.role_name,
+      profile_pic: profilePicUrl,
+      accessed_projects: accessedProjects,
+    };
+    return res.status(200).json({
+      success: true,
+      message: "Profile fetched successfully",
+      user: userProfile,
+    });
+  } catch (err) {
+    console.error("Get Profile Error:", err);
+    res.status(500).json({
+      success: false,
+      message: "Server error",
+    });
+  }
+};
+
+module.exports = { changePassword, usersList, updateUser, getProfile };
