@@ -278,12 +278,23 @@ const login = async (req, res) => {
 
     const token = generateToken(user);
 
-    const responsePayload = {
-      // id: user.id,
+    const profilePicUrl = user.profile_pic
+      ? `${req.protocol}://${req.get("host")}/uploads/profile_pics/${
+          user.profile_pic
+        }`
+      : null;
+
+    const userResponse = {
+      id: user.id,
       name: user.name,
+      username: user.username,
       email: user.email,
+      profile_pic: profilePicUrl,
+      role_id: user.role_id,
       role_name: user.role_name,
-      accessed_projects: accessedProjects,
+      created_at: user.created_at,
+      updated_at: user.updated_at,
+      // accessed_projects: accessedProjects,
     };
     await logAction(
       user.id,
@@ -291,13 +302,13 @@ const login = async (req, res) => {
       "success",
       "Login successful",
       safeRequestPayload,
-      responsePayload
+      userResponse
     );
 
     res.status(200).json({
       success: true,
       message: "Login successful",
-      user: user,
+      user: userResponse,
       accessed_projects: accessedProjects,
       token: token,
     });
