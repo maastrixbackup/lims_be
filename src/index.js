@@ -11,7 +11,11 @@ const khataRoutes = require("./routes/khataRoutes");
 const authMiddleware = require("./middleware/authMiddleware");
 
 const app = express();
+const path = require("path");
 app.use(express.json());
+
+// Serve static files from uploads folder
+app.use("/uploads", express.static(path.join(__dirname, "..", "uploads")));
 
 // routes
 app.use("/api/auth", authRoutes);
