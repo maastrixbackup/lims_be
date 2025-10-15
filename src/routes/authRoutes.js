@@ -21,7 +21,12 @@ router.post(
 router.post("/login", login);
 router.post("/forgot-password", forgotPassword);
 router.post("/reset-password", resetPassword);
-router.put("/updateUser/:id", authMiddleware, updateUserByAdmin);
+router.put(
+  "/updateUser/:id",
+  authMiddleware,
+  uploadProfilePic.single("profile_pic"),
+  updateUserByAdmin
+);
 router.delete("/deleteUser/:id", authMiddleware, deleteUser);
 
 module.exports = router;

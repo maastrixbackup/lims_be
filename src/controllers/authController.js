@@ -112,17 +112,29 @@ const signup = async (req, res) => {
 
 const updateUserByAdmin = async (req, res) => {
   const userId = req.user.id;
+  const profile_pic = req.file ? req.file.filename : null;
   const safeRequestPayload = {
     id: req.params?.id,
     name: req.body?.name,
+    username: req.body?.username,
     email: req.body?.email,
+    phone_number: req.body?.phone_number,
     role_id: req.body?.role_id,
     accessed_projects: req.body?.accessed_projects,
+    profile_pic,
   };
 
   try {
     const getUserId = req.params.id;
-    const { name, email, role_id, accessed_projects } = req.body;
+    const { name, username, email, phone_number, role_id } = req.body;
+    let accessed_projects = req.body.accessed_projects;
+    if (typeof accessed_projects === "string") {
+      try {
+        accessed_projects = JSON.parse(accessed_projects); // converts string to array
+      } catch (err) {
+        accessed_projects = [];
+      }
+    }
     const existingUser = await User.findById(getUserId);
     if (!existingUser) {
       return res.status(404).json({
@@ -141,7 +153,31 @@ const updateUserByAdmin = async (req, res) => {
       }
     }
 
-    await User.update(getUserId, name, email, role_id);
+    if (profile_pic && existingUser.profile_pic) {
+      const oldPicPath = path.join(
+        __dirname,
+        "../../uploads/profile_pics",
+        existingUser.profile_pic
+      );
+      try {
+        await fs.promises.unlink(oldPicPath);
+      } catch (err) {
+        console.warn(
+          "Old profile pic not found or already deleted:",
+          err.message
+        );
+      }
+    }
+
+    await User.update(
+      getUserId,
+      name,
+      username,
+      email,
+      phone_number,
+      role_id,
+      profile_pic
+    );
     await UserProject.deleteByUserId(getUserId);
 
     if (Array.isArray(accessed_projects) && accessed_projects.length > 0) {

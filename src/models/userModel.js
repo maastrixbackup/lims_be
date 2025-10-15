@@ -33,10 +33,10 @@ const User = {
     };
   },
 
-  async update(id, name, email, role_id) {
+  async update(id, name, username, email, phone_number, role_id, profile_pic) {
     await db.query(
-      "UPDATE users SET name = ?, email = ?, role_id = ?, updated_at = NOW() WHERE id = ?",
-      [name, email, role_id, id]
+      "UPDATE users SET name = ?, username = ?, email = ?, phone_number = ?, role_id = ?, profile_pic = ?, updated_at = NOW() WHERE id = ?",
+      [name, username, email, phone_number, role_id, profile_pic, id]
     );
   },
 
