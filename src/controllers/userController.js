@@ -12,10 +12,27 @@ const usersList = async (req, res) => {
     const { role_id } = req.query;
     const users = await User.usersList(role_id || null);
 
+    const formattedUsers = users.map((user) => ({
+      id: user.id,
+      name: user.name,
+      username: user.username,
+      email: user.email,
+      phone_number: user.phone_number,
+      role_id: user.role_id,
+      role_name: user.role_name,
+      profile_pic: user.profile_pic
+        ? `${req.protocol}://${req.get("host")}/uploads/profile_pics/${
+            user.profile_pic
+          }`
+        : null,
+      created_at: user.created_at,
+      accessed_projects_name: user.accessed_projects_name,
+    }));
+
     return res.status(200).json({
       success: true,
       message: "User list fetched successfully",
-      users: users,
+      users: formattedUsers,
     });
   } catch (err) {
     console.error("Users list Error:", err);

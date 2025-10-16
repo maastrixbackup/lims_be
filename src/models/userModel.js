@@ -61,8 +61,11 @@ const User = {
       SELECT 
         u.id,
         u.name,
+        u.username,
         u.email,
+        u.phone_number,
         u.role_id,
+        u.profile_pic,
         r.name AS role_name,
         u.created_at,
         GROUP_CONCAT(p.project_name ORDER BY p.id) AS accessed_projects_name
@@ -70,6 +73,7 @@ const User = {
         JOIN roles r ON u.role_id = r.id
         LEFT JOIN user_projects up ON u.id = up.user_id
         LEFT JOIN projects p ON up.project_id = p.id
+        WHERE u.role_id != 1
     `;
 
     let params = [];
@@ -78,7 +82,7 @@ const User = {
       params.push(roleId);
     }
 
-    query += " GROUP BY u.id";
+    query += " GROUP BY u.id ORDER BY u.id DESC";
 
     const [rows] = await db.query(query, params);
     return rows;
