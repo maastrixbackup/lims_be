@@ -26,7 +26,7 @@ const usersList = async (req, res) => {
           }`
         : null,
       created_at: user.created_at,
-      accessed_projects_name: user.accessed_projects_name,
+      accessed_projects: user.accessed_projects_name,
     }));
 
     return res.status(200).json({
