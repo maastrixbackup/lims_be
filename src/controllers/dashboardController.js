@@ -3,6 +3,10 @@ const Village = require("../models/villageModel");
 const Plot = require("../models/plotModel");
 const Log = require("../models/logModel");
 
+const dayjs = require("dayjs");
+const relativeTime = require("dayjs/plugin/relativeTime");
+dayjs.extend(relativeTime);
+
 const getDashboardData = async (req, res) => {
   try {
     const [projectsCount, villagesCount, plotsCount] = await Promise.all([
@@ -14,6 +18,11 @@ const getDashboardData = async (req, res) => {
     const recentProjects = await Project.getRecentProjects(3);
     const recentActivity = await Log.getRecentActivity(3);
 
+    const formattedActivity = recentActivity.map((ra) => ({
+      ...ra,
+      created_at: dayjs(ra.created_at).fromNow(),
+    }));
+
     const dashboardData = {
       projects: projectsCount,
       villages: villagesCount,
@@ -24,7 +33,7 @@ const getDashboardData = async (req, res) => {
       la_status: 20,
       rr_status: 34,
       recent_projects: recentProjects,
-      recent_activity: recentActivity,
+      recent_activity: formattedActivity,
     };
 
     return res.status(200).json({
