@@ -54,6 +54,11 @@ const Village = {
   async delete(id) {
     await db.query("DELETE FROM villages WHERE id = ?", [id]);
   },
+
+  async countAll() {
+    const [rows] = await db.query("SELECT COUNT(*) AS total FROM villages");
+    return rows[0].total;
+  },
 };
 
 module.exports = Village;

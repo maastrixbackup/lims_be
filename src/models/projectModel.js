@@ -1,4 +1,5 @@
 const db = require("../config/db");
+const { countAll } = require("./logModel");
 
 const Project = {
   async create(project_name, status = 0) {
@@ -37,6 +38,29 @@ const Project = {
 
   async delete(id) {
     await db.query("DELETE FROM projects WHERE id = ?", [id]);
+  },
+
+  async countAll() {
+    const [rows] = await db.query("SELECT COUNT(*) AS total FROM projects");
+    return rows[0].total;
+  },
+
+  async getRecentProjects(limit = 3) {
+    const [rows] = await db.query(
+      "SELECT id, project_name, status FROM projects ORDER BY created_at DESC LIMIT ?",
+      [limit]
+    );
+
+    const statusMap = {
+      0: "Pending",
+      1: "Active",
+      2: "Closed",
+    };
+
+    return rows.map((project) => ({
+      ...project,
+      status_text: statusMap[project.status],
+    }));
   },
 };
 
