@@ -45,6 +45,14 @@ const Log = {
     const [rows] = await db.query(`SELECT COUNT(*) AS total FROM logs`);
     return rows[0].total;
   },
+
+  async getRecentActivity(limit = 3) {
+    const [rows] = await db.query(
+      "SELECT message,created_at FROM logs ORDER BY created_at DESC LIMIT ?",
+      [limit]
+    );
+    return rows;
+  },
 };
 
 module.exports = Log;
