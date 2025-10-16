@@ -10,10 +10,19 @@ const villageRoutes = require("./routes/villageRoutes");
 const khataRoutes = require("./routes/khataRoutes");
 const dashboardRoutes = require("./routes/dashboardRoutes");
 const authMiddleware = require("./middleware/authMiddleware");
+const cors = require("cors");
 
 const app = express();
 const path = require("path");
 app.use(express.json());
+
+app.use(
+  cors({
+    origin: "http://localhost:5173",
+    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    credentials: true,
+  })
+);
 
 // Serve static files from uploads folder
 app.use("/uploads", express.static(path.join(__dirname, "..", "uploads")));
