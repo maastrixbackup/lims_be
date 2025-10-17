@@ -4,7 +4,9 @@ const Plot = require("../models/plotModel");
 const uploadPlots = async (req, res) => {
   try {
     if (!req.file) {
-      return res.status(400).json({ success: false, message: "File is required" });
+      return res
+        .status(400)
+        .json({ success: false, message: "File is required" });
     }
 
     // Read Excel file
@@ -18,11 +20,13 @@ const uploadPlots = async (req, res) => {
         .json({ success: false, message: "Excel file is empty" });
     }
 
-    await Plot.bulkInsert(data);
+    const insertedCount = await Plot.bulkInsert(data);
 
     return res.status(201).json({
       success: true,
-      message: `${data.length} plots inserted successfully`,
+      message: insertedCount
+        ? `${insertedCount} plots inserted successfully`
+        : "No new plots inserted",
     });
   } catch (error) {
     console.error("Upload Plots Error:", error);

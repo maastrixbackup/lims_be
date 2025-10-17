@@ -15,6 +15,18 @@ const Project = {
     return rows;
   },
 
+  async findByUserId(userId) {
+    const [rows] = await db.query(
+      `SELECT p.*
+       FROM projects p
+       JOIN user_projects up ON up.project_id = p.id
+       WHERE up.user_id = ?
+       ORDER BY p.id DESC`,
+      [userId]
+    );
+    return rows;
+  },
+
   async findById(id) {
     const [rows] = await db.query("SELECT * FROM projects WHERE id = ?", [id]);
     return rows[0];

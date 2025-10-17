@@ -57,7 +57,15 @@ const createProject = async (req, res) => {
 
 const projectList = async (req, res) => {
   try {
-    const projects = await Project.findAll();
+    // const projects = await Project.findAll();
+    let projects;
+    if (req.user.role_id === 1) {
+      // Admin can see all projects
+      projects = await Project.findAll();
+    } else {
+      // Others sees only their assigned projects
+      projects = await Project.findByUserId(req.user.id);
+    }
 
     const statusMap = { 0: "Pending", 1: "Active", 2: "Closed" };
     const formattedProjects = projects.map((project) => ({
