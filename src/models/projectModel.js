@@ -15,6 +15,13 @@ const Project = {
     return rows;
   },
 
+  async findActiveProjects() {
+    const [rows] = await db.query(
+      "SELECT project_name,status FROM projects WHERE status = 1 ORDER BY project_name ASC"
+    );
+    return rows;
+  },
+
   async findByUserId(userId) {
     const [rows] = await db.query(
       `SELECT p.*
