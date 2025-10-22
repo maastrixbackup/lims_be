@@ -87,6 +87,24 @@ const projectList = async (req, res) => {
   }
 };
 
+const getActiveProjects = async (req, res) => {
+  try {
+    const projects = await Project.findActiveProjects();
+
+    return res.status(200).json({
+      success: true,
+      message: "Project fetched successfully",
+      projects: projects,
+    });
+  } catch (err) {
+    console.error("Fetch projects error:", err);
+    return res.status(500).json({
+      success: false,
+      message: "Server error",
+    });
+  }
+};
+
 const updateProject = async (req, res) => {
   const userId = req.user.id;
   const safeRequestPayload = {
@@ -202,4 +220,10 @@ const deleteProject = async (req, res) => {
   }
 };
 
-module.exports = { createProject, projectList, updateProject, deleteProject };
+module.exports = {
+  createProject,
+  projectList,
+  updateProject,
+  deleteProject,
+  getActiveProjects,
+};
