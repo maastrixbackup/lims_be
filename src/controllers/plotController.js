@@ -80,36 +80,4 @@ const plotList = async (req, res) => {
   }
 };
 
-// const listPlots = async (req, res) => {
-//   try {
-//     let { page = 1, limit = 10 } = req.query;
-//     page = parseInt(page);
-//     limit = parseInt(limit);
-
-//     const offset = (page - 1) * limit;
-
-//     // Fetch plots and total count
-//     const [plots, total] = await Promise.all([
-//       Plot.getAll(limit, offset),
-//       Plot.countAll(),
-//     ]);
-
-//     return res.status(200).json({
-//       success: true,
-//       message: "Plots fetched successfully",
-//       page,
-//       limit,
-//       total,
-//       totalPages: Math.ceil(total / limit),
-//       plots,
-//     });
-//   } catch (error) {
-//     console.error("List Plots Error:", error);
-//     return res.status(500).json({
-//       success: false,
-//       message: "Server error",
-//     });
-//   }
-// };
-
 module.exports = { uploadPlots, plotList };
