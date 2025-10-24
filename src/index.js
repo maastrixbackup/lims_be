@@ -33,7 +33,7 @@ app.use("/api/user", authMiddleware, userRoutes);
 app.use("/api/role", authMiddleware, roleRoutes);
 app.use("/api/project", authMiddleware, projectRoutes);
 app.use("/api/log", authMiddleware, logRoutes);
-app.use("/api/plots", plotRoutes);
+app.use("/api/plots", authMiddleware, plotRoutes);
 app.use("/api/village", authMiddleware, villageRoutes);
 app.use("/api/khata", authMiddleware, khataRoutes);
 app.use("/api", authMiddleware, dashboardRoutes);

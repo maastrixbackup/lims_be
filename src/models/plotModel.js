@@ -3,27 +3,154 @@ const db = require("../config/db");
 const Plot = {
   async bulkInsert(plots) {
     if (!plots || plots.length === 0) return;
+
     const values = plots.map((plot) => [
-      plot.plot_number || null,
-      plot.owner_name || null,
-      plot.area || null,
-      plot.location || null,
-      plot.price || null,
+      plot["SES Survey No."] || null,
+      plot["LA Case File No."] || null,
+      plot["Date of Award"] || null,
+      plot["LO1-Name of Recorded Tenant (RT)"] || null,
+      plot["LO2-Name of Present Tenant(s)"] || null,
+      plot["Present Address"] || null,
+      plot["Displaced/Affected Person"] || null,
+      plot["Name of Village"] || null,
+      plot["Name of the Tahasil"] || null,
+      plot["Name of the R.I. Circle"] || null,
+      plot["Thana No."] || null,
+      plot["Khata No."] || null,
+      plot["Plot No."] || null,
+      plot["Kissam of the Land"] || null,
+      plot["LO12-Category of Land"] || null,
+      plot["LO13-Remarks"] || null,
+      plot["LA1-Land Area (Total Area in Acres)"] || null,
+      plot["LA2-Land Area (Total Area in Ha.)"] || null,
+      plot["Land Area (Total Acquired Area in Acres)"] || null,
+      plot["Land Area (Total Acquired Area in Ha.)"] || null,
+      plot["Market Value fixed U/S.26 of RFCTLARR Act 2013 (Per Acre)"] || null,
+      plot["Basic Land value"] || null,
+      plot["Land value  with multiplication factor (Values from 1 to 2)"] ||
+        null,
+      plot["No. of Trees"] || null,
+      plot["Total Value of Trees "] || null,
+      plot["No. of House"] || null,
+      plot["Value of Structure (house)"] || null,
+      plot["Detail of Structures other than House"] || null,
+      plot["Value of structures other than house"] || null,
+      plot["Total Value  (Land-22 + Tree-24 + House-26 + Structures-28)"] ||
+        null,
+      plot["Solatium @ of (100%)"] || null,
+      plot["12% additional compensation on market value of land area"] || null,
+      plot["Total Compensation Amount"] || null,
+      plot[
+        "LA18-Apportionment Amount of the Award for the Individual Family Member"
+      ] || null,
+      plot["LA19-Priority/Urgency"] || null,
+      plot["LA20-Land Use Plan"] || null,
+      plot["LA21-Remarks"] || null,
+      plot["BK01-Bank Account No."] || null,
+      plot["BK02-Name of the Bank"] || null,
+      plot["BK03-Name of the Branch with IFSC Code"] || null,
+      plot["PD01-Aadhaar No."] || null,
+      plot["PAN No."] || null,
+      plot["Age"] || null,
+      plot["Caste"] || null,
+      plot["Marital Status"] || null,
+      plot["Education"] || null,
+      plot["Occupation"] || null,
+      plot["Annual Income"] || null,
+      plot["PD09- Skill Acquired"] || null,
+      plot["PD10-Affidavit with subject details (if any)"] || null,
+      plot["FD01-No. of Family Members (Major Male)"] || null,
+      plot["No. of Family Members (Major Female)"] || null,
+      plot["No. of Family Members (Minor Male)"] || null,
+      plot["No. of Family Members (Minor Female)"] || null,
+      plot["No. of Family Members (Major Transgender)"] || null,
+      plot["No. of Family Members (Minor Transgender)"] || null,
+      plot["No. of Persons with Disability"] || null,
+      plot["Family with Orphan Members (Y/N)"] || null,
+      plot["FD09-Legal Heir Certificate No. (if any)"] || null,
+      plot["LG01-Land Case - No. (Number)"] || null,
+      plot["Land Case - Date (Date)"] || null,
+      plot["Land Case Type"] || null,
+      plot["Land case - Status"] || null,
+      plot["LG05-Land Case - Action"] || null,
+      plot["RR Assistance (Rehab) - Employment in the Project"] || null,
+      plot["RR Assistance (Rehab) - Cash in lieu of Employment"] || null,
+      plot["RR Assistance (Rehab) - Training for Skill Upgradation"] || null,
+      plot["RR Assistance (Rehab) - Assistance for Self Employment"] || null,
+      plot[
+        "RR Assistance (Rehab) - Special Allowance to STs for loss of NTFP"
+      ] || null,
+      plot[
+        "RR Assistance (Resettle) - Homested Land Alloted/Self Relocation"
+      ] || null,
+      plot["RR Assistance (Resettle) - House Building Assistance"] || null,
+      plot[
+        "RR Assistance (Resettle) - Constructed by Project Authority/Self"
+      ] || null,
+      plot["RR Assistance (Resettle) - Assistance for Transit Shed"] || null,
+      plot["RR Assistance (Resettle) - Transportation Allowance"] || null,
+      plot["RR Assistance (Resettle) - Maintenance Allowance"] || null,
+      plot[
+        "RR Assistance (Other) - Special Allowance for Multiple Displacement"
+      ] || null,
+      plot["RR Assistance (Other) - Ex-Gratia (if any)"] || null,
+      plot["RR Assistance (Other) - Other Benefits (if any)"] || null,
+      plot["GR01-Grievance No. "] || null,
+      plot["Grievance  Date"] || null,
+      plot["Grievance - Subject Matter"] || null,
+      plot["Grievance - Present Status"] || null,
+      plot["GR05-Grievance - Action taken"] || null,
+      plot["TR01-Tribunal (Y/N)"] || null,
+      plot["Tribunal - Date of Deposit"] || null,
+      plot["TR03-Tribunal - Amount Deposited"] || null,
+      plot["GV01-Premium"] || null,
+      plot["GV02-Ground Rent"] || null,
+      plot["GV03-Cess"] || null,
+      plot["GV04-Incidental Charges"] || null,
+      plot["GV05-Total"] || null,
+      plot["Abatement"] || null,
     ]);
 
-    // const values = plots.map((plot) => [
-    //   plot["Name of the Branch with IFSC Code"] || null,
-    //   plot["Legal Heir Certificate No. (if any)"] || null,
-    //   plot["Cases if any Against the Plots"] || null,
-    // ]);
-
     const [result] = await db.query(
-      `INSERT IGNORE INTO plots (plot_number, owner_name, area, location, price) VALUES ?`,
+      `INSERT IGNORE INTO plots (ses_survey_no, la_case_file_no, date_of_award, name_of_recorded_tenant, name_of_present_tenant, present_address, displaced_affected_person, village_name, tahasil_name, ri_circle_name, thana_no, khata_no, plot_no, kissam_of_land, land_category, lo13_remarks, land_area_total_acres, land_area_total_hectares, land_area_acquired_acres, land_area_acquired_hectares, market_value_per_acre, basic_land_value, land_value_with_mf, no_of_trees, total_value_of_trees, no_of_house, value_of_house, details_of_other_structures, value_of_other_structures, total_value, solatium_100, additional_12_percent, total_compensation, apportionment_amount, priority_urgency, land_use_plan, la21_remarks, bank_account_no, bank_name, branch_ifsc, aadhaar_no, pan_no, age, caste, marital_status, education, occupation, annual_income, skill_acquired, affidavit_details, family_major_male, family_major_female, family_minor_male, family_minor_female, family_major_transgender, family_minor_transgender, persons_with_disability, family_with_orphan_members, legal_heir_certificate_no, land_case_no, land_case_date, land_case_type, land_case_status, land_case_action, rr_employment, rr_cash_in_lieu, rr_training_skill_upgradation, rr_self_employment, rr_special_allowance_st_ntfp, rr_homestead_allotment, rr_house_building_assistance, rr_constructed_by, rr_transit_shed, rr_transport_allowance, rr_maintenance_allowance, rr_multiple_displacement_allowance, rr_exgratia, rr_other_benefits, grievance_no, grievance_date, grievance_subject, grievance_status, grievance_action, tribunal, tribunal_deposit_date, tribunal_amount, premium, ground_rent, cess, incidental_charges, total, abatement ) VALUES ?`,
       [values]
     );
+
+    // Fetch inserted rows (only the ones that actually went in)
+    // const insertedPlotNumbers = plots
+    //   .map((p) => p["SES Survey No."])
+    //   .filter(Boolean);
+
+    // const [rows] = await db.query(
+    //   `SELECT * FROM plots WHERE ses_survey_no IN (?) LIMIT ?`,
+    //   [insertedPlotNumbers, result.affectedRows]
+    // );
+    // return rows;
+
     // Return number of actually inserted rows
     return result.affectedRows || 0;
   },
+
+  async getAllPlot(limit = 10, offset = 0) {
+    const [rows] = await db.query(
+      `SELECT * FROM plots
+       ORDER BY id DESC
+       LIMIT ? OFFSET ?`,
+      [limit, offset]
+    );
+    return rows;
+  },
+  // async getAll(limit = 10, offset = 0) {
+  //   const [rows] = await db.query(
+  //     `SELECT id, ses_survey_no, la_case_file_no, date_of_award, name_of_recorded_tenant, name_of_present_tenant,
+  //             village_name, tahasil_name, ri_circle_name, plot_no, land_category, premium, total, abatement, created_at
+  //      FROM plots
+  //      ORDER BY id DESC
+  //      LIMIT ? OFFSET ?`,
+  //     [limit, offset]
+  //   );
+  //   return rows;
+  // },
 
   async countAll() {
     const [rows] = await db.query("SELECT COUNT(*) AS total FROM plots");
