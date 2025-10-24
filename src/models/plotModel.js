@@ -140,17 +140,6 @@ const Plot = {
     );
     return rows;
   },
-  // async getAll(limit = 10, offset = 0) {
-  //   const [rows] = await db.query(
-  //     `SELECT id, ses_survey_no, la_case_file_no, date_of_award, name_of_recorded_tenant, name_of_present_tenant,
-  //             village_name, tahasil_name, ri_circle_name, plot_no, land_category, premium, total, abatement, created_at
-  //      FROM plots
-  //      ORDER BY id DESC
-  //      LIMIT ? OFFSET ?`,
-  //     [limit, offset]
-  //   );
-  //   return rows;
-  // },
 
   async countAll() {
     const [rows] = await db.query("SELECT COUNT(*) AS total FROM plots");
