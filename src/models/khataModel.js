@@ -47,6 +47,22 @@ const Khata = {
   async delete(id) {
     await db.query("DELETE FROM khatas WHERE ID = ?", [id]);
   },
+
+  async uploadKhataDocument(khata_id, file_name) {
+    const [result] = await db.query(
+      "INSERT INTO khata_documents(khata_id, file_name) VALUES (?,?)",
+      [khata_id, file_name]
+    );
+    return result;
+  },
+
+  async getFilesByKhataId(khata_id) {
+    const [rows] = await db.query(
+      "SELECT * FROM khata_documents WHERE khata_id = ? ORDER BY created_at DESC",
+      [khata_id]
+    );
+    return rows;
+  },
 };
 
 module.exports = Khata;

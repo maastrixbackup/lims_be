@@ -23,12 +23,12 @@ const excelFileFilter = (req, file, cb) => {
   }
 };
 
-const uploadExcel = multer({
+const uploadPlotExcel = multer({
   storage: excelStorage,
   fileFilter: excelFileFilter,
 });
 
-//Profile pic
+//Upload profile pic
 const profileStorage = multer.diskStorage({
   destination: (req, file, cb) => {
     cb(null, "uploads/profile_pics");
@@ -56,4 +56,34 @@ const uploadProfilePic = multer({
   limits: { fileSize: 2 * 1024 * 1024 }, // 2MB limit
 });
 
-module.exports = { uploadExcel, uploadProfilePic };
+//Upload khata
+const KhataStorage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    cb(null, "uploads/khata");
+  },
+  filename: (req, file, cb) => {
+    const uniqueName = Date.now() + "_" + Math.round(Math.random() * 1e9);
+    cb(null, uniqueName + path.extname(file.originalname));
+  },
+});
+
+const khataFileFilter = (req, file, cb) => {
+  const allowedMimeTypes = [
+    "application/pdf",
+    "application/vnd.ms-excel",
+    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+  ];
+
+  if (allowedMimeTypes.includes(file.mimetype)) {
+    cb(null, true);
+  } else {
+    cb(new Error("Only Excel or PDF files are allowed for Khata"), false);
+  }
+};
+
+const uploadKhata = multer({
+  storage: KhataStorage,
+  fileFilter: khataFileFilter,
+});
+
+module.exports = { uploadPlotExcel, uploadProfilePic, uploadKhata };
