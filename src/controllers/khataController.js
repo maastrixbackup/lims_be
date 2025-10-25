@@ -147,4 +147,80 @@ const deleteKhata = async (req, res) => {
   }
 };
 
-module.exports = { addKhata, khataList, updateKhata, deleteKhata };
+const uploadKhataDoc = async (req, res) => {
+  const userId = req.user.id;
+  const safeRequestPayload = req.body;
+  try {
+    const { khata_id } = req.body;
+    if (!khata_id) {
+      return res.status(400).json({
+        success: false,
+        message: "Khata id is required",
+      });
+    }
+
+    if (!req.file) {
+      return res.status(400).json({
+        success: false,
+        message: "File is required",
+      });
+    }
+    const uploadedDocument = await Khata.uploadKhataDocument(
+      khata_id,
+      req.file.filename
+    );
+
+    await logAction(
+      userId,
+      "upload khata document",
+      "success",
+      "Khata uploaded successfully",
+      safeRequestPayload,
+      uploadedDocument
+    );
+    return res.status(200).json({
+      success: true,
+      message: "Khata document uploaded successfully",
+    });
+  } catch (err) {
+    console.error("Upload Khata Error:", err);
+    await logAction(
+      userId,
+      "upload khata document",
+      "failure",
+      err.message,
+      safeRequestPayload,
+      null
+    );
+
+    return res.status(500).json({
+      success: false,
+      message: "Server error",
+    });
+  }
+};
+
+const getKhataFilesByKhataId = async (req, res) => {
+  try {
+    const khata_id = req.params.id;
+    const documents = await Khata.getFilesByKhataId(khata_id);
+    res.status(200).json({
+      success: true,
+      message: "Khata documents fetched successfully.",
+      count: documents.length,
+      documents,
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ success: false, message: err.message });
+  }
+};
+
+module.exports = {
+  addKhata,
+  khataList,
+  updateKhata,
+  deleteKhata,
+  uploadKhataDoc,
+  getKhataFilesByKhataId,
+};
