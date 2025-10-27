@@ -204,11 +204,17 @@ const getKhataFilesByKhataId = async (req, res) => {
   try {
     const khata_id = req.params.id;
     const documents = await Khata.getFilesByKhataId(khata_id);
+    const baseUrl = `${req.protocol}://${req.get("host")}`;
+
+    const documentsWithUrl = documents.map((doc) => ({
+      ...doc,
+      url: `${baseUrl}/uploads/khata/${doc.file_name}`,
+    }));
     res.status(200).json({
       success: true,
       message: "Khata documents fetched successfully.",
-      count: documents.length,
-      documents,
+      count: documentsWithUrl.length,
+      documentsWithUrl,
     });
   } catch (err) {
     console.error(err);
