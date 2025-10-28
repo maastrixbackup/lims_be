@@ -1,7 +1,9 @@
 const Khata = require("../models/khataModel");
 const logAction = require("../utils/logger");
+const fs = require("fs");
+const path = require("path");
 
-const addKhata = async (req, res) => {
+async function addKhata(req, res) {
   const userId = req.user.id;
   const { project_id, village_id, khata_no } = req.body;
   const safeRequestPayload = req.body;
@@ -39,7 +41,7 @@ const addKhata = async (req, res) => {
     console.error("Create Khata Error:", err);
     return res.status(500).json({ success: false, message: "Server error" });
   }
-};
+}
 
 const khataList = async (req, res) => {
   try {
@@ -222,6 +224,62 @@ const getKhataFilesByKhataId = async (req, res) => {
   }
 };
 
+const deleteKhataFileById = async (req, res) => {
+  const userId = req.user.id;
+  const file_id = req.params.id;
+  try {
+    const document = await Khata.findFileById(file_id);
+    if (!document) {
+      return res.status(404).json({
+        success: false,
+        message: "Document not found.",
+      });
+    }
+
+    const deleted = await Khata.deleteFileById(file_id);
+    if (!deleted) {
+      return res.status(400).json({
+        success: false,
+        message: "Failed to delete document from database.",
+      });
+    }
+    const filePath = path.join(
+      __dirname,
+      "../../uploads/khata",
+      document.file_name
+    );
+    if (fs.existsSync(filePath)) {
+      fs.unlinkSync(filePath);
+    }
+    await logAction(
+      userId,
+      "delete khata document",
+      "success",
+      "Document deleted successfully",
+      { file_id },
+      deleted
+    );
+    return res.status(200).json({
+      success: true,
+      message: "Document deleted successfully.",
+    });
+  } catch (err) {
+    await logAction(
+      userId,
+      "delete khata document",
+      "failure",
+      err.message,
+      { file_id },
+      null
+    );
+    console.error(err);
+    res.status(500).json({
+      success: false,
+      message: err.message,
+    });
+  }
+};
+
 module.exports = {
   addKhata,
   khataList,
@@ -229,4 +287,5 @@ module.exports = {
   deleteKhata,
   uploadKhataDoc,
   getKhataFilesByKhataId,
+  deleteKhataFileById,
 };
