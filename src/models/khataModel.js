@@ -33,7 +33,8 @@ const Khata = {
 
   async findById(id) {
     const [rows] = await db.query("SELECT * FROM khatas WHERE id = ?", [id]);
-    return rows[0];
+    // return rows[0];
+    return rows[0] || null;
   },
 
   async update(id, project_id, village_id, khata_no) {
@@ -63,6 +64,26 @@ const Khata = {
     );
     return rows;
   },
+
+  async findFileById(id) {
+    const [rows] = await db.query(
+      "SELECT * FROM khata_documents WHERE id = ?",
+      [id]
+    );
+    return rows[0];
+  },
+
+  async deleteFileById(file_id) {
+    const [result] = await db.query(
+      "DELETE FROM khata_documents WHERE id = ?",
+      [file_id]
+    );
+    return result.affectedRows > 0;
+  },
+  // deleteFileById: async (file_id) => {
+  //   const [result] = await db.query("DELETE FROM khata_files WHERE id = ?", [file_id]);
+  //   return result.affectedRows > 0;
+  // },
 };
 
 module.exports = Khata;
