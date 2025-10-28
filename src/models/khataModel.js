@@ -80,10 +80,6 @@ const Khata = {
     );
     return result.affectedRows > 0;
   },
-  // deleteFileById: async (file_id) => {
-  //   const [result] = await db.query("DELETE FROM khata_files WHERE id = ?", [file_id]);
-  //   return result.affectedRows > 0;
-  // },
 };
 
 module.exports = Khata;
