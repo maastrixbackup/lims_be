@@ -22,6 +22,25 @@ const uploadPlots = async (req, res) => {
         .json({ success: false, message: "Excel file is empty" });
     }
 
+    const requiredColumns = [
+      "SES Survey No.",
+      "LA Case File No.",
+      "Date of Award",
+      "LO1-Name of Recorded Tenant (RT)",
+    ];
+
+    const excelColumns = Object.keys(data[0]);
+    const missingColumns = requiredColumns.filter(
+      (col) => !excelColumns.includes(col)
+    );
+
+    if (missingColumns.length > 0) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid Excel format.Missing columns",
+      });
+    }
+
     const insertedPlots = await Plot.bulkInsert(data);
     await logAction(
       userId,
@@ -80,4 +99,42 @@ const plotList = async (req, res) => {
   }
 };
 
-module.exports = { uploadPlots, plotList };
+const createPlot = async (req, res) => {
+  const userId = req.user.id;
+  const safeRequestPayload = req.body;
+  try {
+    if (!safeRequestPayload.ses_survey_no || !safeRequestPayload.plot_no) {
+      return res.status(400).json({
+        success: false,
+        message: "Survey No and Plot No are required",
+      });
+    }
+    const plot = await Plot.create(safeRequestPayload);
+    await logAction(
+      userId,
+      "create plot",
+      "success",
+      "Plot created",
+      safeRequestPayload,
+      plot
+    );
+    return res.status(201).json({
+      success: true,
+      message: "Plot created successfully",
+      plot,
+    });
+  } catch (err) {
+    await logAction(
+      userId,
+      "create plot",
+      "failure",
+      err.message,
+      safeRequestPayload,
+      null
+    );
+    console.error(err);
+    res.status(500).json({ success: false, message: err.message });
+  }
+};
+
+module.exports = { uploadPlots, plotList, createPlot };
