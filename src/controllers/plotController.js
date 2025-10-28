@@ -137,4 +137,43 @@ const createPlot = async (req, res) => {
   }
 };
 
-module.exports = { uploadPlots, plotList, createPlot };
+const updatePlot = async (req, res) => {
+  const userId = req.user.id;
+  const id = req.params.id;
+  const safeRequestPayload = req.body;
+  try {
+    const existing = await Plot.findById(id);
+    if (!existing) {
+      return res.status(404).json({
+        success: false,
+        message: "Plot not found",
+      });
+    }
+    const updated = await Plot.update(id, safeRequestPayload);
+    await logAction(
+      userId,
+      "update plot",
+      "success",
+      "Plot updated",
+      safeRequestPayload,
+      updated
+    );
+    res.status(200).json({
+      success: true,
+      message: "Plot updated successfully",
+      plot: updated,
+    });
+  } catch (err) {
+    await logAction(
+      userId,
+      "update plot",
+      "failure",
+      err.message,
+      safeRequestPayload,
+      null
+    );
+    res.status(500).json({ success: false, message: err.message });
+  }
+};
+
+module.exports = { uploadPlots, plotList, createPlot, updatePlot };
