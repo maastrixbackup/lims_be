@@ -143,8 +143,69 @@ const Plot = {
       ];
     });
 
+    // const [result] = await db.query(
+    //   `INSERT IGNORE INTO plots (ses_survey_no, la_case_file_no, date_of_award, name_of_recorded_tenant, name_of_present_tenant, present_address, displaced_affected_person, village_name, tahasil_name, ri_circle_name, thana_no, khata_no, plot_no, kissam_of_land, land_category, lo13_remarks, land_area_total_acres, land_area_total_hectares, land_area_acquired_acres, land_area_acquired_hectares, market_value_per_acre, basic_land_value, land_value_with_mf, no_of_trees, total_value_of_trees, no_of_house, value_of_house, details_of_other_structures, value_of_other_structures, total_value, solatium_100, additional_12_percent, total_compensation, apportionment_amount, priority_urgency, land_use_plan, la21_remarks, bank_account_no, bank_name, branch_ifsc, aadhaar_no, pan_no, age, caste, marital_status, education, occupation, annual_income, skill_acquired, affidavit_details, family_major_male, family_major_female, family_minor_male, family_minor_female, family_major_transgender, family_minor_transgender, persons_with_disability, family_with_orphan_members, legal_heir_certificate_no, land_case_no, land_case_date, land_case_type, land_case_status, land_case_action, rr_employment, rr_cash_in_lieu, rr_training_skill_upgradation, rr_self_employment, rr_special_allowance_st_ntfp, rr_homestead_allotment, rr_house_building_assistance, rr_constructed_by, rr_transit_shed, rr_transport_allowance, rr_maintenance_allowance, rr_multiple_displacement_allowance, rr_exgratia, rr_other_benefits, grievance_no, grievance_date, grievance_subject, grievance_status, grievance_action, tribunal, tribunal_deposit_date, tribunal_amount, premium, ground_rent, cess, incidental_charges, total, abatement ) VALUES ?`,
+    //   [values]
+    // );
+
     const [result] = await db.query(
-      `INSERT IGNORE INTO plots (ses_survey_no, la_case_file_no, date_of_award, name_of_recorded_tenant, name_of_present_tenant, present_address, displaced_affected_person, village_name, tahasil_name, ri_circle_name, thana_no, khata_no, plot_no, kissam_of_land, land_category, lo13_remarks, land_area_total_acres, land_area_total_hectares, land_area_acquired_acres, land_area_acquired_hectares, market_value_per_acre, basic_land_value, land_value_with_mf, no_of_trees, total_value_of_trees, no_of_house, value_of_house, details_of_other_structures, value_of_other_structures, total_value, solatium_100, additional_12_percent, total_compensation, apportionment_amount, priority_urgency, land_use_plan, la21_remarks, bank_account_no, bank_name, branch_ifsc, aadhaar_no, pan_no, age, caste, marital_status, education, occupation, annual_income, skill_acquired, affidavit_details, family_major_male, family_major_female, family_minor_male, family_minor_female, family_major_transgender, family_minor_transgender, persons_with_disability, family_with_orphan_members, legal_heir_certificate_no, land_case_no, land_case_date, land_case_type, land_case_status, land_case_action, rr_employment, rr_cash_in_lieu, rr_training_skill_upgradation, rr_self_employment, rr_special_allowance_st_ntfp, rr_homestead_allotment, rr_house_building_assistance, rr_constructed_by, rr_transit_shed, rr_transport_allowance, rr_maintenance_allowance, rr_multiple_displacement_allowance, rr_exgratia, rr_other_benefits, grievance_no, grievance_date, grievance_subject, grievance_status, grievance_action, tribunal, tribunal_deposit_date, tribunal_amount, premium, ground_rent, cess, incidental_charges, total, abatement ) VALUES ?`,
+      `INSERT INTO plots (
+    ses_survey_no, la_case_file_no, date_of_award, name_of_recorded_tenant,
+    name_of_present_tenant, present_address, displaced_affected_person,
+    village_name, tahasil_name, ri_circle_name, thana_no, khata_no, plot_no,
+    kissam_of_land, land_category, lo13_remarks, land_area_total_acres,
+    land_area_total_hectares, land_area_acquired_acres, land_area_acquired_hectares,
+    market_value_per_acre, basic_land_value, land_value_with_mf, no_of_trees,
+    total_value_of_trees, no_of_house, value_of_house, details_of_other_structures,
+    value_of_other_structures, total_value, solatium_100, additional_12_percent,
+    total_compensation, apportionment_amount, priority_urgency, land_use_plan,
+    la21_remarks, bank_account_no, bank_name, branch_ifsc, aadhaar_no, pan_no,
+    age, caste, marital_status, education, occupation, annual_income, skill_acquired,
+    affidavit_details, family_major_male, family_major_female, family_minor_male,
+    family_minor_female, family_major_transgender, family_minor_transgender,
+    persons_with_disability, family_with_orphan_members, legal_heir_certificate_no,
+    land_case_no, land_case_date, land_case_type, land_case_status, land_case_action,
+    rr_employment, rr_cash_in_lieu, rr_training_skill_upgradation, rr_self_employment,
+    rr_special_allowance_st_ntfp, rr_homestead_allotment, rr_house_building_assistance,
+    rr_constructed_by, rr_transit_shed, rr_transport_allowance, rr_maintenance_allowance,
+    rr_multiple_displacement_allowance, rr_exgratia, rr_other_benefits, grievance_no,
+    grievance_date, grievance_subject, grievance_status, grievance_action, tribunal,
+    tribunal_deposit_date, tribunal_amount, premium, ground_rent, cess,
+    incidental_charges, total, abatement
+  )
+  VALUES ?
+  ON DUPLICATE KEY UPDATE
+    ses_survey_no = VALUES(ses_survey_no),
+    date_of_award = VALUES(date_of_award),
+    name_of_recorded_tenant = VALUES(name_of_recorded_tenant),
+    name_of_present_tenant = VALUES(name_of_present_tenant),
+    present_address = VALUES(present_address),
+    displaced_affected_person = VALUES(displaced_affected_person),
+    village_name = VALUES(village_name),
+    tahasil_name = VALUES(tahasil_name),
+    ri_circle_name = VALUES(ri_circle_name),
+    thana_no = VALUES(thana_no),
+    khata_no = VALUES(khata_no),
+    plot_no = VALUES(plot_no),
+    kissam_of_land = VALUES(kissam_of_land),
+    land_category = VALUES(land_category),
+    lo13_remarks = VALUES(lo13_remarks),
+    land_area_total_acres = VALUES(land_area_total_acres),
+    land_area_total_hectares = VALUES(land_area_total_hectares),
+    land_area_acquired_acres = VALUES(land_area_acquired_acres),
+    land_area_acquired_hectares = VALUES(land_area_acquired_hectares),
+    market_value_per_acre = VALUES(market_value_per_acre),
+    basic_land_value = VALUES(basic_land_value),
+    land_value_with_mf = VALUES(land_value_with_mf),
+    no_of_trees = VALUES(no_of_trees),
+    total_value_of_trees = VALUES(total_value_of_trees),
+    no_of_house = VALUES(no_of_house),
+    value_of_house = VALUES(value_of_house),
+    total_value = VALUES(total_value),
+    solatium_100 = VALUES(solatium_100),
+    additional_12_percent = VALUES(additional_12_percent),
+    total_compensation = VALUES(total_compensation),
+    updated_at = CURRENT_TIMESTAMP`,
       [values]
     );
 
