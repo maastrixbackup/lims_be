@@ -176,4 +176,40 @@ const updatePlot = async (req, res) => {
   }
 };
 
-module.exports = { uploadPlots, plotList, createPlot, updatePlot };
+const deletePlot = async (req, res) => {
+  const userId = req.user.id;
+  const plotId = req.params.id;
+
+  try {
+    const deleted = await Plot.plotDelete(plotId);
+    if (!deleted) {
+      return res
+        .status(404)
+        .json({ success: false, message: "Plot not found" });
+    }
+    await logAction(
+      userId,
+      "delete plot",
+      "success",
+      "Plot soft deleted",
+      { plotId },
+      null
+    );
+
+    return res
+      .status(200)
+      .json({ success: true, message: "Plot soft deleted successfully" });
+  } catch (err) {
+    await logAction(
+      userId,
+      "delete plot",
+      "failure",
+      err.message,
+      { plotId },
+      null
+    );
+    res.status(500).json({ success: false, message: err.message });
+  }
+};
+
+module.exports = { uploadPlots, plotList, createPlot, updatePlot, deletePlot };
