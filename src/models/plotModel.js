@@ -166,6 +166,7 @@ const Plot = {
   async getAllPlot(limit = 10, offset = 0) {
     const [rows] = await db.query(
       `SELECT * FROM plots
+       WHERE is_deleted = 0
        ORDER BY id DESC
        LIMIT ? OFFSET ?`,
       [limit, offset]
@@ -174,7 +175,9 @@ const Plot = {
   },
 
   async countAll() {
-    const [rows] = await db.query("SELECT COUNT(*) AS total FROM plots");
+    const [rows] = await db.query(
+      "SELECT COUNT(*) AS total FROM plots WHERE is_deleted = 0"
+    );
     return rows[0].total;
   },
 
@@ -379,7 +382,10 @@ const Plot = {
   },
 
   async findById(id) {
-    const [rows] = await db.query(`SELECT * FROM plots WHERE id = ?`, [id]);
+    const [rows] = await db.query(
+      `SELECT * FROM plots WHERE id = ? AND is_deleted = 0`,
+      [id]
+    );
     return rows[0];
   },
 
@@ -575,7 +581,7 @@ const Plot = {
       incidental_charges = ?,
       total = ?,
       abatement = ?
-      WHERE id = ?`,
+      WHERE id = ? AND is_deleted = 0`,
       [
         project_id,
         ses_survey_no,
