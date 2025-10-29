@@ -46,7 +46,7 @@ const uploadPlots = async (req, res) => {
       userId,
       "plot excel upload",
       "success",
-      `${insertedPlots} plots inserted successfully`,
+      "Plots inserted successfully",
       null,
       null
     );
@@ -54,7 +54,7 @@ const uploadPlots = async (req, res) => {
       success: true,
       message:
         insertedPlots > 0
-          ? `${insertedPlots} plots inserted successfully`
+          ? "Plots inserted successfully"
           : "No new plots inserted",
     });
   } catch (err) {
