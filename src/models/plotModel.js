@@ -675,6 +675,14 @@ const Plot = {
     );
     return this.findById(id);
   },
+
+  async plotDelete(id) {
+    const [result] = await db.query(
+      `UPDATE plots SET is_deleted = 1 WHERE id = ? AND is_deleted = 0`,
+      [id]
+    );
+    return result.affectedRows;
+  },
 };
 
 module.exports = Plot;
