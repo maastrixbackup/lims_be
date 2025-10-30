@@ -7,7 +7,9 @@ const excelStorage = multer.diskStorage({
     cb(null, "uploads/excels");
   },
   filename: (req, file, cb) => {
-    cb(null, Date.now() + path.extname(file.originalname));
+    const originalname = file.originalname.replace(/\s+/g, "_");
+    cb(null, originalname);
+    // cb(null, Date.now() + path.extname(file.originalname));
   },
 });
 
@@ -34,8 +36,10 @@ const profileStorage = multer.diskStorage({
     cb(null, "uploads/profile_pics");
   },
   filename: (req, file, cb) => {
-    const uniqueName = Date.now() + "-" + Math.round(Math.random() * 1e9);
-    cb(null, uniqueName + path.extname(file.originalname));
+    const originalname = file.originalname.replace(/\s+/g, "_");
+    cb(null, originalname);
+    // const uniqueName = Date.now() + "-" + Math.round(Math.random() * 1e9);
+    // cb(null, uniqueName + path.extname(file.originalname));
   },
 });
 
@@ -62,8 +66,10 @@ const KhataStorage = multer.diskStorage({
     cb(null, "uploads/khata");
   },
   filename: (req, file, cb) => {
-    const uniqueName = Date.now() + "_" + Math.round(Math.random() * 1e9);
-    cb(null, uniqueName + path.extname(file.originalname));
+    const originalname = file.originalname.replace(/\s+/g, "_");
+    cb(null, originalname);
+    // const uniqueName = Date.now() + "_" + Math.round(Math.random() * 1e9);
+    // cb(null, uniqueName + path.extname(file.originalname));
   },
 });
 
