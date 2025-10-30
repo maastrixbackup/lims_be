@@ -146,7 +146,7 @@ const plotDocumentList = async (req, res) => {
     console.error("Error reading uploads:", err);
     return res.status(500).json({
       success: false,
-      message: "Server error while listing Excel files",
+      message: "Server error while fetching plot Excel files",
     });
   }
 };
