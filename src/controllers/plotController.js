@@ -1,5 +1,8 @@
 const xlsx = require("xlsx");
 const Plot = require("../models/plotModel");
+const path = require("path");
+const fs = require("fs");
+
 const logAction = require("../utils/logger");
 
 const uploadPlots = async (req, res) => {
@@ -99,29 +102,99 @@ const plotList = async (req, res) => {
   }
 };
 
+const plotDocumentList = async (req, res) => {
+  try {
+    const uploadsDir = path.join(process.cwd(), "uploads/excels");
+    if (!fs.existsSync(uploadsDir)) {
+      return res.status(200).json({
+        success: true,
+        message: "Uploads/excels directory not found",
+        files: [],
+      });
+    }
+
+    const files = fs.readdirSync(uploadsDir);
+    const excelFiles = files.filter((f) => f.match(/\.(xls|xlsx)$/i));
+
+    if (excelFiles.length === 0) {
+      return res.status(200).json({
+        success: true,
+        message: "No Excel files found",
+        files: [],
+      });
+    }
+
+    const fileList = excelFiles.map((file) => {
+      const filePath = path.join(uploadsDir, file);
+      const stats = fs.statSync(filePath);
+      return {
+        name: file,
+        size: `${(stats.size / 1024).toFixed(2)} KB`,
+        uploadedAt: stats.mtime,
+        documentUrl: `${req.protocol}://${req.get(
+          "host"
+        )}/uploads/excels/${file}`,
+      };
+    });
+
+    return res.status(200).json({
+      success: true,
+      total: fileList.length,
+      files: fileList,
+    });
+  } catch (err) {
+    console.error("Error reading uploads:", err);
+    return res.status(500).json({
+      success: false,
+      message: "Server error while listing Excel files",
+    });
+  }
+};
+
 const createPlot = async (req, res) => {
   const userId = req.user.id;
   const safeRequestPayload = req.body;
   try {
-    if (!safeRequestPayload.ses_survey_no || !safeRequestPayload.plot_no) {
+    if (!safeRequestPayload.la_case_file_no || !safeRequestPayload.plot_no) {
       return res.status(400).json({
         success: false,
-        message: "Survey No and Plot No are required",
+        message: "Case File No. and Plot No. are required",
       });
     }
-    const plot = await Plot.create(safeRequestPayload);
-    await logAction(
-      userId,
-      "create plot",
-      "success",
-      "Plot created",
-      safeRequestPayload,
-      plot
+
+    const existingPlot = await Plot.findByCaseFileNo(
+      safeRequestPayload.la_case_file_no
     );
+    let plot, message;
+    if (existingPlot) {
+      plot = await Plot.updateByCaseFileNo(
+        safeRequestPayload.la_case_file_no,
+        safeRequestPayload
+      );
+      message = "Plot updated successfully (existing LA Case File No.)";
+      await logAction(
+        userId,
+        "update plot (via create)",
+        "success",
+        message,
+        safeRequestPayload,
+        plot
+      );
+    } else {
+      plot = await Plot.create(safeRequestPayload);
+      message = "Plot created successfully";
+      await logAction(
+        userId,
+        "create plot",
+        "success",
+        message,
+        safeRequestPayload,
+        plot
+      );
+    }
     return res.status(201).json({
       success: true,
-      message: "Plot created successfully",
-      plot,
+      message: message,
     });
   } catch (err) {
     await logAction(
@@ -148,6 +221,17 @@ const updatePlot = async (req, res) => {
         success: false,
         message: "Plot not found",
       });
+    }
+    if (safeRequestPayload.la_case_file_no) {
+      const duplicate = await Plot.findByCaseFileNo(
+        safeRequestPayload.la_case_file_no
+      );
+      if (duplicate && duplicate.id !== Number(id)) {
+        return res.status(400).json({
+          success: false,
+          message: `LA Case File No. '${safeRequestPayload.la_case_file_no}' already exist.`,
+        });
+      }
     }
     const updated = await Plot.update(id, safeRequestPayload);
     await logAction(
@@ -212,4 +296,11 @@ const deletePlot = async (req, res) => {
   }
 };
 
-module.exports = { uploadPlots, plotList, createPlot, updatePlot, deletePlot };
+module.exports = {
+  uploadPlots,
+  plotList,
+  plotDocumentList,
+  createPlot,
+  updatePlot,
+  deletePlot,
+};
