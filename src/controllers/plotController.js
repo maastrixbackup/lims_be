@@ -8,6 +8,13 @@ const logAction = require("../utils/logger");
 const uploadPlots = async (req, res) => {
   const userId = req.user.id;
   try {
+    const { project_id } = req.body;
+    if (!project_id) {
+      return res.status(400).json({
+        success: false,
+        message: "Project ID is required for uploading plots",
+      });
+    }
     if (!req.file) {
       return res
         .status(400)
@@ -44,13 +51,13 @@ const uploadPlots = async (req, res) => {
       });
     }
 
-    const insertedPlots = await Plot.bulkInsert(data);
+    const insertedPlots = await Plot.bulkInsert(data, project_id);
     await logAction(
       userId,
       "plot excel upload",
       "success",
       "Plots inserted successfully",
-      null,
+      { project_id },
       null
     );
     return res.status(201).json({
@@ -155,10 +162,10 @@ const createPlot = async (req, res) => {
   const userId = req.user.id;
   const safeRequestPayload = req.body;
   try {
-    if (!safeRequestPayload.la_case_file_no || !safeRequestPayload.plot_no) {
+    if (!safeRequestPayload.project_id || !safeRequestPayload.la_case_file_no || !safeRequestPayload.plot_no) {
       return res.status(400).json({
         success: false,
-        message: "Case File No. and Plot No. are required",
+        message: "Project id,Case File No. and Plot No. are required",
       });
     }
 
