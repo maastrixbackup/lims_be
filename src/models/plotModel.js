@@ -1,7 +1,7 @@
 const db = require("../config/db");
 
 const Plot = {
-  async bulkInsert(plots) {
+  async bulkInsert(plots, project_id) {
     if (!plots || plots.length === 0) return;
 
     const values = plots.map((plot) => {
@@ -33,6 +33,7 @@ const Plot = {
       }
 
       return [
+        project_id,
         plot["SES Survey No."] || null,
         plot["LA Case File No."] || null,
         formattedDate || null,
@@ -150,7 +151,7 @@ const Plot = {
 
     const [result] = await db.query(
       `INSERT INTO plots (
-    ses_survey_no, la_case_file_no, date_of_award, name_of_recorded_tenant,
+    project_id, ses_survey_no, la_case_file_no, date_of_award, name_of_recorded_tenant,
     name_of_present_tenant, present_address, displaced_affected_person,
     village_name, tahasil_name, ri_circle_name, thana_no, khata_no, plot_no,
     kissam_of_land, land_category, lo13_remarks, land_area_total_acres,
@@ -175,36 +176,99 @@ const Plot = {
   )
   VALUES ?
   ON DUPLICATE KEY UPDATE
+    project_id = VALUES(project_id),
     ses_survey_no = VALUES(ses_survey_no),
+    la_case_file_no = VALUES(la_case_file_no),
     date_of_award = VALUES(date_of_award),
     name_of_recorded_tenant = VALUES(name_of_recorded_tenant),
-    name_of_present_tenant = VALUES(name_of_present_tenant),
-    present_address = VALUES(present_address),
+    name_of_present_tenant = VALUES(name_of_present_tenant), 
+    present_address = VALUES(present_address), 
     displaced_affected_person = VALUES(displaced_affected_person),
-    village_name = VALUES(village_name),
-    tahasil_name = VALUES(tahasil_name),
-    ri_circle_name = VALUES(ri_circle_name),
-    thana_no = VALUES(thana_no),
-    khata_no = VALUES(khata_no),
+    village_name = VALUES(village_name), 
+    tahasil_name = VALUES(tahasil_name), 
+    ri_circle_name = VALUES(ri_circle_name), 
+    thana_no = VALUES(thana_no), 
+    khata_no = VALUES(khata_no), 
     plot_no = VALUES(plot_no),
-    kissam_of_land = VALUES(kissam_of_land),
-    land_category = VALUES(land_category),
-    lo13_remarks = VALUES(lo13_remarks),
+    kissam_of_land = VALUES(kissam_of_land), 
+    land_category = VALUES(land_category), 
+    lo13_remarks = VALUES(lo13_remarks), 
     land_area_total_acres = VALUES(land_area_total_acres),
-    land_area_total_hectares = VALUES(land_area_total_hectares),
-    land_area_acquired_acres = VALUES(land_area_acquired_acres),
+    land_area_total_hectares = VALUES(land_area_total_hectares), 
+    land_area_acquired_acres = VALUES(land_area_acquired_acres), 
     land_area_acquired_hectares = VALUES(land_area_acquired_hectares),
-    market_value_per_acre = VALUES(market_value_per_acre),
-    basic_land_value = VALUES(basic_land_value),
-    land_value_with_mf = VALUES(land_value_with_mf),
+    market_value_per_acre = VALUES(market_value_per_acre), 
+    basic_land_value = VALUES(basic_land_value), 
+    land_value_with_mf = VALUES(land_value_with_mf), 
     no_of_trees = VALUES(no_of_trees),
-    total_value_of_trees = VALUES(total_value_of_trees),
+    total_value_of_trees = VALUES(total_value_of_trees), 
     no_of_house = VALUES(no_of_house),
-    value_of_house = VALUES(value_of_house),
+    value_of_house = VALUES(value_of_house), 
+    details_of_other_structures = VALUES(details_of_other_structures),
+    value_of_other_structures = VALUES(value_of_other_structures), 
     total_value = VALUES(total_value),
-    solatium_100 = VALUES(solatium_100),
+    solatium_100 = VALUES(solatium_100), 
     additional_12_percent = VALUES(additional_12_percent),
-    total_compensation = VALUES(total_compensation),
+    total_compensation = VALUES(total_compensation), 
+    apportionment_amount = VALUES(apportionment_amount), 
+    priority_urgency = VALUES(priority_urgency), 
+    land_use_plan = VALUES(land_use_plan),
+    la21_remarks = VALUES(la21_remarks), 
+    bank_account_no = VALUES(bank_account_no), 
+    bank_name = VALUES(bank_name), 
+    branch_ifsc = VALUES(branch_ifsc), 
+    aadhaar_no = VALUES(aadhaar_no), 
+    pan_no = VALUES(pan_no),
+    age = VALUES(age), 
+    caste = VALUES(caste), 
+    marital_status = VALUES(marital_status), 
+    education = VALUES(education), 
+    occupation = VALUES(occupation), 
+    annual_income = VALUES(annual_income), 
+    skill_acquired = VALUES(skill_acquired),
+    affidavit_details = VALUES(affidavit_details), 
+    family_major_male = VALUES(family_major_male), 
+    family_major_female = VALUES(family_major_female), 
+    family_minor_male = VALUES(family_minor_male),
+    family_minor_female = VALUES(family_minor_female), 
+    family_major_transgender = VALUES(family_major_transgender), 
+    family_minor_transgender = VALUES(family_minor_transgender),
+    persons_with_disability = VALUES(persons_with_disability), 
+    family_with_orphan_members = VALUES(family_with_orphan_members), 
+    legal_heir_certificate_no = VALUES(legal_heir_certificate_no),
+    land_case_no = VALUES(land_case_no),
+    land_case_date = VALUES(land_case_date), 
+    land_case_type = VALUES(land_case_type), 
+    land_case_status = VALUES(land_case_status), 
+    land_case_action = VALUES(land_case_action),
+    rr_employment = VALUES(rr_employment), 
+    rr_cash_in_lieu = VALUES(rr_cash_in_lieu), 
+    rr_training_skill_upgradation = VALUES(rr_training_skill_upgradation), 
+    rr_self_employment = VALUES(rr_self_employment),
+    rr_special_allowance_st_ntfp = VALUES(rr_special_allowance_st_ntfp), 
+    rr_homestead_allotment = VALUES(rr_homestead_allotment), 
+    rr_house_building_assistance = VALUES(rr_house_building_assistance),
+    rr_constructed_by = VALUES(rr_constructed_by), 
+    rr_transit_shed = VALUES(rr_transit_shed), 
+    rr_transport_allowance = VALUES(rr_transport_allowance), 
+    rr_maintenance_allowance = VALUES(rr_maintenance_allowance),
+    rr_multiple_displacement_allowance = VALUES(rr_multiple_displacement_allowance), 
+    rr_exgratia = VALUES(rr_exgratia), 
+    rr_other_benefits = VALUES(rr_other_benefits), 
+    grievance_no = VALUES(grievance_no),
+    grievance_date = VALUES(grievance_date), 
+    grievance_subject = VALUES(grievance_subject), 
+    grievance_status = VALUES(grievance_status), 
+    grievance_action = VALUES(grievance_action), 
+    tribunal = VALUES(tribunal),
+    tribunal_deposit_date = VALUES(tribunal_deposit_date), 
+    tribunal_amount = VALUES(tribunal_amount), 
+    premium = VALUES(premium), 
+    ground_rent = VALUES(ground_rent), 
+    cess = VALUES(cess),
+    incidental_charges = VALUES(incidental_charges), 
+    total = VALUES(total), 
+    abatement = VALUES(abatement),
     updated_at = CURRENT_TIMESTAMP`,
       [values]
     );
@@ -226,10 +290,13 @@ const Plot = {
 
   async getAllPlot(limit = 10, offset = 0) {
     const [rows] = await db.query(
-      `SELECT * FROM plots
-       WHERE is_deleted = 0
-       ORDER BY id DESC
-       LIMIT ? OFFSET ?`,
+      `SELECT p.*,
+      pr.project_name
+      FROM plots p
+      LEFT JOIN projects pr ON p.project_id = pr.id
+       WHERE p.is_deleted = 0
+      ORDER BY p.id DESC
+      LIMIT ? OFFSET ?`,
       [limit, offset]
     );
     return rows;
