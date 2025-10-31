@@ -27,6 +27,7 @@ const uploadPlots = async (req, res) => {
     const data = xlsx.utils.sheet_to_json(workbook.Sheets[sheetName]);
 
     if (!data.length) {
+      fs.unlinkSync(req.file.path);
       return res
         .status(400)
         .json({ success: false, message: "Excel file is empty" });
@@ -45,6 +46,7 @@ const uploadPlots = async (req, res) => {
     );
 
     if (missingColumns.length > 0) {
+      fs.unlinkSync(req.file.path);
       return res.status(400).json({
         success: false,
         message: "Invalid Excel format.Missing columns",
@@ -162,7 +164,11 @@ const createPlot = async (req, res) => {
   const userId = req.user.id;
   const safeRequestPayload = req.body;
   try {
-    if (!safeRequestPayload.project_id || !safeRequestPayload.la_case_file_no || !safeRequestPayload.plot_no) {
+    if (
+      !safeRequestPayload.project_id ||
+      !safeRequestPayload.la_case_file_no ||
+      !safeRequestPayload.plot_no
+    ) {
       return res.status(400).json({
         success: false,
         message: "Project id,Case File No. and Plot No. are required",
