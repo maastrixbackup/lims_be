@@ -171,6 +171,11 @@ const updateUser = async (req, res) => {
       phone_number || user.phone_number,
       profile_pic || user.profile_pic
     );
+    if (updatedUser.profile_pic) {
+      updatedUser.profile_pic = `${req.protocol}://${req.get(
+        "host"
+      )}/uploads/profile_pics/${updatedUser.profile_pic}`;
+    }
     await logAction(
       userId,
       "update user",
