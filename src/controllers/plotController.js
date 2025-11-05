@@ -34,10 +34,22 @@ const uploadPlots = async (req, res) => {
     }
 
     const requiredColumns = [
-      "SES Survey No.",
       "LA Case File No.",
-      "Date of Award",
       "LO1-Name of Recorded Tenant (RT)",
+      "LO2-Name of Present Tenant(s)",
+      "Name of Village",
+      "Village Code",
+      "Name of the Tahasil",
+      "Name of the R.I. Circle",
+      "Thana No.",
+      "Khata No.",
+      "Plot No.",
+      "Kissam of the Land",
+      "LO12-Category of Land",
+      "LA1-Land Area (Total Area in Acres)",
+      "LA2-Land Area (Total Area in Ha.)",
+      "Land Area (Total Acquired Area in Acres)",
+      "Land Area (Total Acquired Area in Ha.)",
     ];
 
     const excelColumns = Object.keys(data[0]);
@@ -50,6 +62,30 @@ const uploadPlots = async (req, res) => {
       return res.status(400).json({
         success: false,
         message: "Invalid Excel format.Missing columns",
+      });
+    }
+
+    const invalidRows = [];
+    data.forEach((row, index) => {
+      requiredColumns.forEach((col) => {
+        const value = row[col];
+        if (
+          value === undefined ||
+          value === null ||
+          value === "" ||
+          (typeof value === "string" && value.trim() === "")
+        ) {
+          invalidRows.push({ row: index + 2, column: col }); // +2 = header + 1-based row
+        }
+      });
+    });
+
+    if (invalidRows.length > 0) {
+      fs.unlinkSync(req.file.path);
+      const firstError = invalidRows[0];
+      return res.status(400).json({
+        success: false,
+        message: `Missing value in required field "${firstError.column}" at row ${firstError.row}. All required values must be filled.`,
       });
     }
 
@@ -167,11 +203,25 @@ const createPlot = async (req, res) => {
     if (
       !safeRequestPayload.project_id ||
       !safeRequestPayload.la_case_file_no ||
-      !safeRequestPayload.plot_no
+      !safeRequestPayload.name_of_recorded_tenant ||
+      !safeRequestPayload.name_of_present_tenant ||
+      !safeRequestPayload.village_name ||
+      !safeRequestPayload.village_code ||
+      !safeRequestPayload.tahasil_name ||
+      !safeRequestPayload.ri_circle_name ||
+      !safeRequestPayload.thana_no ||
+      !safeRequestPayload.khata_no ||
+      !safeRequestPayload.plot_no ||
+      !safeRequestPayload.kissam_of_land ||
+      !safeRequestPayload.land_category ||
+      !safeRequestPayload.land_area_total_acres ||
+      !safeRequestPayload.land_area_total_hectares ||
+      !safeRequestPayload.land_area_acquired_acres ||
+      !safeRequestPayload.land_area_acquired_hectares
     ) {
       return res.status(400).json({
         success: false,
-        message: "Project id,Case File No. and Plot No. are required",
+        message: "All fields are required",
       });
     }
 

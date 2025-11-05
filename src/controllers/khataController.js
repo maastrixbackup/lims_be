@@ -5,16 +5,16 @@ const path = require("path");
 
 async function addKhata(req, res) {
   const userId = req.user.id;
-  const { project_id, village_id, khata_no } = req.body;
+  const { project_id, village_id, khata_no, type } = req.body;
   const safeRequestPayload = req.body;
   try {
-    if (!project_id || !village_id || !khata_no) {
+    if (!project_id || !village_id || !khata_no || !type) {
       return res.status(400).json({
         success: false,
         message: "All fields are required",
       });
     }
-    const khata = await Khata.create(project_id, village_id, khata_no);
+    const khata = await Khata.create(project_id, village_id, khata_no, type);
     await logAction(
       userId,
       "create khata",
@@ -64,7 +64,7 @@ const khataList = async (req, res) => {
 const updateKhata = async (req, res) => {
   const userId = req.user.id;
   const khataId = req.params.id;
-  const { project_id, village_id, khata_no } = req.body;
+  const { project_id, village_id, khata_no, type } = req.body;
   const safeRequestPayload = req.body;
 
   try {
@@ -79,7 +79,8 @@ const updateKhata = async (req, res) => {
       khataId,
       project_id,
       village_id,
-      khata_no
+      khata_no,
+      type
     );
     await logAction(
       userId,
