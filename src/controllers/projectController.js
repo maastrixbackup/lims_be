@@ -3,16 +3,14 @@ const logAction = require("../utils/logger");
 
 const createProject = async (req, res) => {
   const userId = req.user.id;
-  const safeRequestPayload = {
-    project_name: req.body?.project_name,
-    status: req.body?.status ?? 0,
-  };
+  const { project_name, status = 0, client_code } = req.body;
+  const safeRequestPayload = { project_name, status, client_code };
+
   try {
-    const { project_name, status = 0 } = req.body;
-    if (!project_name) {
+    if (!project_name || !client_code) {
       return res.status(400).json({
         success: false,
-        message: "Project name is required",
+        message: "All fields are required",
       });
     }
 
@@ -24,7 +22,7 @@ const createProject = async (req, res) => {
       });
     }
 
-    const project = await Project.create(project_name, status);
+    const project = await Project.create(project_name, status, client_code);
     await logAction(
       userId,
       "create project",
@@ -107,25 +105,26 @@ const getActiveProjects = async (req, res) => {
 
 const updateProject = async (req, res) => {
   const userId = req.user.id;
-  const safeRequestPayload = {
-    id: req.params.id,
-    project_name: req.body?.project_name,
-    status: req.body?.status,
-  };
+  const { id } = req.params;
+  const { project_name, status, client_code } = req.body;
+
+  const safeRequestPayload = { id, project_name, status, client_code };
 
   try {
-    const { id } = req.params;
-    const { project_name, status } = req.body;
     if (!id || isNaN(id)) {
       return res.status(400).json({
         success: false,
         message: "Valid project ID is required",
       });
     }
-    if (project_name === undefined && status === undefined) {
+    if (
+      project_name === undefined &&
+      status === undefined &&
+      client_code === undefined
+    ) {
       return res.status(400).json({
         success: false,
-        message: "Project name or status is required",
+        message: "All fields are required",
       });
     }
     const project = await Project.findById(id);
@@ -144,7 +143,12 @@ const updateProject = async (req, res) => {
         });
       }
     }
-    const updatedProject = await Project.update(id, project_name, status);
+    const updatedProject = await Project.update(
+      id,
+      project_name,
+      status,
+      client_code
+    );
     await logAction(
       userId,
       "update project",
