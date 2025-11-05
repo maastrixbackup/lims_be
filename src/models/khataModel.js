@@ -1,12 +1,12 @@
 const db = require("../config/db");
 
 const Khata = {
-  async create(project_id, village_id, khata_no) {
+  async create(project_id, village_id, khata_no, type) {
     const [result] = await db.query(
-      "INSERT INTO khatas(project_id, village_id, khata_no) VALUES (?,?,?)",
-      [project_id, village_id, khata_no]
+      "INSERT INTO khatas(project_id, village_id, khata_no, type) VALUES (?,?,?,?)",
+      [project_id, village_id, khata_no, type]
     );
-    return { id: result.insertId, project_id, village_id, khata_no };
+    return { id: result.insertId, project_id, village_id, khata_no, type };
   },
 
   async findAll({ project_id = null, village_id = null }) {
@@ -37,12 +37,12 @@ const Khata = {
     return rows[0] || null;
   },
 
-  async update(id, project_id, village_id, khata_no) {
+  async update(id, project_id, village_id, khata_no, type) {
     await db.query(
-      "UPDATE khatas SET project_id = ?, village_id = ?, khata_no = ?, updated_at = NOW() WHERE id = ?",
-      [project_id, village_id, khata_no, id]
+      "UPDATE khatas SET project_id = ?, village_id = ?, khata_no = ?, type = ?, updated_at = NOW() WHERE id = ?",
+      [project_id, village_id, khata_no, type, id]
     );
-    return { id, project_id, village_id, khata_no };
+    return { id, project_id, village_id, khata_no, type };
   },
 
   async delete(id) {
