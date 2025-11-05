@@ -1,12 +1,27 @@
 const db = require("../config/db");
 
 const Village = {
-  async create(village_name, tahasil, district, project_id) {
+  async create(
+    village_name,
+    tahasil,
+    district,
+    project_id,
+    village_code,
+    type
+  ) {
     const [result] = await db.query(
-      "INSERT INTO villages (village_name, tahasil, district, project_id) VALUES (?,?,?,?)",
-      [village_name, tahasil, district, project_id]
+      "INSERT INTO villages (village_name, tahasil, district, project_id, village_code, type) VALUES (?,?,?,?,?,?)",
+      [village_name, tahasil, district, project_id, village_code, type]
     );
-    return { id: result.insertId, village_name, tahasil, district, project_id };
+    return {
+      id: result.insertId,
+      village_name,
+      tahasil,
+      district,
+      project_id,
+      village_code,
+      type,
+    };
   },
 
   async findAll({ project_id = null, district = null, tahasil = null }) {
@@ -43,12 +58,28 @@ const Village = {
     return rows[0];
   },
 
-  async update(id, village_name, tahasil, district, project_id) {
+  async update(
+    id,
+    village_name,
+    tahasil,
+    district,
+    project_id,
+    village_code,
+    type
+  ) {
     await db.query(
-      "UPDATE villages SET village_name = ?, tahasil = ?, district = ?, project_id = ?,updated_at = NOW() WHERE id = ?",
-      [village_name, tahasil, district, project_id, id]
+      "UPDATE villages SET village_name = ?, tahasil = ?, district = ?, project_id = ?, village_code = ?, type = ?, updated_at = NOW() WHERE id = ?",
+      [village_name, tahasil, district, project_id, village_code, type, id]
     );
-    return { id, village_name, tahasil, district, project_id };
+    return {
+      id,
+      village_name,
+      tahasil,
+      district,
+      project_id,
+      village_code,
+      type,
+    };
   },
 
   async delete(id) {
