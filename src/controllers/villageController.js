@@ -4,10 +4,18 @@ const logAction = require("../utils/logger");
 const addVillage = async (req, res) => {
   const userId = req.user.id;
   const safeRequestPayload = req.body;
-  const { village_name, tahasil, district, project_id } = req.body;
+  const { village_name, tahasil, district, project_id, village_code, type } =
+    req.body;
 
   try {
-    if (!village_name || !tahasil || !district || !project_id) {
+    if (
+      !village_name ||
+      !tahasil ||
+      !district ||
+      !project_id ||
+      !village_code ||
+      !type
+    ) {
       return res.status(400).json({
         success: false,
         message: "All fields are required",
@@ -18,7 +26,9 @@ const addVillage = async (req, res) => {
       village_name,
       tahasil,
       district,
-      project_id
+      project_id,
+      village_code,
+      type
     );
 
     await logAction(
@@ -74,7 +84,8 @@ const updateVillage = async (req, res) => {
   const userId = req.user.id;
   const villageId = req.params.id;
   const safeRequestPayload = req.body;
-  const { village_name, tahasil, district, project_id } = req.body;
+  const { village_name, tahasil, district, project_id, village_code, type } =
+    req.body;
 
   try {
     const existingVillage = await Village.findById(villageId);
@@ -90,7 +101,9 @@ const updateVillage = async (req, res) => {
       village_name,
       tahasil,
       district,
-      project_id
+      project_id,
+      village_code,
+      type
     );
     await logAction(
       userId,
