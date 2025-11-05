@@ -2,12 +2,12 @@ const db = require("../config/db");
 const { countAll } = require("./logModel");
 
 const Project = {
-  async create(project_name, status = 0) {
+  async create(project_name, status = 0, client_code) {
     const [result] = await db.query(
-      "INSERT INTO projects (project_name, status) VALUES (?, ?)",
-      [project_name, status]
+      "INSERT INTO projects (project_name, status, client_code) VALUES (?, ?, ?)",
+      [project_name, status, client_code]
     );
-    return { id: result.insertId, project_name, status };
+    return { id: result.insertId, project_name, status, client_code };
   },
 
   async findAll() {
@@ -47,12 +47,12 @@ const Project = {
     return rows;
   },
 
-  async update(id, project_name, status) {
+  async update(id, project_name, status, client_code) {
     await db.query(
-      "UPDATE projects SET project_name = ?, status = ?, updated_at = NOW() WHERE id = ?",
-      [project_name, status, id]
+      "UPDATE projects SET project_name = ?, status = ?, client_code = ?, updated_at = NOW() WHERE id = ?",
+      [project_name, status, client_code, id]
     );
-    return { id, project_name, status };
+    return { id, project_name, status, client_code };
   },
 
   async delete(id) {
