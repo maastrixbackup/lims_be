@@ -1127,6 +1127,13 @@ const Plot = {
     );
     return result.affectedRows;
   },
+
+  async getDeletedPlots() {
+    const [rows] = await db.query(
+      "SELECT * FROM plots WHERE is_deleted = 1 ORDER BY updated_at DESC"
+    );
+    return rows;
+  },
 };
 
 module.exports = Plot;
