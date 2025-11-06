@@ -4,15 +4,23 @@ const path = require("path");
 const fs = require("fs");
 
 const logAction = require("../utils/logger");
+const Village = require("../models/villageModel");
+const Khata = require("../models/khataModel");
 
 const uploadPlots = async (req, res) => {
   const userId = req.user.id;
   try {
-    const { project_id } = req.body;
+    const { project_id, type } = req.body;
     if (!project_id) {
       return res.status(400).json({
         success: false,
         message: "Project ID is required for uploading plots",
+      });
+    }
+    if (!type) {
+      return res.status(400).json({
+        success: false,
+        message: "Type is required",
       });
     }
     if (!req.file) {
@@ -88,6 +96,14 @@ const uploadPlots = async (req, res) => {
         message: `Missing value in required field "${firstError.column}" at row ${firstError.row}. All required values must be filled.`,
       });
     }
+
+    const insertedVillages = await Village.insertVillagesFromExcel(
+      data,
+      project_id,
+      type
+    );
+
+    await Khata.insertKhatasFromExcel(data, project_id, type);
 
     const insertedPlots = await Plot.bulkInsert(data, project_id);
     await logAction(

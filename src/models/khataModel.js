@@ -1,12 +1,19 @@
 const db = require("../config/db");
 
 const Khata = {
-  async create(project_id, village_id, khata_no, type) {
+  async create(project_id, village_id, khata_no, type, unique_id) {
     const [result] = await db.query(
-      "INSERT INTO khatas(project_id, village_id, khata_no, type) VALUES (?,?,?,?)",
-      [project_id, village_id, khata_no, type]
+      "INSERT INTO khatas(project_id, village_id, khata_no, type, unique_id) VALUES (?,?,?,?,?)",
+      [project_id, village_id, khata_no, type, unique_id]
     );
-    return { id: result.insertId, project_id, village_id, khata_no, type };
+    return {
+      id: result.insertId,
+      project_id,
+      village_id,
+      khata_no,
+      type,
+      unique_id,
+    };
   },
 
   async findAll({ project_id = null, village_id = null }) {
@@ -79,6 +86,42 @@ const Khata = {
       [file_id]
     );
     return result.affectedRows > 0;
+  },
+
+  async insertKhatasFromExcel(data, project_id, type) {
+    const [project] = await db.query(
+      "SELECT client_code FROM projects WHERE id = ?",
+      [project_id]
+    );
+    if (!project.length) throw new Error("Invalid project_id");
+    const clientCode = project[0].client_code;
+
+    for (const row of data) {
+      const villageName = row["Name of Village"];
+      const khataNo = row["Khata No."];
+      if (!villageName || !khataNo) continue;
+
+      const [village] = await db.query(
+        "SELECT id, village_code FROM villages WHERE village_name = ?",
+        [villageName]
+      );
+      if (!village.length) continue;
+
+      const village_id = village[0].id;
+      const village_code = village[0].village_code;
+      const unique_id = `${clientCode}/${village_code}/${khataNo}`;
+
+      await db.query(
+        `INSERT INTO khatas (unique_id, project_id, village_id, khata_no, type)
+         VALUES (?, ?, ?, ?, ?)
+         ON DUPLICATE KEY UPDATE
+         project_id = VALUES(project_id),
+         village_id = VALUES(village_id),
+         khata_no = VALUES(khata_no),
+         type = VALUES(type)`,
+        [unique_id, project_id, village_id, khataNo, type]
+      );
+    }
   },
 };
 

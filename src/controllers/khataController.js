@@ -1,4 +1,6 @@
 const Khata = require("../models/khataModel");
+const Project = require("../models/projectModel");
+const Village = require("../models/villageModel");
 const logAction = require("../utils/logger");
 const fs = require("fs");
 const path = require("path");
@@ -14,7 +16,32 @@ async function addKhata(req, res) {
         message: "All fields are required",
       });
     }
-    const khata = await Khata.create(project_id, village_id, khata_no, type);
+
+    const project = await Project.findById(project_id);
+    if (!project) {
+      return res.status(404).json({
+        success: false,
+        message: "Project not found",
+      });
+    }
+
+    const village = await Village.findById(village_id);
+    if (!village) {
+      return res.status(404).json({
+        success: false,
+        message: "Village not found",
+      });
+    }
+
+    const unique_id = `${project.client_code}/${village.village_code}/${khata_no}`;
+
+    const khata = await Khata.create(
+      project_id,
+      village_id,
+      khata_no,
+      type,
+      unique_id
+    );
     await logAction(
       userId,
       "create khata",
