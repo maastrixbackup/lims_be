@@ -9,6 +9,7 @@ const {
   updatePlot,
   deletePlot,
   getDeletedPlots,
+  restorePlot,
 } = require("../controllers/plotController");
 
 router.post("/upload", uploadPlotExcel.single("file"), uploadPlots);
@@ -18,5 +19,6 @@ router.post("/createPlot", createPlot);
 router.put("/updatePlot/:id", updatePlot);
 router.delete("/deletePlot/:id", deletePlot);
 router.get("/getDeletedPlots", getDeletedPlots);
+router.put("/restorePlot/:id", restorePlot);
 
 module.exports = router;
