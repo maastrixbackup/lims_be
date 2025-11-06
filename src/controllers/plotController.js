@@ -399,6 +399,43 @@ const getDeletedPlots = async (req, res) => {
   }
 };
 
+const restorePlot = async (req, res) => {
+  const { id } = req.params;
+  const userId = req.user.id;
+  try {
+    const restored = await Plot.restorePlot(id);
+    if (!restored) {
+      return res.status(404).json({
+        success: false,
+        message: "Plot not found or already active",
+      });
+    }
+    await logAction(
+      userId,
+      "restore plot",
+      "success",
+      "Plot restored successfully",
+      { id },
+      null
+    );
+
+    return res.status(200).json({
+      success: true,
+      message: "Plot restored successfully",
+    });
+  } catch (err) {
+    await logAction(
+      userId,
+      "restore plot",
+      "failure",
+      err.message,
+      { id },
+      null
+    );
+    res.status(500).json({ success: false, message: err.message });
+  }
+};
+
 module.exports = {
   uploadPlots,
   plotList,
@@ -407,4 +444,5 @@ module.exports = {
   updatePlot,
   deletePlot,
   getDeletedPlots,
+  restorePlot,
 };

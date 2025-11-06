@@ -1134,6 +1134,14 @@ const Plot = {
     );
     return rows;
   },
+
+  async restorePlot(id) {
+    const [result] = await db.query(
+      "UPDATE plots SET is_deleted = 0 WHERE id = ? AND is_deleted = 1",
+      [id]
+    );
+    return result.affectedRows > 0;
+  },
 };
 
 module.exports = Plot;
