@@ -375,6 +375,30 @@ const deletePlot = async (req, res) => {
   }
 };
 
+const getDeletedPlots = async (req, res) => {
+  const userId = req.user.id;
+  try {
+    const deletedPlots = await Plot.getDeletedPlots();
+    if (!deletedPlots.length) {
+      return res.status(404).json({
+        success: false,
+        message: "No deleted plots found",
+      });
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: "Deleted plots fetched successfully",
+      data: deletedPlots,
+    });
+  } catch (err) {
+    res.status(500).json({
+      success: false,
+      message: err.message,
+    });
+  }
+};
+
 module.exports = {
   uploadPlots,
   plotList,
@@ -382,4 +406,5 @@ module.exports = {
   createPlot,
   updatePlot,
   deletePlot,
+  getDeletedPlots,
 };

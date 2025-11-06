@@ -120,34 +120,39 @@ const Village = {
       const villageCode = row["Village Code"]?.trim();
       const tahasil = row["Name of the Tahasil"]?.trim();
       const thanaNo = row["Thana No."]?.trim(); // only used for comparison
+      const presentAddress = row["Present Address"] || "";
 
       if (!villageName || !villageCode || !tahasil) continue;
+
+      let district = null;
+      const distMatch = presentAddress.match(/Dist[-: ]+([A-Za-z\s]+)/i);
+      if (distMatch && distMatch[1]) {
+        district = distMatch[1].trim() || null;
+      }
 
       // Key for matching existing data
       const baseKey = `${villageName.toLowerCase()}|${tahasil.toLowerCase()}`;
       const uniqueKey = `${baseKey}|${thanaNo?.toLowerCase() || ""}`;
 
-      // ✅ Check duplicates in DB
+      // Skip if already exists in DB
       if (existingSet.has(baseKey)) {
-        // Village + Tahasil already exists in DB → maybe same thana or not
-        // We can’t distinguish since thana is not stored — so skip inserting again
         continue;
       }
 
-      // ✅ Check duplicates within the same Excel upload
+      // Skip duplicates within the same Excel file
       if (uploadedSet.has(uniqueKey)) {
         continue;
       }
 
-      // ✅ Mark as uploaded
+      // Mark as uploaded
       uploadedSet.add(uniqueKey);
 
-      // ✅ Insert into DB
+      // Insert into DB
       await db.query(
         `INSERT INTO villages (
-          village_name, village_code, tahasil, project_id, type
-        ) VALUES (?, ?, ?, ?, ?)`,
-        [villageName, villageCode, tahasil, project_id, type]
+          village_name, village_code, tahasil, district, project_id, type
+        ) VALUES (?, ?, ?, ?, ?, ?)`,
+        [villageName, villageCode, tahasil, district, project_id, type]
       );
 
       insertedCount++;
