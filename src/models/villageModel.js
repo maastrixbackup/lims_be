@@ -116,18 +116,36 @@ const Village = {
     let insertedCount = 0;
 
     for (const row of data) {
-      const villageName = row["Name of Village"]?.trim();
+      // const villageName = row["Name of Village"]?.trim();
+      const villageName =
+        row["Name of Village"]?.trim() ||
+        row["name of village"]?.trim() ||
+        null;
       const villageCode = row["Village Code"]?.trim();
-      const tahasil = row["Name of the Tahasil"]?.trim();
-      const thanaNo = row["Thana No."]?.trim(); // only used for comparison
-      const presentAddress = row["Present Address"] || "";
+      // const tahasil = row["Name of the Tahasil"]?.trim();
+      const tahasil =
+        row["Name of the Tahasil"]?.trim() ||
+        row["Tahasil/Thana"]?.trim() ||
+        null;
+      // const thanaNo =
+      //   row["Thana No."]?.trim() || row["Thana no"]?.trim() || null;
+      const thanaNoRaw = row["Thana No."] ?? row["Thana no"];
+      const thanaNo =
+        thanaNoRaw !== undefined && thanaNoRaw !== null
+          ? thanaNoRaw.toString().trim()
+          : null;
+      const presentAddress = row["Present Address"] || null;
 
       if (!villageName || !villageCode || !tahasil) continue;
 
       let district = null;
-      const distMatch = presentAddress.match(/Dist[-: ]+([A-Za-z\s]+)/i);
-      if (distMatch && distMatch[1]) {
-        district = distMatch[1].trim() || null;
+      if (presentAddress) {
+        const distMatch = presentAddress.match(/Dist[-: ]+([A-Za-z\s]+)/i);
+        if (distMatch && distMatch[1]) {
+          district = distMatch[1].trim() || null;
+        }
+      } else {
+        district = null;
       }
 
       // Key for matching existing data
