@@ -41,61 +41,104 @@ const uploadPlots = async (req, res) => {
         .json({ success: false, message: "Excel file is empty" });
     }
 
-    const requiredColumns = [
-      "LA Case File No.",
-      "LO1-Name of Recorded Tenant (RT)",
-      "LO2-Name of Present Tenant(s)",
-      "Name of Village",
-      "Village Code",
-      "Name of the Tahasil",
-      "Name of the R.I. Circle",
-      "Thana No.",
-      "Khata No.",
-      "Plot No.",
-      "Kissam of the Land",
-      "LO12-Category of Land",
-      "LA1-Land Area (Total Area in Acres)",
-      "LA2-Land Area (Total Area in Ha.)",
-      "Land Area (Total Acquired Area in Acres)",
-      "Land Area (Total Acquired Area in Ha.)",
-    ];
+    // const requiredColumns = [
+    //   "LA Case File No.",
+    //   "LO1-Name of Recorded Tenant (RT)",
+    //   "LO2-Name of Present Tenant(s)",
+    //   "Name of Village",
+    //   "Village Code",
+    //   "Name of the Tahasil",
+    //   "Name of the R.I. Circle",
+    //   "Thana No.",
+    //   "Khata No.",
+    //   "Plot No.",
+    //   "Kissam of the Land",
+    //   "LO12-Category of Land",
+    //   "LA1-Land Area (Total Area in Acres)",
+    //   "LA2-Land Area (Total Area in Ha.)",
+    //   "Land Area (Total Acquired Area in Acres)",
+    //   "Land Area (Total Acquired Area in Ha.)",
+    // ];
 
-    const excelColumns = Object.keys(data[0]);
-    const missingColumns = requiredColumns.filter(
-      (col) => !excelColumns.includes(col)
+    const requiredColumns = {
+      "LA Case File No.": [],
+      "LO1-Name of Recorded Tenant (RT)": ["Name of Tenant"],
+      "LO2-Name of Present Tenant(s)": ["Name of Tenant"],
+      "Name of Village": ["name of village"],
+      "Village Code": [],
+      "Name of the Tahasil": ["Tahasil/Thana"],
+      "Name of the R.I. Circle": [],
+      "Thana No.": ["Thana no"],
+      "Khata No.": ["Khata No"],
+      "Plot No.": [],
+      "Kissam of the Land": ["Kissam"],
+      "LO12-Category of Land": [],
+      "LA1-Land Area (Total Area in Acres)": ["ROR Area In Ha."],
+      "LA2-Land Area (Total Area in Ha.)": ["Area occupied in Ha."],
+      "Land Area (Total Acquired Area in Acres)": [],
+      "Land Area (Total Acquired Area in Ha.)": [],
+    };
+
+    const excelColumns = Object.keys(data[0]).map((col) =>
+      col.trim().toLowerCase()
     );
+
+    // Detect missing required columns (considering aliases)
+    const missingColumns = Object.keys(requiredColumns).filter((mainCol) => {
+      const mainLower = mainCol.trim().toLowerCase();
+      const aliases = (requiredColumns[mainCol] || []).map((a) =>
+        a.trim().toLowerCase()
+      );
+      const allOptions = [mainLower, ...aliases];
+      return !allOptions.some((option) => excelColumns.includes(option));
+    });
 
     if (missingColumns.length > 0) {
       fs.unlinkSync(req.file.path);
       return res.status(400).json({
         success: false,
-        message: "Invalid Excel format.Missing columns",
+        message: `Invalid Excel format. Missing columns: ${missingColumns.join(
+          ", "
+        )}`,
       });
     }
 
-    const invalidRows = [];
-    data.forEach((row, index) => {
-      requiredColumns.forEach((col) => {
-        const value = row[col];
-        if (
-          value === undefined ||
-          value === null ||
-          value === "" ||
-          (typeof value === "string" && value.trim() === "")
-        ) {
-          invalidRows.push({ row: index + 2, column: col }); // +2 = header + 1-based row
-        }
-      });
-    });
+    // const excelColumns = Object.keys(data[0]);
+    // const missingColumns = requiredColumns.filter(
+    //   (col) => !excelColumns.includes(col)
+    // );
 
-    if (invalidRows.length > 0) {
-      fs.unlinkSync(req.file.path);
-      const firstError = invalidRows[0];
-      return res.status(400).json({
-        success: false,
-        message: `Missing value in required field "${firstError.column}" at row ${firstError.row}. All required values must be filled.`,
-      });
-    }
+    // if (missingColumns.length > 0) {
+    //   fs.unlinkSync(req.file.path);
+    //   return res.status(400).json({
+    //     success: false,
+    //     message: "Invalid Excel format.Missing columns",
+    //   });
+    // }
+
+    // const invalidRows = [];
+    // data.forEach((row, index) => {
+    //   requiredColumns.forEach((col) => {
+    //     const value = row[col];
+    //     if (
+    //       value === undefined ||
+    //       value === null ||
+    //       value === "" ||
+    //       (typeof value === "string" && value.trim() === "")
+    //     ) {
+    //       invalidRows.push({ row: index + 2, column: col }); // +2 = header + 1-based row
+    //     }
+    //   });
+    // });
+
+    // if (invalidRows.length > 0) {
+    //   fs.unlinkSync(req.file.path);
+    //   const firstError = invalidRows[0];
+    //   return res.status(400).json({
+    //     success: false,
+    //     message: `Missing value in required field "${firstError.column}" at row ${firstError.row}. All required values must be filled.`,
+    //   });
+    // }
 
     const insertedVillages = await Village.insertVillagesFromExcel(
       data,

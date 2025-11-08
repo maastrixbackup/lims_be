@@ -56,10 +56,16 @@ const Khata = {
     await db.query("DELETE FROM khatas WHERE ID = ?", [id]);
   },
 
-  async uploadKhataDocument(khata_id, file_name) {
+  async uploadKhataDocument(
+    khata_id,
+    unique_id,
+    file_name,
+    type,
+    document_type
+  ) {
     const [result] = await db.query(
-      "INSERT INTO khata_documents(khata_id, file_name) VALUES (?,?)",
-      [khata_id, file_name]
+      "INSERT INTO khata_documents(khata_id, unique_id, file_name, type, document_type) VALUES (?,?,?,?,?)",
+      [khata_id, unique_id, file_name, type, document_type]
     );
     return result;
   },
@@ -97,13 +103,35 @@ const Khata = {
     const clientCode = project[0].client_code;
 
     for (const row of data) {
-      const villageName = row["Name of Village"];
-      const khataNo = row["Khata No."];
-      if (!villageName || !khataNo) continue;
+      // const villageName = row["Name of Village"];
+      // const khataNo = row["Khata No."];
+      // if (!villageName || !khataNo) continue;
+      const villageName =
+        row["Name of Village"]?.trim() ||
+        row["name of village"]?.trim() ||
+        null;
+      // const khataNo =
+      //   row["Khata No."] !== undefined && row["Khata No."] !== null
+      //     ? row["Khata No."].toString().trim()
+      //     : null;
+      const khataNo =
+        (row["Khata No."] || row["Khata No"])?.toString().trim() || null;
 
+      const tahasil =
+        row["Name of the Tahasil"]?.trim() ||
+        row["Tahasil/Thana"]?.trim() ||
+        null;
+
+      if (!villageName || !khataNo || !tahasil) continue;
+
+      // const [village] = await db.query(
+      //   "SELECT id, village_code FROM villages WHERE village_name = ?",
+      //   [villageName]
+      // );
+      // if (!village.length) continue;
       const [village] = await db.query(
-        "SELECT id, village_code FROM villages WHERE village_name = ?",
-        [villageName]
+        "SELECT id, village_code FROM villages WHERE village_name = ? AND tahasil = ? AND project_id = ?",
+        [villageName, tahasil, project_id]
       );
       if (!village.length) continue;
 

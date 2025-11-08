@@ -3,6 +3,9 @@ const db = require("../config/db");
 const Plot = {
   async bulkInsert(plots, project_id) {
     if (!plots || plots.length === 0) return;
+    //For new excel
+    // const hasTahasilThana = plots[0]?.hasOwnProperty("Tahasil/Thana");
+    // const hasNameOfTahasil = plots[0]?.hasOwnProperty("Name of the Tahasil");
 
     const values = plots.map((plot) => {
       let dateValue = plot["Date of Award"];
@@ -31,31 +34,89 @@ const Plot = {
           }
         }
       }
+      //For new excel
+      // let tahasilName = null;
+      // let thanaName = null;
+      // if (hasTahasilThana) {
+      //   tahasilName = plot["Tahasil/Thana"] || null;
+      //   thanaName = plot["Tahasil/Thana"] || null;
+      // } else if (hasNameOfTahasil) {
+      //   tahasilName = plot["Name of the Tahasil"] || null;
+      //   thanaName = null;
+      // } else {
+      //   tahasilName = null;
+      //   thanaName = null;
+      // }
+
+      let totalAcres = null;
+      let totalHectares = null;
+      let acquiredAcres = null;
+      let acquiredHectares = null;
+
+      // Case 1: Full LA columns present
+      if (
+        plot["LA1-Land Area (Total Area in Acres)"] ||
+        plot["LA2-Land Area (Total Area in Ha.)"]
+      ) {
+        totalAcres =
+          parseFloat(plot["LA1-Land Area (Total Area in Acres)"]) || null;
+        totalHectares =
+          parseFloat(plot["LA2-Land Area (Total Area in Ha.)"]) || null;
+        acquiredAcres =
+          parseFloat(plot["Land Area (Total Acquired Area in Acres)"]) || null;
+        acquiredHectares =
+          parseFloat(plot["Land Area (Total Acquired Area in Ha.)"]) || null;
+      }
+
+      // Case 2: Alternate ROR headers
+      else if (plot["ROR Area In Ha."] || plot["Area occupied in Ha."]) {
+        totalHectares = parseFloat(plot["ROR Area In Ha."]) || null;
+        acquiredHectares = parseFloat(plot["Area occupied in Ha."]) || null;
+      }
+
+      // --- Conversion Logic ---
+      // Convert missing hectare/acres based on available values (4-decimal precision)
+      if (totalAcres && !totalHectares)
+        totalHectares = parseFloat((totalAcres / 2.471).toFixed(4));
+      if (totalHectares && !totalAcres)
+        totalAcres = parseFloat((totalHectares * 2.471).toFixed(4));
+
+      if (acquiredAcres && !acquiredHectares)
+        acquiredHectares = parseFloat((acquiredAcres / 2.471).toFixed(4));
+      if (acquiredHectares && !acquiredAcres)
+        acquiredAcres = parseFloat((acquiredHectares * 2.471).toFixed(4));
 
       return [
         project_id,
         plot["SES Survey No."] || null,
         plot["LA Case File No."] || null,
-        formattedDate || null,
+        formattedDate || null, //for Date of Award
         // plot["Date of Award"] || null,
-        plot["LO1-Name of Recorded Tenant (RT)"] || null,
-        plot["LO2-Name of Present Tenant(s)"] || null,
+        plot["LO1-Name of Recorded Tenant (RT)"] ||
+          plot["Name of Tenant"] ||
+          null,
+        plot["LO2-Name of Present Tenant(s)"] || plot["Name of Tenant"] || null,
         plot["Present Address"] || null,
         plot["Displaced/Affected Person"] || null,
-        plot["Name of Village"] || null,
+        plot["Name of Village"] || plot["name of village"] || null,
         plot["Village Code"] || null,
-        plot["Name of the Tahasil"] || null,
+        plot["Name of the Tahasil"] || plot["Tahasil/Thana"] || null, //for tahasil name
         plot["Name of the R.I. Circle"] || null,
-        plot["Thana No."] || null,
-        plot["Khata No."] || null,
+        plot["Tahasil/Thana"] || null, //for thana name
+        plot["Thana No."] || plot["Thana no"] || null,
+        plot["Khata No."] || plot["Khata No"] || null,
         plot["Plot No."] || null,
-        plot["Kissam of the Land"] || null,
+        plot["Kissam of the Land"] || plot["Kissam"] || null,
         plot["LO12-Category of Land"] || null,
         plot["LO13-Remarks"] || null,
-        plot["LA1-Land Area (Total Area in Acres)"] || null,
-        plot["LA2-Land Area (Total Area in Ha.)"] || null,
-        plot["Land Area (Total Acquired Area in Acres)"] || null,
-        plot["Land Area (Total Acquired Area in Ha.)"] || null,
+        totalAcres || null,
+        totalHectares || null,
+        acquiredAcres || null,
+        acquiredHectares || null,
+        // plot["LA1-Land Area (Total Area in Acres)"] || null,
+        // plot["LA2-Land Area (Total Area in Ha.)"] || null,
+        // plot["Land Area (Total Acquired Area in Acres)"] || null,
+        // plot["Land Area (Total Acquired Area in Ha.)"] || null,
         plot["Market Value fixed U/S.26 of RFCTLARR Act 2013 (Per Acre)"] ||
           null,
         plot["Basic Land value"] || null,
@@ -154,7 +215,7 @@ const Plot = {
       `INSERT INTO plots (
     project_id, ses_survey_no, la_case_file_no, date_of_award, name_of_recorded_tenant,
     name_of_present_tenant, present_address, displaced_affected_person,
-    village_name, village_code, tahasil_name, ri_circle_name, thana_no, khata_no, plot_no,
+    village_name, village_code, tahasil_name, ri_circle_name, thana_name, thana_no, khata_no, plot_no,
     kissam_of_land, land_category, lo13_remarks, land_area_total_acres,
     land_area_total_hectares, land_area_acquired_acres, land_area_acquired_hectares,
     market_value_per_acre, basic_land_value, land_value_with_mf, no_of_trees,
@@ -188,7 +249,8 @@ const Plot = {
     village_name = VALUES(village_name),
     village_code = VALUES(village_code), 
     tahasil_name = VALUES(tahasil_name), 
-    ri_circle_name = VALUES(ri_circle_name), 
+    ri_circle_name = VALUES(ri_circle_name),
+    thana_name = VALUES(thana_name), 
     thana_no = VALUES(thana_no), 
     khata_no = VALUES(khata_no), 
     plot_no = VALUES(plot_no),
@@ -411,7 +473,7 @@ const Plot = {
 
     const [result] = await db.query(
       `INSERT INTO plots
-      (project_id,ses_survey_no, la_case_file_no, date_of_award, name_of_recorded_tenant, name_of_present_tenant, present_address, displaced_affected_person, village_name, village_code, tahasil_name, ri_circle_name, thana_no, khata_no, plot_no, kissam_of_land, land_category, lo13_remarks, land_area_total_acres, land_area_total_hectares, land_area_acquired_acres, land_area_acquired_hectares, market_value_per_acre, basic_land_value, land_value_with_mf, no_of_trees, total_value_of_trees, no_of_house, value_of_house, details_of_other_structures, value_of_other_structures, total_value, solatium_100, additional_12_percent, total_compensation, apportionment_amount, priority_urgency, land_use_plan, la21_remarks, bank_account_no, bank_name, branch_ifsc, aadhaar_no, pan_no, age, caste, marital_status, education, occupation, annual_income, skill_acquired, affidavit_details, family_major_male, family_major_female, family_minor_male, family_minor_female, family_major_transgender, family_minor_transgender, persons_with_disability, family_with_orphan_members, legal_heir_certificate_no, land_case_no, land_case_date, land_case_type, land_case_status, land_case_action, rr_employment, rr_cash_in_lieu, rr_training_skill_upgradation, rr_self_employment, rr_special_allowance_st_ntfp, rr_homestead_allotment, rr_house_building_assistance, rr_constructed_by, rr_transit_shed, rr_transport_allowance, rr_maintenance_allowance, rr_multiple_displacement_allowance, rr_exgratia, rr_other_benefits, grievance_no, grievance_date, grievance_subject, grievance_status, grievance_action, tribunal, tribunal_deposit_date, tribunal_amount, premium, ground_rent, cess, incidental_charges, total, abatement)
+      (project_id,ses_survey_no, la_case_file_no, date_of_award, name_of_recorded_tenant, name_of_present_tenant, present_address, displaced_affected_person, village_name, village_code, tahasil_name, ri_circle_name, thana_name, thana_no, khata_no, plot_no, kissam_of_land, land_category, lo13_remarks, land_area_total_acres, land_area_total_hectares, land_area_acquired_acres, land_area_acquired_hectares, market_value_per_acre, basic_land_value, land_value_with_mf, no_of_trees, total_value_of_trees, no_of_house, value_of_house, details_of_other_structures, value_of_other_structures, total_value, solatium_100, additional_12_percent, total_compensation, apportionment_amount, priority_urgency, land_use_plan, la21_remarks, bank_account_no, bank_name, branch_ifsc, aadhaar_no, pan_no, age, caste, marital_status, education, occupation, annual_income, skill_acquired, affidavit_details, family_major_male, family_major_female, family_minor_male, family_minor_female, family_major_transgender, family_minor_transgender, persons_with_disability, family_with_orphan_members, legal_heir_certificate_no, land_case_no, land_case_date, land_case_type, land_case_status, land_case_action, rr_employment, rr_cash_in_lieu, rr_training_skill_upgradation, rr_self_employment, rr_special_allowance_st_ntfp, rr_homestead_allotment, rr_house_building_assistance, rr_constructed_by, rr_transit_shed, rr_transport_allowance, rr_maintenance_allowance, rr_multiple_displacement_allowance, rr_exgratia, rr_other_benefits, grievance_no, grievance_date, grievance_subject, grievance_status, grievance_action, tribunal, tribunal_deposit_date, tribunal_amount, premium, ground_rent, cess, incidental_charges, total, abatement)
       VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
       [
         project_id,
@@ -426,6 +488,7 @@ const Plot = {
         village_code,
         tahasil_name,
         ri_circle_name,
+        tahasil_name,
         thana_no,
         khata_no,
         plot_no,
@@ -639,6 +702,7 @@ const Plot = {
       village_code = ?,
       tahasil_name = ?,
       ri_circle_name = ?,
+      thana_name = ?,
       thana_no = ?,
       khata_no = ?,
       plot_no = ?,
@@ -735,6 +799,7 @@ const Plot = {
         village_code,
         tahasil_name,
         ri_circle_name,
+        tahasil_name,
         thana_no,
         khata_no,
         plot_no,
@@ -936,6 +1001,7 @@ const Plot = {
       village_code = ?,
       tahasil_name = ?,
       ri_circle_name = ?,
+      thana_name = ?,
       thana_no = ?,
       khata_no = ?,
       plot_no = ?,
@@ -1032,6 +1098,7 @@ const Plot = {
         village_code,
         tahasil_name,
         ri_circle_name,
+        tahasil_name,
         thana_no,
         khata_no,
         plot_no,
