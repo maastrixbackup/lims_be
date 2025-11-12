@@ -235,9 +235,12 @@ const plotDocumentList = async (req, res) => {
         name: file,
         size: `${(stats.size / 1024).toFixed(2)} KB`,
         uploadedAt: stats.mtime,
-        documentUrl: `${req.protocol}://${req.get(
-          "host"
-        )}/uploads/excels/${file}`,
+        // documentUrl: `${req.protocol}://${req.get(
+        //   "host"
+        // )}/uploads/excels/${file}`,
+        documentUrl: `${req.protocol}://${req.get("host")}${
+          req.get("host").includes("localhost") ? "" : "/api"
+        }/uploads/excels/${file}`,
       };
     });
 

@@ -333,8 +333,17 @@ const login = async (req, res) => {
 
     const token = generateToken(user);
 
+    // const profilePicUrl = user.profile_pic
+    //   ? `${req.protocol}://${req.get("host")}/uploads/profile_pics/${
+    //       user.profile_pic
+    //     }`
+    //   : null;
+
+    const isLocal = req.get("host").includes("localhost");
+    const prefix = isLocal ? "" : "/api";
+
     const profilePicUrl = user.profile_pic
-      ? `${req.protocol}://${req.get("host")}/uploads/profile_pics/${
+      ? `${req.protocol}://${req.get("host")}${prefix}/uploads/profile_pics/${
           user.profile_pic
         }`
       : null;
