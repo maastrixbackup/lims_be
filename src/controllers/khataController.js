@@ -1,6 +1,7 @@
 const Khata = require("../models/khataModel");
 const Project = require("../models/projectModel");
 const Village = require("../models/villageModel");
+const Plot = require("../models/plotModel");
 const logAction = require("../utils/logger");
 const fs = require("fs");
 const path = require("path");
@@ -245,11 +246,21 @@ const getKhataFilesByKhataId = async (req, res) => {
   try {
     const khata_id = req.params.id;
     const documents = await Khata.getFilesByKhataId(khata_id);
-    const baseUrl = `${req.protocol}://${req.get("host")}`;
+    // const baseUrl = `${req.protocol}://${req.get("host")}`;
+
+    // const documentsWithUrl = documents.map((doc) => ({
+    //   ...doc,
+    //   url: `${baseUrl}/uploads/khata/${doc.file_name}`,
+    // }));
 
     const documentsWithUrl = documents.map((doc) => ({
       ...doc,
-      url: `${baseUrl}/uploads/khata/${doc.file_name}`,
+      // url: `${req.protocol}://${req.get("host")}${prefix}/uploads/khata/${
+      //   doc.file_name
+      // }`,
+      url: `${req.protocol}://${req.get("host")}${
+        req.get("host").includes("localhost") ? "" : "/api"
+      }/uploads/khata/${doc.file_name}`,
     }));
     res.status(200).json({
       success: true,
@@ -319,6 +330,45 @@ const deleteKhataFileById = async (req, res) => {
   }
 };
 
+const viewPlotsByKhata = async (req, res) => {
+  const userId = req.user.id;
+  const khata_id = req.params.id;
+  try {
+    if (!khata_id) {
+      return res.status(400).json({
+        success: false,
+        message: "Khata ID is required",
+      });
+    }
+
+    const khataData = await Khata.findById(khata_id);
+    if (!khataData) {
+      return res.status(404).json({
+        success: false,
+        message: "Khata not found",
+      });
+    }
+    const { khata_no } = khataData;
+
+    const plots = await Plot.findByKhataNo(khata_no);
+    return res.status(200).json({
+      success: true,
+      message: "Plots fetched successfully",
+      data: {
+        khata_no,
+        total_plots: plots.length,
+        plots,
+      },
+    });
+  } catch (err) {
+    console.error("View Plots Error:", err);
+    return res.status(500).json({
+      success: false,
+      message: "Server error",
+    });
+  }
+};
+
 module.exports = {
   addKhata,
   khataList,
@@ -327,4 +377,5 @@ module.exports = {
   uploadKhataDoc,
   getKhataFilesByKhataId,
   deleteKhataFileById,
+  viewPlotsByKhata,
 };

@@ -1209,6 +1209,13 @@ const Plot = {
     );
     return result.affectedRows > 0;
   },
+
+  async findByKhataNo(khata_no) {
+    const [rows] = await db.query("SELECT * FROM plots WHERE khata_no = ?", [
+      khata_no,
+    ]);
+    return rows;
+  },
 };
 
 module.exports = Plot;
