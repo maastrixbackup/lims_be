@@ -77,7 +77,7 @@ const uploadPlots = async (req, res) => {
       "LA2-Land Area (Total Area in Ha.)": ["Area occupied in Ha."],
       "Land Area (Total Acquired Area in Acres)": [],
       "Land Area (Total Acquired Area in Ha.)": [],
-    };
+    }; //These are required fields but These columns are set to null in the table because there are some blank values in the Excel file.
 
     const excelColumns = Object.keys(data[0]).map((col) =>
       col.trim().toLowerCase()
