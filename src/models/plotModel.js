@@ -1139,23 +1139,25 @@ const Plot = {
     return result.affectedRows || 0;
   },
 
-  async getAllPlot(limit = 10, offset = 0) {
+  async getAllPlot(project_id, limit = 10, offset = 0) {
     const [rows] = await db.query(
       `SELECT p.*,
       pr.project_name
       FROM plots p
       LEFT JOIN projects pr ON p.project_id = pr.id
-       WHERE p.is_deleted = 0
+      WHERE p.is_deleted = 0
+      AND p.project_id = ?
       ORDER BY p.id DESC
       LIMIT ? OFFSET ?`,
-      [limit, offset]
+      [project_id, limit, offset]
     );
     return rows;
   },
 
-  async countAll() {
+  async countAll(project_id) {
     const [rows] = await db.query(
-      "SELECT COUNT(*) AS total FROM plots WHERE is_deleted = 0"
+      `SELECT COUNT(*) AS total FROM plots WHERE is_deleted = 0 AND project_id = ?`,
+      [project_id]
     );
     return rows[0].total;
   },
