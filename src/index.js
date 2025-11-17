@@ -13,6 +13,7 @@ const authMiddleware = require("./middleware/authMiddleware");
 const cors = require("cors");
 
 const app = express();
+app.enable('trust proxy');
 const path = require("path");
 app.use(express.json());
 
