@@ -77,7 +77,7 @@ const uploadPlots = async (req, res) => {
       "LA2-Land Area (Total Area in Ha.)": ["Area occupied in Ha."],
       "Land Area (Total Acquired Area in Acres)": [],
       "Land Area (Total Acquired Area in Ha.)": [],
-    };
+    }; //These are required fields but These columns are set to null in the table because there are some blank values in the Excel file.
 
     const excelColumns = Object.keys(data[0]).map((col) =>
       col.trim().toLowerCase()
@@ -180,17 +180,25 @@ const uploadPlots = async (req, res) => {
 
 const plotList = async (req, res) => {
   try {
-    let { page = 1, limit = 10 } = req.query;
+    let { page = 1, limit = 10, project_id } = req.query;
+    if (!project_id) {
+      return res.status(400).json({
+        success: false,
+        message: "Project ID is required",
+      });
+    }
+
     page = parseInt(page);
     limit = parseInt(limit);
     const offset = (page - 1) * limit;
     const [plots, total] = await Promise.all([
-      Plot.getAllPlot(limit, offset),
-      Plot.countAll(),
+      Plot.getAllPlot(project_id, limit, offset),
+      Plot.countAll(project_id),
     ]);
     return res.status(200).json({
       success: true,
       message: "Plots fetched successfully",
+      project_id,
       page,
       limit,
       total,
