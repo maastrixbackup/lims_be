@@ -14,7 +14,7 @@ const getDashboardData = async (req, res) => {
       await Promise.all([
         Project.countAll(),
         Village.countAll(),
-        Plot.countAll(),
+        Plot.allPlotcount(),
         Khata.countAll(),
       ]);
 

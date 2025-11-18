@@ -73,8 +73,8 @@ async function addKhata(req, res) {
 
 const khataList = async (req, res) => {
   try {
-    const { project_id, village_id } = req.query;
-    const khatas = await Khata.findAll({ project_id, village_id });
+    const { project_id, village_id, type } = req.query;
+    const khatas = await Khata.findAll({ project_id, village_id, type });
     return res.status(200).json({
       success: true,
       message: "Khata list fetched successfully",
