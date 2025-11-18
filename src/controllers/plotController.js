@@ -148,7 +148,7 @@ const uploadPlots = async (req, res) => {
 
     await Khata.insertKhatasFromExcel(data, project_id, type);
 
-    const insertedPlots = await Plot.bulkInsert(data, project_id);
+    const insertedPlots = await Plot.bulkInsert(data, project_id, type);
     await logAction(
       userId,
       "plot excel upload",
@@ -180,7 +180,7 @@ const uploadPlots = async (req, res) => {
 
 const plotList = async (req, res) => {
   try {
-    let { page = 1, limit = 10, project_id } = req.query;
+    let { page = 1, limit = 10, project_id, type } = req.query;
     if (!project_id) {
       return res.status(400).json({
         success: false,
@@ -192,13 +192,14 @@ const plotList = async (req, res) => {
     limit = parseInt(limit);
     const offset = (page - 1) * limit;
     const [plots, total] = await Promise.all([
-      Plot.getAllPlot(project_id, limit, offset),
-      Plot.countAll(project_id),
+      Plot.getAllPlot(project_id, type, limit, offset),
+      Plot.countAll(project_id, type),
     ]);
     return res.status(200).json({
       success: true,
       message: "Plots fetched successfully",
       project_id,
+      type,
       page,
       limit,
       total,
@@ -287,7 +288,8 @@ const createPlot = async (req, res) => {
       !safeRequestPayload.land_area_total_acres ||
       !safeRequestPayload.land_area_total_hectares ||
       !safeRequestPayload.land_area_acquired_acres ||
-      !safeRequestPayload.land_area_acquired_hectares
+      !safeRequestPayload.land_area_acquired_hectares ||
+      !safeRequestPayload.type
     ) {
       return res.status(400).json({
         success: false,
