@@ -1162,6 +1162,13 @@ const Plot = {
     return rows[0].total;
   },
 
+  async allPlotcount() {
+    const [rows] = await db.query(
+      `SELECT COUNT(*) AS total FROM plots WHERE is_deleted = 0`
+    );
+    return rows[0].total;
+  },
+
   async create(plotData) {
     const {
       project_id,
