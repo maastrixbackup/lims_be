@@ -24,7 +24,12 @@ const Village = {
     };
   },
 
-  async findAll({ project_id = null, district = null, tahasil = null }) {
+  async findAll({
+    project_id = null,
+    district = null,
+    tahasil = null,
+    type = null,
+  }) {
     let query = `
         SELECT v.*,p.project_name
         FROM villages v
@@ -46,6 +51,11 @@ const Village = {
     if (tahasil) {
       query += " AND v.tahasil LIKE ?";
       params.push(`%${tahasil}%`);
+    }
+
+    if (type) {
+      query += " AND v.type = ?";
+      params.push(type);
     }
     query += " ORDER BY v.id DESC";
 

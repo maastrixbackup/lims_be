@@ -61,12 +61,13 @@ const addVillage = async (req, res) => {
 
 const villageList = async (req, res) => {
   try {
-    const { project_id, district, tahasil } = req.query;
+    const { project_id, district, tahasil, type } = req.query;
 
     const villages = await Village.findAll({
       project_id,
       district,
       tahasil,
+      type,
     });
 
     return res.status(200).json({

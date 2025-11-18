@@ -16,7 +16,7 @@ const Khata = {
     };
   },
 
-  async findAll({ project_id = null, village_id = null }) {
+  async findAll({ project_id = null, village_id = null, type = null }) {
     let query = `
         SELECT k.*, p.project_name, v.village_name
         FROM khatas k
@@ -32,6 +32,10 @@ const Khata = {
     if (village_id) {
       query += " AND k.village_id = ?";
       params.push(village_id);
+    }
+    if (type) {
+      query += " AND k.type = ?";
+      params.push(type);
     }
     query += " ORDER BY k.id DESC";
     const [rows] = await db.query(query, params);
@@ -153,9 +157,7 @@ const Khata = {
   },
 
   async countAll() {
-    const [rows] = await db.query(
-      "SELECT COUNT(*) AS total FROM khatas"
-    );
+    const [rows] = await db.query("SELECT COUNT(*) AS total FROM khatas");
     return rows[0].total;
   },
 };
