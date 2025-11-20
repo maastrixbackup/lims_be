@@ -53,7 +53,7 @@ const getDashboardData = async (req, res) => {
       data: dashboardData,
     });
   } catch (err) {
-    console.error("Dashboard Error:", error);
+    console.error("Dashboard Error:", err);
     return res.status(500).json({
       success: false,
       message: "Server error",
