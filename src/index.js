@@ -9,11 +9,12 @@ const plotRoutes = require("./routes/plotRoutes");
 const villageRoutes = require("./routes/villageRoutes");
 const khataRoutes = require("./routes/khataRoutes");
 const dashboardRoutes = require("./routes/dashboardRoutes");
+const reportRoutes = require("./routes/reportRoutes");
 const authMiddleware = require("./middleware/authMiddleware");
 const cors = require("cors");
 
 const app = express();
-app.enable('trust proxy');
+app.enable("trust proxy");
 const path = require("path");
 app.use(express.json());
 
@@ -38,6 +39,7 @@ app.use("/api/plots", authMiddleware, plotRoutes);
 app.use("/api/village", authMiddleware, villageRoutes);
 app.use("/api/khata", authMiddleware, khataRoutes);
 app.use("/api", authMiddleware, dashboardRoutes);
+app.use("/api/report", authMiddleware, reportRoutes);
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
