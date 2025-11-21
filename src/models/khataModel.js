@@ -16,7 +16,13 @@ const Khata = {
     };
   },
 
-  async findAll({ project_id = null, village_id = null, type = null }) {
+  async findAll({
+    project_id = null,
+    village_id = null,
+    type = null,
+    limit = 10,
+    offset = 0,
+  }) {
     let query = `
         SELECT k.*, p.project_name, v.village_name,
         (
@@ -43,9 +49,42 @@ const Khata = {
       query += " AND k.type = ?";
       params.push(type);
     }
-    query += " ORDER BY k.id DESC";
+    query += " ORDER BY k.id DESC LIMIT ? OFFSET ?";
+    params.push(limit, offset);
     const [rows] = await db.query(query, params);
     return rows;
+  },
+
+  async paginationCountAll({
+    project_id = null,
+    village_id = null,
+    type = null,
+  }) {
+    let query = `
+    SELECT COUNT(*) AS total
+    FROM khatas
+    WHERE 1=1
+  `;
+
+    const params = [];
+
+    if (project_id) {
+      query += " AND project_id = ?";
+      params.push(project_id);
+    }
+
+    if (village_id) {
+      query += " AND village_id = ?";
+      params.push(village_id);
+    }
+
+    if (type) {
+      query += " AND type = ?";
+      params.push(type);
+    }
+
+    const [rows] = await db.query(query, params);
+    return rows[0].total;
   },
 
   async findById(id) {
