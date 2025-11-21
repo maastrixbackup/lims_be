@@ -73,11 +73,31 @@ async function addKhata(req, res) {
 
 const khataList = async (req, res) => {
   try {
-    const { project_id, village_id, type } = req.query;
-    const khatas = await Khata.findAll({ project_id, village_id, type });
+    let { project_id, village_id, type, page = 1, limit = 10 } = req.query;
+    page = parseInt(page);
+    limit = parseInt(limit);
+    const offset = (page - 1) * limit;
+    const khatas = await Khata.findAll({
+      project_id,
+      village_id,
+      type,
+      limit,
+      offset,
+    });
+
+    const total = await Khata.paginationCountAll({
+      project_id,
+      village_id,
+      type,
+    });
+
     return res.status(200).json({
       success: true,
       message: "Khata list fetched successfully",
+      page,
+      limit,
+      total,
+      totalPages: Math.ceil(total / limit),
       khatas,
     });
   } catch (err) {
