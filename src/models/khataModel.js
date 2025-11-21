@@ -41,9 +41,14 @@ const Khata = {
       query += " AND k.project_id = ?";
       params.push(project_id);
     }
-    if (village_id) {
-      query += " AND k.village_id = ?";
-      params.push(village_id);
+    // if (village_id) {
+    //   query += " AND k.village_id = ?";
+    //   params.push(village_id);
+    // }
+    if (village_id && Array.isArray(village_id)) {
+      const placeholders = village_id.map(() => "?").join(",");
+      query += ` AND k.village_id IN (${placeholders})`;
+      params.push(...village_id);
     }
     if (type) {
       query += " AND k.type = ?";
@@ -73,9 +78,14 @@ const Khata = {
       params.push(project_id);
     }
 
-    if (village_id) {
-      query += " AND village_id = ?";
-      params.push(village_id);
+    // if (village_id) {
+    //   query += " AND village_id = ?";
+    //   params.push(village_id);
+    // }
+    if (village_id && Array.isArray(village_id)) {
+      const placeholders = village_id.map(() => "?").join(",");
+      query += ` AND village_id IN (${placeholders})`;
+      params.push(...village_id);
     }
 
     if (type) {

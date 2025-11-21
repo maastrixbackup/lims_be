@@ -74,6 +74,9 @@ async function addKhata(req, res) {
 const khataList = async (req, res) => {
   try {
     let { project_id, village_id, type, page = 1, limit = 10 } = req.query;
+    if (village_id) {
+      village_id = village_id.split(",").map((id) => parseInt(id.trim()));
+    }
     page = parseInt(page);
     limit = parseInt(limit);
     const offset = (page - 1) * limit;
