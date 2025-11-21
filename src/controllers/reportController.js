@@ -109,7 +109,48 @@ async function getAllKhataDocuments(req, res) {
   }
 }
 
+async function getVillageReport(req, res) {
+  try {
+    const villages = await Report.getAllVillages();
+    const finalReport = [];
+    for (const v of villages) {
+      const village_name = v.village_name;
+      const villagePlots = await Report.getVillagePlots(village_name);
+      if (villagePlots.length === 0) {
+        continue;
+      }
+
+      const khata_numbers = await Report.getKhataNumbers(village_name);
+      const plot_numbers = await Report.getPlotNumbers(village_name);
+      const total_land_area = await Report.getTotalLandArea(village_name);
+      const land_breakup = await Report.getLandTypeBreakup(village_name);
+
+      finalReport.push({
+        village_name,
+        khata_numbers,
+        plot_numbers,
+        total_land_area_acres: total_land_area,
+        private_govt_land: land_breakup,
+      });
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: "Village report fetched successfully",
+      total_villages: finalReport.length,
+      data: finalReport,
+    });
+  } catch (err) {
+    console.error("Village Report Error:", err);
+    return res.status(500).json({
+      success: false,
+      message: "Server error",
+    });
+  }
+}
+
 module.exports = {
   khataSummary,
   getAllKhataDocuments,
+  getVillageReport,
 };

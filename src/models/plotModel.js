@@ -1172,7 +1172,25 @@ const Plot = {
     params.push(limit, offset);
 
     const [rows] = await db.query(query, params);
-    return rows;
+
+    const updatedRows = rows.map((plot) => {
+      if (
+        plot.name_of_present_tenant &&
+        plot.name_of_present_tenant.trim() !== ""
+      ) {
+        const tenants = plot.name_of_present_tenant
+          .split(",")
+          .map((t) => t.trim())
+          .filter((t) => t !== "");
+
+        plot.present_tenant_count = tenants.length;
+      } else {
+        plot.present_tenant_count = "N/A";
+      }
+
+      return plot;
+    });
+    return updatedRows;
   },
 
   async countAll(project_id, type) {

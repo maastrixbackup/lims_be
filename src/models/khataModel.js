@@ -18,7 +18,13 @@ const Khata = {
 
   async findAll({ project_id = null, village_id = null, type = null }) {
     let query = `
-        SELECT k.*, p.project_name, v.village_name
+        SELECT k.*, p.project_name, v.village_name,
+        (
+          SELECT COUNT(*)
+          FROM plots
+          WHERE plots.khata_no = k.khata_no
+          AND plots.project_id = k.project_id
+        ) AS plot_count
         FROM khatas k
         LEFT JOIN projects p ON k.project_id = p.id
         LEFT JOIN villages v ON k.village_id = v.id
