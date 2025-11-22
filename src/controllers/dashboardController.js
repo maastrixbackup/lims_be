@@ -26,6 +26,8 @@ const getDashboardData = async (req, res) => {
       created_at: dayjs(ra.created_at).fromNow(),
     }));
 
+    const landDistribution = await Plot.landDistribution();
+
     const dashboardData = {
       projects: projectsCount,
       villages: villagesCount,
@@ -36,6 +38,11 @@ const getDashboardData = async (req, res) => {
       payment_status: 110,
       la_status: 20,
       rr_status: 34,
+      land_distribution: {
+        pvt_land: landDistribution.private,
+        govt_land: landDistribution.govt,
+        forest_land: landDistribution.forest,
+      },
       recent_projects: recentProjects,
       recent_activity: formattedActivity,
     };
@@ -46,7 +53,7 @@ const getDashboardData = async (req, res) => {
       data: dashboardData,
     });
   } catch (err) {
-    console.error("Dashboard Error:", error);
+    console.error("Dashboard Error:", err);
     return res.status(500).json({
       success: false,
       message: "Server error",

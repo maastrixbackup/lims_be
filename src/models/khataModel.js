@@ -16,9 +16,21 @@ const Khata = {
     };
   },
 
-  async findAll({ project_id = null, village_id = null, type = null }) {
+  async findAll({
+    project_id = null,
+    village_id = null,
+    type = null,
+    limit = 10,
+    offset = 0,
+  }) {
     let query = `
-        SELECT k.*, p.project_name, v.village_name
+        SELECT k.*, p.project_name, v.village_name,
+        (
+          SELECT COUNT(*)
+          FROM plots
+          WHERE plots.khata_no = k.khata_no
+          AND plots.project_id = k.project_id
+        ) AS plot_count
         FROM khatas k
         LEFT JOIN projects p ON k.project_id = p.id
         LEFT JOIN villages v ON k.village_id = v.id
@@ -29,17 +41,60 @@ const Khata = {
       query += " AND k.project_id = ?";
       params.push(project_id);
     }
-    if (village_id) {
-      query += " AND k.village_id = ?";
-      params.push(village_id);
+    // if (village_id) {
+    //   query += " AND k.village_id = ?";
+    //   params.push(village_id);
+    // }
+    if (village_id && Array.isArray(village_id)) {
+      const placeholders = village_id.map(() => "?").join(",");
+      query += ` AND k.village_id IN (${placeholders})`;
+      params.push(...village_id);
     }
     if (type) {
       query += " AND k.type = ?";
       params.push(type);
     }
-    query += " ORDER BY k.id DESC";
+    query += " ORDER BY k.id DESC LIMIT ? OFFSET ?";
+    params.push(limit, offset);
     const [rows] = await db.query(query, params);
     return rows;
+  },
+
+  async paginationCountAll({
+    project_id = null,
+    village_id = null,
+    type = null,
+  }) {
+    let query = `
+    SELECT COUNT(*) AS total
+    FROM khatas
+    WHERE 1=1
+  `;
+
+    const params = [];
+
+    if (project_id) {
+      query += " AND project_id = ?";
+      params.push(project_id);
+    }
+
+    // if (village_id) {
+    //   query += " AND village_id = ?";
+    //   params.push(village_id);
+    // }
+    if (village_id && Array.isArray(village_id)) {
+      const placeholders = village_id.map(() => "?").join(",");
+      query += ` AND village_id IN (${placeholders})`;
+      params.push(...village_id);
+    }
+
+    if (type) {
+      query += " AND type = ?";
+      params.push(type);
+    }
+
+    const [rows] = await db.query(query, params);
+    return rows[0].total;
   },
 
   async findById(id) {
