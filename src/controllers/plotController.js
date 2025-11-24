@@ -492,6 +492,56 @@ const restorePlot = async (req, res) => {
   }
 };
 
+const paymentReady = async (req, res) => {
+  const { plot_id } = req.body;
+  const userId = req.user.id;
+  try {
+    if (!plot_id) {
+      return res.status(400).json({
+        success: false,
+        message: "Plot Id is required",
+      });
+    }
+    const status = "Processing";
+    const plot = await Plot.findById(plot_id);
+    if (!plot) {
+      return res.status(404).json({
+        success: false,
+        message: "Plot not found",
+      });
+    }
+    await Plot.updatePaymentStatus(plot_id, status);
+    await logAction(
+      userId,
+      "Payment ready",
+      "success",
+      "Payment processed successfully",
+      { plot_id },
+      null
+    );
+    // plot.payment_status = status;
+    // await Payment.addPaymentRecord(plot);
+    return res.status(200).json({
+      success: true,
+      message: "Payment processed successfully",
+    });
+  } catch (err) {
+    console.error("Payment Ready Error:", err);
+    await logAction(
+      userId,
+      "Payment ready",
+      "failure",
+      err.message,
+      { plot_id },
+      null
+    );
+    return res.status(500).json({
+      success: false,
+      message: "Server error",
+    });
+  }
+};
+
 module.exports = {
   uploadPlots,
   plotList,
@@ -501,4 +551,5 @@ module.exports = {
   deletePlot,
   getDeletedPlots,
   restorePlot,
+  paymentReady,
 };

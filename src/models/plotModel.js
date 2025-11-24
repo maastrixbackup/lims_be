@@ -2077,6 +2077,15 @@ const Plot = {
     ]);
     return rows;
   },
+
+  async updatePaymentStatus(plot_id, status) {
+    await db.query(
+      `UPDATE plots SET payment_status = ?
+      WHERE id = ? AND is_deleted = 0`,
+      [status, plot_id]
+    );
+    return true;
+  },
 };
 
 module.exports = Plot;
