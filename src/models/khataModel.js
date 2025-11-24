@@ -18,7 +18,7 @@ const Khata = {
 
   async findAll({
     project_id = null,
-    village_id = null,
+    // village_id = null,
     type = null,
     limit = 10,
     offset = 0,
@@ -45,11 +45,11 @@ const Khata = {
     //   query += " AND k.village_id = ?";
     //   params.push(village_id);
     // }
-    if (village_id && Array.isArray(village_id)) {
-      const placeholders = village_id.map(() => "?").join(",");
-      query += ` AND k.village_id IN (${placeholders})`;
-      params.push(...village_id);
-    }
+    // if (village_id && Array.isArray(village_id)) {
+    //   const placeholders = village_id.map(() => "?").join(",");
+    //   query += ` AND k.village_id IN (${placeholders})`;
+    //   params.push(...village_id);
+    // }
     if (type) {
       query += " AND k.type = ?";
       params.push(type);
@@ -62,7 +62,7 @@ const Khata = {
 
   async paginationCountAll({
     project_id = null,
-    village_id = null,
+    // village_id = null,
     type = null,
   }) {
     let query = `
@@ -82,11 +82,11 @@ const Khata = {
     //   query += " AND village_id = ?";
     //   params.push(village_id);
     // }
-    if (village_id && Array.isArray(village_id)) {
-      const placeholders = village_id.map(() => "?").join(",");
-      query += ` AND village_id IN (${placeholders})`;
-      params.push(...village_id);
-    }
+    // if (village_id && Array.isArray(village_id)) {
+    //   const placeholders = village_id.map(() => "?").join(",");
+    //   query += ` AND village_id IN (${placeholders})`;
+    //   params.push(...village_id);
+    // }
 
     if (type) {
       query += " AND type = ?";
