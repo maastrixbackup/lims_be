@@ -511,19 +511,22 @@ const paymentReady = async (req, res) => {
       });
     }
     await Plot.updatePaymentStatus(plot_id, status);
+
+    plot.payment_status = status;
+    const paymentRecord = await Plot.addPaymentRecord(plot);
     await logAction(
       userId,
       "Payment ready",
       "success",
       "Payment processed successfully",
       { plot_id },
-      null
+      paymentRecord
     );
-    // plot.payment_status = status;
-    // await Payment.addPaymentRecord(plot);
+
     return res.status(200).json({
       success: true,
       message: "Payment processed successfully",
+      data: paymentRecord,
     });
   } catch (err) {
     console.error("Payment Ready Error:", err);
