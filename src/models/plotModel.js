@@ -2086,6 +2086,28 @@ const Plot = {
     );
     return true;
   },
+
+  async addPaymentRecord(plot) {
+    const [result] = await db.query(
+      `INSERT INTO plot_payments 
+       (plot_id, khata_no, plot_no, land_area_total_acres, name_of_present_tenant, payment_status)
+       VALUES (?, ?, ?, ?, ?, ?)`,
+      [
+        plot.id,
+        plot.khata_no,
+        plot.plot_no,
+        plot.land_area_total_acres,
+        plot.name_of_present_tenant,
+        plot.payment_status,
+      ]
+    );
+
+    const [rows] = await db.query(`SELECT * FROM plot_payments WHERE id = ?`, [
+      result.insertId,
+    ]);
+
+    return rows[0];
+  },
 };
 
 module.exports = Plot;
