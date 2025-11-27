@@ -11,6 +11,7 @@ const {
   deleteKhataFileById,
   viewPlotsByKhata,
   exportKhata,
+  printKhata,
 } = require("../controllers/khataController");
 const { uploadKhata } = require("../middleware/upload");
 
@@ -46,5 +47,6 @@ router.delete("/deleteKhataFile/:id", deleteKhataFileById);
 router.get("/viewPlotsByKhata/:id", viewPlotsByKhata);
 
 router.get("/exportKhata", exportKhata);
+router.get("/printKhata", printKhata);
 
 module.exports = router;
