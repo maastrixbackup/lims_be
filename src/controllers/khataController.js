@@ -553,8 +553,6 @@ const exportKhata = async (req, res) => {
 //   }
 // };
 
-const PDFDocument = require("pdfkit");
-
 const printKhata = async (req, res) => {
   const userId = req.user.id;
 
