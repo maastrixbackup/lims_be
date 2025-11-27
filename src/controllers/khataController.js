@@ -5,6 +5,7 @@ const Plot = require("../models/plotModel");
 const logAction = require("../utils/logger");
 const fs = require("fs");
 const path = require("path");
+const ExcelJS = require("exceljs");
 
 async function addKhata(req, res) {
   const userId = req.user.id;
@@ -392,6 +393,85 @@ const viewPlotsByKhata = async (req, res) => {
   }
 };
 
+const exportKhata = async (req, res) => {
+  const userId = req.user.id;
+  try {
+    let { project_id, village_id, type } = req.query;
+    if (village_id) {
+      village_id = village_id.split(",").map((id) => parseInt(id.trim()));
+    }
+
+    const khata = await Khata.findAll({
+      project_id,
+      village_id,
+      type,
+      limit: 999999,
+      offset: 0,
+    });
+
+    const khataTypeMap = {
+      1: "Private Land",
+      2: "Govt Land",
+      3: "Forest Land",
+    };
+
+    const workbook = new ExcelJS.Workbook();
+    const sheet = workbook.addWorksheet("Khata Report");
+
+    sheet.addRow([
+      "Sl/No",
+      "Project Name",
+      "Village Name",
+      "Khata No",
+      "Khata Type",
+      "Unique ID",
+      "Plot Count",
+      "Created At",
+      "Updated At",
+    ]);
+
+    khata.forEach((k, index) => {
+      sheet.addRow([
+        index + 1,
+        k.project_name,
+        k.village_name,
+        k.khata_no,
+        khataTypeMap[k.type] || "N/A",
+        k.unique_id,
+        k.plot_count,
+        k.created_at,
+        k.updated_at,
+      ]);
+    });
+
+    res.setHeader(
+      "Content-Type",
+      "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+    );
+    res.setHeader(
+      "Content-Disposition",
+      "attachment; filename=khata_report.xlsx"
+    );
+    await workbook.xlsx.write(res);
+    res.end();
+    await logAction(
+      userId,
+      "export khata",
+      "success",
+      "Khata exported successfully",
+      null,
+      null
+    );
+  } catch (err) {
+    await logAction(userId, "export khata", "failure", err.message, null, null);
+    console.error("Export Khata Error:", err);
+    return res.status(500).json({
+      success: false,
+      message: "Failed to export khata",
+    });
+  }
+};
+
 module.exports = {
   addKhata,
   khataList,
@@ -401,4 +481,5 @@ module.exports = {
   getKhataFilesByKhataId,
   deleteKhataFileById,
   viewPlotsByKhata,
+  exportKhata,
 };

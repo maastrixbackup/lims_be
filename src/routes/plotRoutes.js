@@ -11,6 +11,7 @@ const {
   getDeletedPlots,
   restorePlot,
   paymentReady,
+  getCompensation,
 } = require("../controllers/plotController");
 
 router.post("/upload", uploadPlotExcel.single("file"), uploadPlots);
@@ -22,5 +23,6 @@ router.delete("/deletePlot/:id", deletePlot);
 router.get("/getDeletedPlots", getDeletedPlots);
 router.put("/restorePlot/:id", restorePlot);
 router.post("/paymentReady", paymentReady);
+router.get("/compensation", getCompensation);
 
 module.exports = router;

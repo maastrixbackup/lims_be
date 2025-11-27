@@ -545,6 +545,41 @@ const paymentReady = async (req, res) => {
   }
 };
 
+const getCompensation = async (req, res) => {
+  const { plot_id } = req.query;
+
+  try {
+    if (!plot_id) {
+      return res.status(400).json({
+        success: false,
+        message: "Plot ID is required",
+      });
+    }
+
+    const compensationData = await Plot.getCompensationByPlotId(plot_id);
+
+    if (!compensationData || compensationData.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: "No compensation record found for this plot",
+      });
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: "Compensation data retrieved successfully",
+      data: compensationData,
+    });
+  } catch (err) {
+    console.error("Get Compensation Error:", err);
+
+    return res.status(500).json({
+      success: false,
+      message: "Server error",
+    });
+  }
+};
+
 module.exports = {
   uploadPlots,
   plotList,
@@ -555,4 +590,5 @@ module.exports = {
   getDeletedPlots,
   restorePlot,
   paymentReady,
+  getCompensation,
 };
