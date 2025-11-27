@@ -2108,6 +2108,15 @@ const Plot = {
 
     return rows[0];
   },
+
+  async getCompensationByPlotId(plot_id) {
+    const [rows] = await db.query(
+      `SELECT * FROM plot_payments 
+     WHERE plot_id = ?`,
+      [plot_id]
+    );
+    return rows;
+  },
 };
 
 module.exports = Plot;
