@@ -6,6 +6,7 @@ const fs = require("fs");
 const logAction = require("../utils/logger");
 const Village = require("../models/villageModel");
 const Khata = require("../models/khataModel");
+const ExcelJS = require("exceljs");
 
 const uploadPlots = async (req, res) => {
   const userId = req.user.id;
@@ -580,6 +581,110 @@ const getCompensation = async (req, res) => {
   }
 };
 
+const exportPlot = async (req, res) => {
+  const userId = req.user.id;
+
+  try {
+    const { project_id, type } = req.query;
+
+    if (!project_id) {
+      return res.status(400).json({
+        success: false,
+        message: "Project ID is required",
+      });
+    }
+    const plots = await Plot.getAllPlot(project_id, type, 1000000, 0);
+
+    const plotTypeMap = {
+      1: "Private Land",
+      2: "Govt Land",
+      3: "Forest Land",
+    };
+
+    const workbook = new ExcelJS.Workbook();
+    const sheet = workbook.addWorksheet("Plot Report");
+
+    sheet.addRow([
+      "Sl/No",
+      "Project Name",
+      "LA Case File No",
+      "Khata No",
+      "Plot No",
+      "SES Survey No",
+      "Date of Award",
+      "Recorded Tenant",
+      "Present Tenant",
+      "Number Of Present Tenant",
+      "Present Address",
+      "Displaced/Affected",
+      "Village",
+      "Tahasil",
+      "RI Circle",
+      "Thana No",
+      "Land Type",
+      "Payment Status",
+      "Created At",
+      "Updated At",
+    ]);
+
+    plots.forEach((p, index) => {
+      sheet.addRow([
+        index + 1,
+        p.project_name,
+        p.la_case_file_no,
+        p.khata_no,
+        p.plot_no,
+        p.ses_survey_no,
+        p.date_of_award,
+        p.name_of_recorded_tenant,
+        p.name_of_present_tenant,
+        p.present_tenant_count,
+        p.present_address,
+        p.displaced_affected_person,
+        p.village_name,
+        p.tahasil_name,
+        p.ri_circle_name,
+        p.thana_no,
+        plotTypeMap[p.type],
+        p.payment_status,
+        p.created_at,
+        p.updated_at,
+      ]);
+    });
+
+    res.setHeader(
+      "Content-Type",
+      "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+    );
+
+    res.setHeader(
+      "Content-Disposition",
+      "attachment; filename=plot_report.xlsx"
+    );
+
+    await workbook.xlsx.write(res);
+    res.end();
+
+    await logAction(
+      userId,
+      "export plot",
+      "success",
+      "Plot exported successfully",
+      { project_id, type },
+      null
+    );
+  } catch (err) {
+    console.error("Export Plot Error:", err);
+
+    await logAction(userId, "export plot", "failure", err.message, null, null);
+
+    return res.status(500).json({
+      success: false,
+      message: "Failed to export plot",
+    });
+  }
+};
+
 module.exports = {
   uploadPlots,
   plotList,
@@ -591,4 +696,5 @@ module.exports = {
   restorePlot,
   paymentReady,
   getCompensation,
+  exportPlot,
 };
