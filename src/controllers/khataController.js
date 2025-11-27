@@ -473,8 +473,91 @@ const exportKhata = async (req, res) => {
   }
 };
 
+// const printKhata = async (req, res) => {
+//   const userId = req.user.id;
+//   try {
+//     let { project_id, village_id, type } = req.query;
+
+//     if (village_id) {
+//       village_id = village_id.split(",").map((id) => parseInt(id.trim()));
+//     }
+
+//     const khata = await Khata.findAll({
+//       project_id,
+//       village_id,
+//       type,
+//       limit: 999999,
+//       offset: 0,
+//     });
+
+//     const khataTypeMap = {
+//       1: "Private Land",
+//       2: "Govt Land",
+//       3: "Forest Land",
+//     };
+
+//     const doc = new PDFDocument({ margin: 40 });
+//     res.setHeader("Content-Type", "application/pdf");
+//     res.setHeader("Content-Disposition", "attachment; filename=khata_list.pdf");
+
+//     doc.pipe(res);
+
+//     doc.fontSize(20).text("Khata List", { align: "center" });
+//     doc.moveDown();
+
+//     doc
+//       .fontSize(12)
+//       .text(
+//         "Sl/No | Project Name | Village Name | Khata No | Khata Type | Unique ID | Plot Count | Created At | Updated At",
+//         {
+//           underline: true,
+//         }
+//       );
+//     doc.moveDown(0.5);
+
+//     khata.forEach((k, index) => {
+//       doc.text(
+//         `${index + 1} | ${k.project_name} | ${k.village_name} | ${
+//           k.khata_no
+//         } | ${khataTypeMap[k.type]} | ${k.unique_id} | ${k.plot_count} | ${
+//           k.created_at
+//         } | ${k.updated_at}`
+//       );
+//     });
+
+//     doc.end();
+
+//     await logAction(
+//       userId,
+//       "print khata list",
+//       "success",
+//       "Khata list printed successfully",
+//       { project_id, village_id, type },
+//       null
+//     );
+//   } catch (err) {
+//     await logAction(
+//       userId,
+//       "print khata list",
+//       "failure",
+//       err.message,
+//       null,
+//       null
+//     );
+
+//     console.error("Print Khata List Error:", err);
+//     return res.status(500).json({
+//       success: false,
+//       message: "Failed to generate Khata List PDF",
+//     });
+//   }
+// };
+
+const PDFDocument = require("pdfkit");
+
 const printKhata = async (req, res) => {
   const userId = req.user.id;
+
   try {
     let { project_id, village_id, type } = req.query;
 
@@ -492,37 +575,81 @@ const printKhata = async (req, res) => {
 
     const khataTypeMap = {
       1: "Private Land",
-      2: "Govt Land",
+      2: "Government Land",
       3: "Forest Land",
     };
 
-    const doc = new PDFDocument({ margin: 40 });
+    const doc = new PDFDocument({ margin: 40, size: "A4" });
+
     res.setHeader("Content-Type", "application/pdf");
     res.setHeader("Content-Disposition", "attachment; filename=khata_list.pdf");
 
     doc.pipe(res);
 
+    // Title
     doc.fontSize(20).text("Khata List", { align: "center" });
     doc.moveDown();
 
-    doc
-      .fontSize(12)
-      .text(
-        "Sl/No | Project Name | Village Name | Khata No | Khata Type | Unique ID | Plot Count | Created At | Updated At",
+    // Table Header
+    const headers = [
+      "Sl",
+      "Project",
+      "Village",
+      "Khata No",
+      "Type",
+      "Unique ID",
+      "Plots",
+      "Created",
+      "Updated",
+    ];
+
+    const colWidths = [30, 80, 80, 70, 80, 120, 50, 70, 70];
+
+    doc.fontSize(12).font("Helvetica-Bold");
+    let y = doc.y;
+
+    headers.forEach((header, i) => {
+      doc.text(
+        header,
+        40 + colWidths.slice(0, i).reduce((a, b) => a + b, 0),
+        y,
         {
-          underline: true,
+          width: colWidths[i],
         }
       );
-    doc.moveDown(0.5);
+    });
 
+    doc.moveDown(0.5);
+    doc.font("Helvetica");
+
+    // Table Rows
     khata.forEach((k, index) => {
-      doc.text(
-        `${index + 1} | ${k.project_name} | ${k.village_name} | ${
-          k.khata_no
-        } | ${khataTypeMap[k.type]} | ${k.unique_id} | ${k.plot_count} | ${
-          k.created_at
-        } | ${k.updated_at}`
-      );
+      const row = [
+        index + 1,
+        k.project_name,
+        k.village_name,
+        k.khata_no,
+        khataTypeMap[k.type],
+        k.unique_id,
+        k.plot_count,
+        formatDate(k.created_at),
+        formatDate(k.updated_at),
+      ];
+
+      let currentY = doc.y;
+
+      row.forEach((col, i) => {
+        doc.text(
+          col,
+          40 + colWidths.slice(0, i).reduce((a, b) => a + b, 0),
+          currentY,
+          {
+            width: colWidths[i],
+          }
+        );
+      });
+
+      doc.moveDown(0.5);
     });
 
     doc.end();
@@ -552,6 +679,11 @@ const printKhata = async (req, res) => {
     });
   }
 };
+
+// Helper: clean date format
+function formatDate(date) {
+  return new Date(date).toLocaleString("en-IN");
+}
 
 module.exports = {
   addKhata,
