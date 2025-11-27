@@ -1,5 +1,6 @@
 const Village = require("../models/villageModel");
 const logAction = require("../utils/logger");
+const ExcelJS = require("exceljs");
 
 const addVillage = async (req, res) => {
   const userId = req.user.id;
@@ -170,4 +171,93 @@ const deleteVillage = async (req, res) => {
   }
 };
 
-module.exports = { addVillage, villageList, updateVillage, deleteVillage };
+const exportVillage = async (req, res) => {
+  const userId = req.user.id;
+
+  try {
+    const { project_id, district, tahasil, type } = req.query;
+    const village = await Village.findAll({
+      project_id,
+      district,
+      tahasil,
+      type,
+    });
+
+    const villageTypeMap = {
+      1: "Private Land",
+      2: "Govt Land",
+      3: "Forest Land",
+    };
+
+    const workbook = new ExcelJS.Workbook();
+    const sheet = workbook.addWorksheet("Village Report");
+
+    sheet.addRow([
+      "Sl/No",
+      "Project Name",
+      "Village Name",
+      "District",
+      "Tahasil",
+      "Land Type",
+      "Created At",
+      "Updated At",
+    ]);
+
+    village.forEach((v, index) => {
+      sheet.addRow([
+        index + 1,
+        v.project_name,
+        v.village_name,
+        v.district,
+        v.tahasil,
+        villageTypeMap[v.type] || "N/A",
+        v.created_at,
+        v.updated_at,
+      ]);
+    });
+
+    res.setHeader(
+      "Content-Type",
+      "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+    );
+    res.setHeader(
+      "Content-Disposition",
+      "attachment; filename=village_report.xlsx"
+    );
+
+    await workbook.xlsx.write(res);
+    res.end();
+
+    await logAction(
+      userId,
+      "export village",
+      "success",
+      "Village exported successfully",
+      { project_id, district, tahasil, type },
+      null
+    );
+  } catch (err) {
+    await logAction(
+      userId,
+      "export village",
+      "failure",
+      err.message,
+      null,
+      null
+    );
+
+    console.error("Export Village Error:", err);
+    return res.status(500).json({
+      success: false,
+      message: "Failed to export village",
+    });
+  }
+};
+
+module.exports = {
+  addVillage,
+  villageList,
+  updateVillage,
+  deleteVillage,
+  exportVillage,
+};
