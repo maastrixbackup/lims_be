@@ -86,8 +86,15 @@ const updateVillage = async (req, res) => {
   const userId = req.user.id;
   const villageId = req.params.id;
   const safeRequestPayload = req.body;
-  const { village_name, tahasil, district, project_id, village_code, type } =
-    req.body;
+  const {
+    village_name,
+    tahasil,
+    district,
+    project_id,
+    village_code,
+    type,
+    multiplying_factor,
+  } = req.body;
 
   try {
     const existingVillage = await Village.findById(villageId);
@@ -105,7 +112,8 @@ const updateVillage = async (req, res) => {
       district,
       project_id,
       village_code,
-      type
+      type,
+      multiplying_factor
     );
     await logAction(
       userId,

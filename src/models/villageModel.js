@@ -75,11 +75,21 @@ const Village = {
     district,
     project_id,
     village_code,
-    type
+    type,
+    multiplying_factor
   ) {
     await db.query(
-      "UPDATE villages SET village_name = ?, tahasil = ?, district = ?, project_id = ?, village_code = ?, type = ?, updated_at = NOW() WHERE id = ?",
-      [village_name, tahasil, district, project_id, village_code, type, id]
+      "UPDATE villages SET village_name = ?, tahasil = ?, district = ?, project_id = ?, village_code = ?, type = ?, multiplying_factor = ?, updated_at = NOW() WHERE id = ?",
+      [
+        village_name,
+        tahasil,
+        district,
+        project_id,
+        village_code,
+        type,
+        multiplying_factor,
+        id,
+      ]
     );
     return {
       id,
@@ -89,6 +99,7 @@ const Village = {
       project_id,
       village_code,
       type,
+      multiplying_factor,
     };
   },
 
