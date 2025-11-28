@@ -30,10 +30,37 @@ const Khata = {
           FROM plots
           WHERE plots.khata_no = k.khata_no
           AND plots.project_id = k.project_id
-        ) AS plot_count
+        ) AS plot_count,
+          pl.village_name,
+          pl.village_code,
+          pl.khata_no,
+          pl.plot_no,
+          pl.kissam_of_land,
+          pl.land_category,
+          pl.land_area_total_acres,
+          pl.land_area_total_hectares,
+          pl.land_area_acquired_acres,
+          pl.land_area_acquired_hectares,
+          pl.lo13_remarks,
+          pl.tahasil_name,
+          pl.ri_circle_name,
+          pl.thana_no,
+          pl.date_of_award,
+          pl.name_of_recorded_tenant,
+          pl.name_of_present_tenant,
+          pl.present_address,
+          pl.displaced_affected_person
         FROM khatas k
         LEFT JOIN projects p ON k.project_id = p.id
         LEFT JOIN villages v ON k.village_id = v.id
+        LEFT JOIN plots pl
+        ON pl.id = (
+            SELECT MIN(id)
+            FROM plots
+            WHERE khata_no = k.khata_no
+            AND project_id = k.project_id
+            AND type = k.type
+        )
         WHERE 1=1
     `;
     const params = [];
