@@ -683,6 +683,52 @@ function formatDate(date) {
   return new Date(date).toLocaleString("en-IN");
 }
 
+const uploadMapDoc = async (req, res) => {
+  const userId = req.user.id;
+  try {
+    if (!req.file) {
+      return res.status(400).json({
+        success: false,
+        message: "No KMZ file uploaded",
+      });
+    }
+
+    await logAction(
+      userId,
+      "upload map document",
+      "success",
+      "Map doc uploaded successfully",
+      null,
+      null
+    );
+    return res.status(200).json({
+      success: true,
+      message: "KMZ map file uploaded successfully",
+      file: {
+        filename: req.file.filename,
+        path: req.file.path,
+        mimeType: req.file.mimetype,
+        size: req.file.size,
+      },
+    });
+  } catch (error) {
+    console.error("Error uploading KMZ map:", error);
+    await logAction(
+      userId,
+      "upload map document",
+      "failure",
+      "Map doc uploaded failed",
+      null,
+      null
+    );
+    return res.status(500).json({
+      success: false,
+      message: "Failed to upload KMZ map file",
+      error: error.message,
+    });
+  }
+};
+
 module.exports = {
   addKhata,
   khataList,
@@ -694,4 +740,5 @@ module.exports = {
   viewPlotsByKhata,
   exportKhata,
   printKhata,
+  uploadMapDoc,
 };

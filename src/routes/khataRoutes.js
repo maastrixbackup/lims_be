@@ -12,8 +12,9 @@ const {
   viewPlotsByKhata,
   exportKhata,
   printKhata,
+  uploadMapDoc,
 } = require("../controllers/khataController");
-const { uploadKhata } = require("../middleware/upload");
+const { uploadKhata, uploadMapDocument } = require("../middleware/upload");
 
 router.post("/addKhata", addKhata);
 router.get("/khataList", khataList);
@@ -48,5 +49,11 @@ router.get("/viewPlotsByKhata/:id", viewPlotsByKhata);
 
 router.get("/exportKhata", exportKhata);
 router.get("/printKhata", printKhata);
+
+router.post(
+  "/uploadMapDocument",
+  uploadMapDocument.single("file"),
+  uploadMapDoc
+);
 
 module.exports = router;
