@@ -92,4 +92,42 @@ const uploadKhata = multer({
   fileFilter: khataFileFilter,
 });
 
-module.exports = { uploadPlotExcel, uploadProfilePic, uploadKhata };
+// Upload map document (KMZ files)
+const mapStorage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    cb(null, "uploads/maps");
+  },
+  filename: (req, file, cb) => {
+    const originalname = file.originalname.replace(/\s+/g, "_");
+    cb(null, originalname);
+  },
+});
+
+const mapFileFilter = (req, file, cb) => {
+  const allowedMimeTypes = [
+    "application/vnd.google-earth.kmz",
+    "application/zip", // fallback MIME type for many KMZ uploads
+  ];
+
+  const ext = path.extname(file.originalname).toLowerCase();
+
+  // Additional check for extension (.kmz)
+  if (allowedMimeTypes.includes(file.mimetype) || ext === ".kmz") {
+    cb(null, true);
+  } else {
+    cb(new Error("Only KMZ map files are allowed"), false);
+  }
+};
+
+const uploadMapDocument = multer({
+  storage: mapStorage,
+  fileFilter: mapFileFilter,
+  limits: { fileSize: 10 * 1024 * 1024 }, // 10MB limit
+});
+
+module.exports = {
+  uploadPlotExcel,
+  uploadProfilePic,
+  uploadKhata,
+  uploadMapDocument,
+};
