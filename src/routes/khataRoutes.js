@@ -13,6 +13,7 @@ const {
   exportKhata,
   printKhata,
   uploadMapDoc,
+  getMapFiles,
 } = require("../controllers/khataController");
 const { uploadKhata, uploadMapDocument } = require("../middleware/upload");
 
@@ -55,5 +56,6 @@ router.post(
   uploadMapDocument.single("file"),
   uploadMapDoc
 );
+router.get("/getMapFiles", getMapFiles);
 
 module.exports = router;
