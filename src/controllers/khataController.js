@@ -697,7 +697,7 @@ const uploadMapDoc = async (req, res) => {
     if (!req.file) {
       return res.status(400).json({
         success: false,
-        message: "No KMZ file uploaded",
+        message: "File is required",
       });
     }
 
@@ -737,6 +737,59 @@ const uploadMapDoc = async (req, res) => {
   }
 };
 
+const getMapFiles = async (req, res) => {
+  try {
+    const uploadsDir = path.join(process.cwd(), "uploads/maps");
+
+    if (!fs.existsSync(uploadsDir)) {
+      return res.status(200).json({
+        success: true,
+        message: "uploads/maps directory not found",
+        files: [],
+      });
+    }
+
+    const files = fs.readdirSync(uploadsDir);
+
+    // Accept KMZ + ZIP files
+    const mapFiles = files.filter((f) => f.match(/\.(kmz|zip)$/i));
+
+    if (mapFiles.length === 0) {
+      return res.status(200).json({
+        success: true,
+        message: "No KMZ/ZIP map files found",
+        files: [],
+      });
+    }
+
+    const fileList = mapFiles.map((file) => {
+      const filePath = path.join(uploadsDir, file);
+      const stats = fs.statSync(filePath);
+
+      return {
+        name: file,
+        size: `${(stats.size / 1024).toFixed(2)} KB`,
+        uploadedAt: stats.mtime,
+        documentUrl: `${req.protocol}://${req.get("host")}${
+          req.get("host").includes("localhost") ? "" : "/api"
+        }/uploads/maps/${file}`,
+      };
+    });
+
+    return res.status(200).json({
+      success: true,
+      total: fileList.length,
+      files: fileList,
+    });
+  } catch (err) {
+    console.error("Error reading map uploads:", err);
+    return res.status(500).json({
+      success: false,
+      message: "Server error while fetching map files",
+    });
+  }
+};
+
 module.exports = {
   addKhata,
   khataList,
@@ -749,4 +802,5 @@ module.exports = {
   exportKhata,
   printKhata,
   uploadMapDoc,
+  getMapFiles,
 };
