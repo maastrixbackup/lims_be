@@ -56,6 +56,6 @@ router.post(
   uploadMapDocument.single("file"),
   uploadMapDoc
 );
-router.get("/getMapFiles", getMapFiles);
+router.get("/getMapFiles/:khata_id", getMapFiles);
 
 module.exports = router;

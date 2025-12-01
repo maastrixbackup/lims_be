@@ -57,7 +57,7 @@ const imageFileFilter = (req, file, cb) => {
 const uploadProfilePic = multer({
   storage: profileStorage,
   fileFilter: imageFileFilter,
-  limits: { fileSize: 2 * 1024 * 1024 }, // 2MB limit
+  limits: { fileSize: 5 * 1024 * 1024 }, // 5MB limit
 });
 
 //Upload khata
