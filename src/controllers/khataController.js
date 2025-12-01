@@ -694,6 +694,15 @@ function formatDate(date) {
 const uploadMapDoc = async (req, res) => {
   const userId = req.user.id;
   try {
+    const { khata_id } = req.body;
+
+    if (!khata_id) {
+      return res.status(400).json({
+        success: false,
+        message: "khata ID is required",
+      });
+    }
+
     if (!req.file) {
       return res.status(400).json({
         success: false,
@@ -701,88 +710,89 @@ const uploadMapDoc = async (req, res) => {
       });
     }
 
+    const khataData = await Khata.findById(khata_id);
+    if (!khataData) {
+      return res.status(404).json({
+        success: false,
+        message: "Khata not found",
+      });
+    }
+    const { type } = khataData;
+
+    const uploadedDocument = await Khata.addMapDocument(
+      khata_id,
+      type,
+      req.file.filename
+    );
+
     await logAction(
       userId,
-      "upload map document",
+      "upload khata map document",
       "success",
-      "Map doc uploaded successfully",
-      null,
-      null
+      "Map file uploaded successfully",
+      { khata_id },
+      uploadedDocument
     );
-    return res.status(200).json({
+
+    res.status(200).json({
       success: true,
-      message: "KMZ map file uploaded successfully",
-      file: {
-        filename: req.file.filename,
-        path: req.file.path,
-        mimeType: req.file.mimetype,
-        size: req.file.size,
-      },
+      message: "Map file uploaded successfully",
     });
-  } catch (error) {
-    console.error("Error uploading KMZ map:", error);
+  } catch (err) {
+    console.error("UPLOAD ERROR:", err);
     await logAction(
       userId,
-      "upload map document",
+      "upload khata map document",
       "failure",
-      "Map doc uploaded failed",
+      err.message,
       null,
       null
     );
-    return res.status(500).json({
+    res.status(500).json({
       success: false,
-      message: "Failed to upload KMZ map file",
-      error: error.message,
+      message: "Failed to upload map document",
     });
   }
 };
 
 const getMapFiles = async (req, res) => {
   try {
-    const uploadsDir = path.join(process.cwd(), "uploads/maps");
+    const { khata_id } = req.params;
 
-    if (!fs.existsSync(uploadsDir)) {
-      return res.status(200).json({
-        success: true,
-        message: "uploads/maps directory not found",
-        files: [],
+    if (!khata_id) {
+      return res.status(400).json({
+        success: false,
+        message: "Khata ID is required",
       });
     }
 
-    const files = fs.readdirSync(uploadsDir);
-
-    // Accept KMZ + ZIP files
-    const mapFiles = files.filter((f) => f.match(/\.(kmz|zip)$/i));
-
-    if (mapFiles.length === 0) {
-      return res.status(200).json({
-        success: true,
-        message: "No KMZ/ZIP map files found",
-        files: [],
+    const khataData = await Khata.findById(khata_id);
+    if (!khataData) {
+      return res.status(404).json({
+        success: false,
+        message: "Khata not found",
       });
     }
 
-    const fileList = mapFiles.map((file) => {
-      const filePath = path.join(uploadsDir, file);
-      const stats = fs.statSync(filePath);
-
-      return {
-        name: file,
-        size: `${(stats.size / 1024).toFixed(2)} KB`,
-        uploadedAt: stats.mtime,
-        documentUrl: `${req.protocol}://${req.get("host")}${
-          req.get("host").includes("localhost") ? "" : "/api"
-        }/uploads/maps/${file}`,
-      };
-    });
-
+    const documents = await Khata.getMapDocumentsByKhataId(khata_id);
+    const baseURL = `${req.protocol}://${req.get("host")}${
+      req.get("host").includes("localhost") ? "" : "/api"
+    }`;
+    const formatted = documents.map((doc) => ({
+      id: doc.id,
+      khata_id: doc.khata_id,
+      land_type: doc.land_type,
+      file_name: doc.file_name,
+      url: `${baseURL}/uploads/maps/${doc.file_name}`,
+      uploaded_at: doc.created_at,
+    }));
     return res.status(200).json({
       success: true,
-      total: fileList.length,
-      files: fileList,
+      message: "Map documents fetched successfully",
+      data: formatted,
     });
   } catch (err) {
-    console.error("Error reading map uploads:", err);
+    console.error("Fetch map doc error:", err);
     return res.status(500).json({
       success: false,
       message: "Server error while fetching map files",

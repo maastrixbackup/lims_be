@@ -242,6 +242,25 @@ const Khata = {
     const [rows] = await db.query("SELECT COUNT(*) AS total FROM khatas");
     return rows[0].total;
   },
+
+  async addMapDocument(khata_id, land_type, file_name) {
+    return db.query(
+      `INSERT INTO khata_map_documents (khata_id, land_type, file_name)
+     VALUES (?, ?, ?)`,
+      [khata_id, land_type, file_name]
+    );
+  },
+
+  async getMapDocumentsByKhataId(khata_id) {
+    const [rows] = await db.query(
+      `SELECT id, khata_id, land_type, file_name, created_at
+      FROM khata_map_documents
+      WHERE khata_id = ?
+      ORDER BY id DESC`,
+      [khata_id]
+    );
+    return rows;
+  },
 };
 
 module.exports = Khata;
