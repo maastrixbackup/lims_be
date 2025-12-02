@@ -356,7 +356,6 @@ const deleteKhataFileById = async (req, res) => {
 };
 
 const viewPlotsByKhata = async (req, res) => {
-  const userId = req.user.id;
   const khata_id = req.params.id;
   const { type } = req.query;
   try {
@@ -381,9 +380,9 @@ const viewPlotsByKhata = async (req, res) => {
         message: "Khata not found",
       });
     }
-    const { khata_no } = khataData;
+    const { khata_no, project_id } = khataData;
 
-    const plots = await Plot.findByKhataNo(khata_no, type);
+    const plots = await Plot.findByKhataNo(khata_no, type, project_id);
     return res.status(200).json({
       success: true,
       message: "Plots fetched successfully",

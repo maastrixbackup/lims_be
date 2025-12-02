@@ -2071,10 +2071,10 @@ const Plot = {
     return result.affectedRows > 0;
   },
 
-  async findByKhataNo(khata_no, type) {
+  async findByKhataNo(khata_no, type, project_id) {
     const [rows] = await db.query(
-      "SELECT * FROM plots WHERE khata_no = ? AND type = ?",
-      [khata_no, type]
+      "SELECT * FROM plots WHERE khata_no = ? AND type = ? AND project_id = ?",
+      [khata_no, type, project_id]
     );
     return rows;
   },
