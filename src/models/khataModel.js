@@ -98,7 +98,7 @@ const Khata = {
     SELECT 
       k.*, 
       p.project_name, 
-      v.village_name,
+      v.village_name,v.village_code,
 
       COUNT(pl.id) AS plot_count,
 
@@ -107,8 +107,6 @@ const Khata = {
       SUM(pl.land_area_acquired_acres) AS land_area_acquired_acres,
       SUM(pl.land_area_acquired_hectares) AS land_area_acquired_hectares,
 
-      MIN(pl.village_name) AS village_name,
-      GROUP_CONCAT(pl.village_code SEPARATOR ', ') AS village_code,
       GROUP_CONCAT(pl.plot_no SEPARATOR ', ') AS plot_no,
       GROUP_CONCAT(pl.kissam_of_land SEPARATOR ', ') AS kissam_of_land,
       GROUP_CONCAT(pl.land_category SEPARATOR ', ') AS land_category,
