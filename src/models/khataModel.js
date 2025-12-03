@@ -107,21 +107,30 @@ const Khata = {
       SUM(pl.land_area_acquired_acres) AS land_area_acquired_acres,
       SUM(pl.land_area_acquired_hectares) AS land_area_acquired_hectares,
 
-      pl.village_name,
+      MIN(pl.village_name) AS village_name,
       GROUP_CONCAT(pl.village_code SEPARATOR ', ') AS village_code,
-      pl.khata_no,
       GROUP_CONCAT(pl.plot_no SEPARATOR ', ') AS plot_no,
       GROUP_CONCAT(pl.kissam_of_land SEPARATOR ', ') AS kissam_of_land,
       GROUP_CONCAT(pl.land_category SEPARATOR ', ') AS land_category,
-      pl.lo13_remarks,
-      pl.tahasil_name,
+      MIN(pl.lo13_remarks) AS lo13_remarks,
+      MIN(pl.tahasil_name) AS tahasil_name,
       GROUP_CONCAT(pl.ri_circle_name SEPARATOR ', ') AS ri_circle_name,
-      pl.thana_no,
-      pl.date_of_award,
-      pl.name_of_recorded_tenant,
-      pl.name_of_present_tenant,
-      pl.present_address,
-      pl.displaced_affected_person
+
+      MIN(pl.thana_no) AS thana_no,
+      MIN(pl.date_of_award) AS date_of_award,
+      CASE 
+          WHEN MIN(pl.name_of_recorded_tenant) = MAX(pl.name_of_recorded_tenant)
+          THEN MIN(pl.name_of_recorded_tenant)
+          ELSE GROUP_CONCAT(DISTINCT pl.name_of_recorded_tenant SEPARATOR ', ')
+      END AS name_of_recorded_tenant,
+
+      CASE 
+          WHEN MIN(pl.name_of_present_tenant) = MAX(pl.name_of_present_tenant)
+          THEN MIN(pl.name_of_present_tenant)
+          ELSE GROUP_CONCAT(DISTINCT pl.name_of_present_tenant SEPARATOR ', ')
+      END AS name_of_present_tenant,
+      MIN(pl.present_address) AS present_address,
+      MIN(pl.displaced_affected_person) AS displaced_affected_person
  
     FROM khatas k
     LEFT JOIN projects p ON k.project_id = p.id
@@ -155,7 +164,7 @@ const Khata = {
 
     query += `
     GROUP BY k.id
-    ORDER BY k.id ASC
+    ORDER BY k.id DESC
     LIMIT ? OFFSET ?
   `;
     params.push(limit, offset);
