@@ -38,6 +38,14 @@ async function addKhata(req, res) {
 
     const unique_id = `${project.client_code}/${village.village_code}/${khata_no}`;
 
+    const existsUniqueId = await Khata.existsByUniqueId(unique_id);
+    if (existsUniqueId) {
+      return res.status(400).json({
+        success: false,
+        message: `Khata with unique_id '${unique_id}' already exists`,
+      });
+    }
+
     const khata = await Khata.create(
       project_id,
       village_id,

@@ -16,6 +16,14 @@ const Khata = {
     };
   },
 
+  async existsByUniqueId(unique_id) {
+    const [rows] = await db.query(
+      "SELECT id FROM khatas WHERE unique_id = ? LIMIT 1",
+      [unique_id]
+    );
+    return rows.length > 0;
+  },
+
   // async findAll({
   //   project_id = null,
   //   village_id = null,
@@ -321,8 +329,30 @@ const Khata = {
     }
   },
 
-  async countAll() {
-    const [rows] = await db.query("SELECT COUNT(*) AS total FROM khatas");
+  // async countAll(projectId = null) {
+  //   let query = "SELECT COUNT(*) AS total FROM khatas";
+  //   let params = [];
+
+  //   if (projectId) {
+  //     query += " WHERE project_id = ?";
+  //     params.push(projectId);
+  //   }
+
+  //   const [rows] = await db.query(query, params);
+  //   return rows[0].total;
+  // },
+
+  async countAll(projectIds = null) {
+    let query = "SELECT COUNT(*) AS total FROM khatas";
+    let params = [];
+
+    if (Array.isArray(projectIds) && projectIds.length > 0) {
+      const placeholders = projectIds.map(() => "?").join(",");
+      query += ` WHERE project_id IN (${placeholders})`;
+      params.push(...projectIds);
+    }
+
+    const [rows] = await db.query(query, params);
     return rows[0].total;
   },
 

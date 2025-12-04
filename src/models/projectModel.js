@@ -34,6 +34,12 @@ const Project = {
     return rows;
   },
 
+  async getAccessedProjects(userId) {
+    return db.query("SELECT project_id from user_projects WHERE user_id = ?", [
+      userId,
+    ]);
+  },
+
   async findById(id) {
     const [rows] = await db.query("SELECT * FROM projects WHERE id = ?", [id]);
     return rows[0];
@@ -59,8 +65,28 @@ const Project = {
     await db.query("DELETE FROM projects WHERE id = ?", [id]);
   },
 
-  async countAll() {
-    const [rows] = await db.query("SELECT COUNT(*) AS total FROM projects");
+  // async countAll(projectId = null) {
+  //   let query = "SELECT COUNT(*) AS total FROM projects";
+  //   let params = [];
+  //   if (projectId) {
+  //     query += " WHERE project_id = ?";
+  //     params.push(projectId);
+  //   }
+  //   const [rows] = await db.query(query, params);
+  //   return rows[0].total;
+  // },
+
+  async countAll(projectIds = null) {
+    let query = "SELECT COUNT(*) AS total FROM projects";
+    let params = [];
+
+    if (Array.isArray(projectIds) && projectIds.length > 0) {
+      const placeholders = projectIds.map(() => "?").join(",");
+      query += ` WHERE id IN (${placeholders})`;
+      params.push(...projectIds);
+    }
+
+    const [rows] = await db.query(query, params);
     return rows[0].total;
   },
 
