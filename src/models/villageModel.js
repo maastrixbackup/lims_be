@@ -107,8 +107,30 @@ const Village = {
     await db.query("DELETE FROM villages WHERE id = ?", [id]);
   },
 
-  async countAll() {
-    const [rows] = await db.query("SELECT COUNT(*) AS total FROM villages");
+  // async countAll(projectId = null) {
+  //   let query = "SELECT COUNT(*) AS total FROM villages";
+  //   let params = [];
+
+  //   if (projectId) {
+  //     query += " WHERE project_id = ?";
+  //     params.push(projectId);
+  //   }
+
+  //   const [rows] = await db.query(query, params);
+  //   return rows[0].total;
+  // },
+
+  async countAll(projectIds = null) {
+    let query = "SELECT COUNT(*) AS total FROM villages";
+    let params = [];
+
+    if (Array.isArray(projectIds) && projectIds.length > 0) {
+      const placeholders = projectIds.map(() => "?").join(",");
+      query += ` WHERE project_id IN (${placeholders})`;
+      params.push(...projectIds);
+    }
+
+    const [rows] = await db.query(query, params);
     return rows[0].total;
   },
 

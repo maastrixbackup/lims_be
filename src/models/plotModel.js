@@ -1214,21 +1214,72 @@ const Plot = {
     return rows[0].total;
   },
 
-  async allPlotcount() {
-    const [rows] = await db.query(
-      `SELECT COUNT(*) AS total FROM plots WHERE is_deleted = 0`
-    );
+  // async allPlotcount(projectId = null) {
+  //   let query = `SELECT COUNT(*) AS total FROM plots WHERE is_deleted = 0`;
+  //   let params = [];
+
+  //   if (projectId) {
+  //     query += " AND project_id = ?";
+  //     params.push(projectId);
+  //   }
+
+  //   const [rows] = await db.query(query, params);
+  //   return rows[0].total;
+  // },
+
+  async allPlotcount(projectIds = null) {
+    let query = `SELECT COUNT(*) AS total FROM plots WHERE is_deleted = 0`;
+    let params = [];
+
+    if (Array.isArray(projectIds) && projectIds.length > 0) {
+      const placeholders = projectIds.map(() => "?").join(",");
+      query += ` AND project_id IN (${placeholders})`;
+      params.push(...projectIds);
+    }
+
+    const [rows] = await db.query(query, params);
     return rows[0].total;
   },
 
-  async landDistribution() {
-    const [rows] = await db.query(`
-      SELECT
-      SUM(type = 1) AS private,
-      SUM(type = 2) AS govt,
-      SUM(type = 3) AS forest
-      FROM plots
-      `);
+  // async landDistribution(projectId = null) {
+  //   let query = `
+  //   SELECT
+  //     SUM(CASE WHEN type = 1 THEN 1 ELSE 0 END) AS private,
+  //     SUM(CASE WHEN type = 2 THEN 1 ELSE 0 END) AS govt,
+  //     SUM(CASE WHEN type = 3 THEN 1 ELSE 0 END) AS forest
+  //   FROM plots
+  //   WHERE is_deleted = 0
+  // `;
+  //   let params = [];
+
+  //   if (projectId) {
+  //     query += " AND project_id = ?";
+  //     params.push(projectId);
+  //   }
+
+  //   const [rows] = await db.query(query, params);
+  //   return rows[0];
+  // },
+
+  async landDistribution(projectIds = null) {
+    let query = `
+    SELECT
+      SUM(CASE WHEN type = 1 THEN 1 ELSE 0 END) AS private,
+      SUM(CASE WHEN type = 2 THEN 1 ELSE 0 END) AS govt,
+      SUM(CASE WHEN type = 3 THEN 1 ELSE 0 END) AS forest
+    FROM plots
+    WHERE is_deleted = 0
+  `;
+
+    let params = [];
+
+    if (Array.isArray(projectIds) && projectIds.length > 0) {
+      const placeholders = projectIds.map(() => "?").join(",");
+      query += ` AND project_id IN (${placeholders})`;
+      params.push(...projectIds);
+    }
+
+    const [rows] = await db.query(query, params);
     return rows[0];
   },
 
