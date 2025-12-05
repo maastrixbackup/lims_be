@@ -221,6 +221,14 @@ const Khata = {
     return rows[0] || null;
   },
 
+  async getKhataByNumber(khata_no) {
+    const [rows] = await db.query(
+      `SELECT * FROM khatas WHERE khata_no = ? LIMIT 1`,
+      [khata_no]
+    );
+    return rows[0];
+  },
+
   async update(id, project_id, village_id, khata_no, type) {
     await db.query(
       "UPDATE khatas SET project_id = ?, village_id = ?, khata_no = ?, type = ?, updated_at = NOW() WHERE id = ?",

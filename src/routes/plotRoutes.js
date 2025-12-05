@@ -11,7 +11,7 @@ const {
   getDeletedPlots,
   restorePlot,
   paymentReady,
-  getCompensation,
+  getAllPaymentReady,
   exportPlot,
 } = require("../controllers/plotController");
 
@@ -24,7 +24,7 @@ router.delete("/deletePlot/:id", deletePlot);
 router.get("/getDeletedPlots", getDeletedPlots);
 router.put("/restorePlot/:id", restorePlot);
 router.post("/paymentReady", paymentReady);
-router.get("/compensation", getCompensation);
+router.get("/getCompensationDetails", getAllPaymentReady);
 router.get("/exportPlot", exportPlot);
 
 module.exports = router;

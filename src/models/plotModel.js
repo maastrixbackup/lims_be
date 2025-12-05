@@ -2139,21 +2139,58 @@ const Plot = {
     return true;
   },
 
-  async addPaymentRecord(plot) {
-    const [result] = await db.query(
-      `INSERT INTO plot_payments 
-       (plot_id, khata_no, plot_no, land_area_total_acres, name_of_present_tenant, payment_status)
-       VALUES (?, ?, ?, ?, ?, ?)`,
-      [
-        plot.id,
-        plot.khata_no,
-        plot.plot_no,
-        plot.land_area_total_acres,
-        plot.name_of_present_tenant,
-        plot.payment_status,
-      ]
-    );
+  // async addPaymentRecord(data) {
+  //   const [result] = await db.query(
+  //     `INSERT INTO plot_payments
+  //    (plot_id, project_id, khata_no, present_tenant_names, total_compensation,
+  //     bank_ac, bank_name, ifsc, status)
+  //    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+  //     [
+  //       data.plot_id,
+  //       data.project_id,
+  //       data.khata_no,
+  //       data.present_tenant_names,
+  //       data.total_compensation,
+  //       data.bank_ac,
+  //       data.bank_name,
+  //       data.ifsc,
+  //       data.status,
+  //     ]
+  //   );
 
+  //   const [rows] = await db.query(`SELECT * FROM plot_payments WHERE id = ?`, [
+  //     result.insertId,
+  //   ]);
+
+  //   return rows[0];
+  // },
+
+  async addPaymentRecord(data) {
+    const sql = `
+      INSERT INTO plot_payments 
+      (unique_id, plot_id, plot_no, khata_no, project_id, present_tenant_names, payment_area, total_compensation, 
+       bank_ac, bank_name, ifsc, status)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,?)
+    `;
+
+    const params = [
+      data.unique_id,
+      data.plot_id,
+      data.plot_no,
+      data.khata_no,
+      data.project_id,
+      data.present_tenant_names,
+      data.payment_area,
+      data.total_compensation,
+      data.bank_ac,
+      data.bank_name,
+      data.ifsc,
+      data.status,
+    ];
+
+    const [result] = await db.query(sql, params);
+
+    // fetch inserted record
     const [rows] = await db.query(`SELECT * FROM plot_payments WHERE id = ?`, [
       result.insertId,
     ]);
@@ -2167,6 +2204,11 @@ const Plot = {
      WHERE plot_id = ?`,
       [plot_id]
     );
+    return rows;
+  },
+
+  async getAll() {
+    const [rows] = await db.query(`SELECT * FROM plot_payments`);
     return rows;
   },
 };
