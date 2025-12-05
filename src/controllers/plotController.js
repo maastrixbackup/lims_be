@@ -493,9 +493,77 @@ const restorePlot = async (req, res) => {
   }
 };
 
+// const paymentReady = async (req, res) => {
+//   const { plot_id } = req.body;
+//   const userId = req.user.id;
+
+//   try {
+//     if (!plot_id) {
+//       return res.status(400).json({
+//         success: false,
+//         message: "Plot Id is required",
+//       });
+//     }
+
+//     const plot = await Plot.findById(plot_id);
+//     if (!plot) {
+//       return res.status(404).json({
+//         success: false,
+//         message: "Plot not found",
+//       });
+//     }
+
+//     await Plot.updatePaymentStatus(plot_id, "Processing");
+
+//     const paymentData = {
+//       plot_id: plot.id,
+//       // unique_id: plot.unique_id,
+//       // //unique id is not in plots table.
+//       // we have to fetch unique_id from khatas table by khata_no
+//       khata_no: plot.khata_no,
+//       project_id: plot.project_id,
+
+//       present_tenant_names: plot.name_of_present_tenant, // comma separated
+//       total_compensation: plot.total_compensation,
+
+//       bank_ac: plot.bank_account_no,
+//       bank_name: plot.bank_name,
+//       ifsc: plot.branch_ifsc,
+
+//       status: "Processing",
+//     };
+
+//     const paymentRecord = await Plot.addPaymentRecord(paymentData);
+
+//     await logAction(
+//       userId,
+//       "Payment ready",
+//       "success",
+//       "Payment processed successfully",
+//       { plot_id },
+//       paymentRecord
+//     );
+
+//     return res.status(200).json({
+//       success: true,
+//       message: "Payment processed successfully",
+//       data: paymentRecord,
+//     });
+//   } catch (err) {
+//     console.error("Payment Ready Error:", err);
+
+//     return res.status(500).json({
+//       success: false,
+//       message: "Server error",
+//     });
+//   }
+// };
+// Updated Payment Ready Controller
+
 const paymentReady = async (req, res) => {
   const { plot_id } = req.body;
   const userId = req.user.id;
+
   try {
     if (!plot_id) {
       return res.status(400).json({
@@ -503,7 +571,7 @@ const paymentReady = async (req, res) => {
         message: "Plot Id is required",
       });
     }
-    const status = "Processing";
+
     const plot = await Plot.findById(plot_id);
     if (!plot) {
       return res.status(404).json({
@@ -511,34 +579,56 @@ const paymentReady = async (req, res) => {
         message: "Plot not found",
       });
     }
-    await Plot.updatePaymentStatus(plot_id, status);
 
-    plot.payment_status = status;
-    const paymentRecord = await Plot.addPaymentRecord(plot);
+    const khata = await Khata.getKhataByNumber(plot.khata_no);
+    const unique_id = khata ? khata.unique_id : null;
+    // Update plot status
+    await Plot.updatePaymentStatus(plot_id, "Processing");
+
+    // Split tenant names into an array
+    const tenants = plot.name_of_present_tenant
+      ? plot.name_of_present_tenant.split(",").map((t) => t.trim())
+      : [];
+
+    const records = [];
+
+    for (const tenant of tenants) {
+      const data = {
+        unique_id,
+        plot_id: plot.id,
+        plot_no: plot.plot_no,
+        khata_no: plot.khata_no,
+        project_id: plot.project_id,
+        present_tenant_names: tenant,
+        payment_area: plot.land_area_total_acres,
+        total_compensation: plot.total_compensation,
+        bank_ac: plot.bank_account_no,
+        bank_name: plot.bank_name,
+        ifsc: plot.branch_ifsc,
+        status: "Processing",
+      };
+
+      const rec = await Plot.addPaymentRecord(data);
+      records.push(rec);
+    }
+
     await logAction(
       userId,
       "Payment ready",
       "success",
       "Payment processed successfully",
       { plot_id },
-      paymentRecord
+      records
     );
 
     return res.status(200).json({
       success: true,
       message: "Payment processed successfully",
-      data: paymentRecord,
+      data: records,
     });
   } catch (err) {
     console.error("Payment Ready Error:", err);
-    await logAction(
-      userId,
-      "Payment ready",
-      "failure",
-      err.message,
-      { plot_id },
-      null
-    );
+
     return res.status(500).json({
       success: false,
       message: "Server error",
@@ -546,34 +636,143 @@ const paymentReady = async (req, res) => {
   }
 };
 
-const getCompensation = async (req, res) => {
-  const { plot_id } = req.query;
+// const getCompensation = async (req, res) => {
+//   const { plot_id } = req.query;
 
+//   try {
+//     if (!plot_id) {
+//       return res.status(400).json({
+//         success: false,
+//         message: "Plot ID is required",
+//       });
+//     }
+
+//     const compensationData = await Plot.getCompensationByPlotId(plot_id);
+
+//     if (!compensationData || compensationData.length === 0) {
+//       return res.status(404).json({
+//         success: false,
+//         message: "No compensation record found for this plot",
+//       });
+//     }
+
+//     return res.status(200).json({
+//       success: true,
+//       message: "Compensation data retrieved successfully",
+//       data: compensationData,
+//     });
+//   } catch (err) {
+//     console.error("Get Compensation Error:", err);
+
+//     return res.status(500).json({
+//       success: false,
+//       message: "Server error",
+//     });
+//   }
+// };
+
+// const getAllPaymentReady = async (req, res) => {
+//   try {
+//     // 1. Get all records from plot_payments
+//     const all = await Plot.getAll();
+
+//     if (!all.length) {
+//       return res.status(404).json({
+//         success: false,
+//         message: "No payment records found",
+//       });
+//     }
+
+//     // 2. Group by unique_id
+//     const groups = {};
+
+//     for (const row of all) {
+//       if (!groups[row.unique_id]) {
+//         // Fetch khata info for summary
+//         const khata = await Khata.getKhataByNumber(row.khata_no);
+
+//         groups[row.unique_id] = {
+//           unique_id: row.unique_id,
+//           khata_no: row.khata_no,
+//           total_area: khata?.total_area ?? 0,
+//           total_compensation: khata?.total_compensation ?? 0,
+//           tenants: [],
+//         };
+//       }
+
+//       // push tenant row
+//       groups[row.unique_id].tenants.push({
+//         plot_no: row.plot_no,
+//         present_tenant: row.present_tenant_names,
+//         payment_area: row.payment_area,
+//         compensation_payment: row.compensation_payment,
+//         apportionment_percent: row.apportionment_percent,
+//         bank_ac: row.bank_ac,
+//         bank_name: row.bank_name,
+//         ifsc: row.ifsc,
+//         status: row.status,
+//       });
+//     }
+
+//     return res.status(200).json({
+//       success: true,
+//       data: Object.values(groups),
+//     });
+//   } catch (err) {
+//     console.error("Get All Payment Ready Error:", err);
+//     return res.status(500).json({
+//       success: false,
+//       message: "Server error",
+//     });
+//   }
+// };
+const getAllPaymentReady = async (req, res) => {
   try {
-    if (!plot_id) {
-      return res.status(400).json({
+    // Get all records
+    const all = await Plot.getAll();
+
+    if (!all.length) {
+      return res.status(404).json({
         success: false,
-        message: "Plot ID is required",
+        message: "No payment records found",
       });
     }
 
-    const compensationData = await Plot.getCompensationByPlotId(plot_id);
+    // Group by unique_id
+    const groups = {};
 
-    if (!compensationData || compensationData.length === 0) {
-      return res.status(404).json({
-        success: false,
-        message: "No compensation record found for this plot",
+    for (const row of all) {
+      if (!groups[row.unique_id]) {
+        // Initialize group using first row values (all rows have same totals)
+        groups[row.unique_id] = {
+          unique_id: row.unique_id,
+          khata_no: row.khata_no,
+          total_area: row.payment_area || 0, // or row.total_area if exists
+          total_compensation: row.total_compensation || 0,
+          tenants: [],
+        };
+      }
+
+      // Add each tenant row
+      groups[row.unique_id].tenants.push({
+        plot_no: row.plot_no,
+        present_tenant: row.present_tenant_names,
+        payment_area: 0,
+        compensation_payment: 0,
+        apportionment_percent: 0,
+        bank_ac: row.bank_ac,
+        bank_name: row.bank_name,
+        ifsc: row.ifsc,
+        status: row.status,
       });
     }
 
     return res.status(200).json({
       success: true,
-      message: "Compensation data retrieved successfully",
-      data: compensationData,
+      data: Object.values(groups),
     });
   } catch (err) {
-    console.error("Get Compensation Error:", err);
-
+    console.error("Get All Payment Ready Error:", err);
     return res.status(500).json({
       success: false,
       message: "Server error",
@@ -695,6 +894,6 @@ module.exports = {
   getDeletedPlots,
   restorePlot,
   paymentReady,
-  getCompensation,
+  getAllPaymentReady,
   exportPlot,
 };
