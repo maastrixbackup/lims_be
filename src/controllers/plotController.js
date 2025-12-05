@@ -31,6 +31,7 @@ const uploadPlots = async (req, res) => {
     }
 
     // Read Excel file
+    
     const workbook = xlsx.readFile(req.file.path);
     const sheetName = workbook.SheetNames[0];
     const data = xlsx.utils.sheet_to_json(workbook.Sheets[sheetName]);
