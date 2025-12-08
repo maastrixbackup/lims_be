@@ -31,7 +31,7 @@ const uploadPlots = async (req, res) => {
     }
 
     // Read Excel file
-    
+
     const workbook = xlsx.readFile(req.file.path);
     const sheetName = workbook.SheetNames[0];
     const data = xlsx.utils.sheet_to_json(workbook.Sheets[sheetName]);
@@ -729,8 +729,15 @@ const paymentReady = async (req, res) => {
 // };
 const getAllPaymentReady = async (req, res) => {
   try {
+    const { project_id } = req.query;
+    if (!project_id) {
+      return res.status(400).json({
+        success: false,
+        message: "project_id is required",
+      });
+    }
     // Get all records
-    const all = await Plot.getAll();
+    const all = await Plot.getAll(project_id);
 
     if (!all.length) {
       return res.status(404).json({
@@ -747,6 +754,7 @@ const getAllPaymentReady = async (req, res) => {
         // Initialize group using first row values (all rows have same totals)
         groups[row.unique_id] = {
           unique_id: row.unique_id,
+          project_id: row.project_id,
           khata_no: row.khata_no,
           total_area: row.payment_area || 0, // or row.total_area if exists
           total_compensation: row.total_compensation || 0,
