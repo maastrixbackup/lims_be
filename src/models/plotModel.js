@@ -2207,8 +2207,16 @@ const Plot = {
     return rows;
   },
 
-  async getAll() {
-    const [rows] = await db.query(`SELECT * FROM plot_payments`);
+  async getAll(project_id = null) {
+    let query = `SELECT * FROM plot_payments WHERE 1=1`;
+    const params = [];
+
+    if (project_id) {
+      query += ` AND project_id = ?`;
+      params.push(project_id);
+    }
+
+    const [rows] = await db.query(query, params);
     return rows;
   },
 };
