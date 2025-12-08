@@ -62,9 +62,29 @@ const addVillage = async (req, res) => {
 
 const villageList = async (req, res) => {
   try {
-    const { project_id, district, tahasil, type } = req.query;
+    let {
+      project_id,
+      district,
+      tahasil,
+      type,
+      page = 1,
+      limit = 10,
+    } = req.query;
+
+    page = parseInt(page);
+    limit = parseInt(limit);
+    const offset = (page - 1) * limit;
 
     const villages = await Village.findAll({
+      project_id,
+      district,
+      tahasil,
+      type,
+      limit,
+      offset,
+    });
+
+    const total = await Village.paginationCountAll({
       project_id,
       district,
       tahasil,
@@ -74,6 +94,10 @@ const villageList = async (req, res) => {
     return res.status(200).json({
       success: true,
       message: "Village list fetched successfully",
+      page,
+      limit,
+      total,
+      totalPages: Math.ceil(total / limit),
       villages,
     });
   } catch (err) {

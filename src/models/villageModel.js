@@ -29,6 +29,8 @@ const Village = {
     district = null,
     tahasil = null,
     type = null,
+    limit,
+    offset,
   }) {
     let query = `
         SELECT v.*,p.project_name
@@ -57,10 +59,52 @@ const Village = {
       query += " AND v.type = ?";
       params.push(type);
     }
-    query += " ORDER BY v.id DESC";
+    query += " ORDER BY v.id DESC LIMIT ? OFFSET ?";
+    params.push(limit, offset);
 
     const [rows] = await db.query(query, params);
+    // query += " ORDER BY v.id DESC";
+
+    // const [rows] = await db.query(query, params);
     return rows;
+  },
+
+  async paginationCountAll({
+    project_id = null,
+    district = null,
+    tahasil = null,
+    type = null,
+  }) {
+    let query = `
+      SELECT COUNT(*) AS total
+      FROM villages v
+      WHERE 1=1
+    `;
+
+    const params = [];
+
+    if (project_id) {
+      query += " AND v.project_id = ?";
+      params.push(project_id);
+    }
+
+    if (district) {
+      query += " AND v.district LIKE ?";
+      params.push(`%${district}%`);
+    }
+
+    if (tahasil) {
+      query += " AND v.tahasil LIKE ?";
+      params.push(`%${tahasil}%`);
+    }
+
+    if (type) {
+      query += " AND v.type = ?";
+      params.push(type);
+    }
+
+    const [rows] = await db.query(query, params);
+    return rows[0].total;
   },
 
   async findById(id) {
