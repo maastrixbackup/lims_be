@@ -184,8 +184,8 @@ const Village = {
     const [existingVillages] = await db.query(
       `SELECT village_name, tahasil, village_code 
        FROM villages 
-       WHERE project_id = ?`,
-      [project_id]
+       WHERE project_id = ? AND type = ?`,
+      [project_id, type]
     );
 
     const existingSet = new Set(
@@ -237,6 +237,7 @@ const Village = {
 
       // Key for matching existing data
       const baseKey = `${villageName.toLowerCase()}|${tahasil.toLowerCase()}`;
+      // const baseKey = `${villageCode.toLowerCase()}`;
       const uniqueKey = `${baseKey}|${thanaNo?.toLowerCase() || ""}`;
 
       // Skip if already exists in DB
