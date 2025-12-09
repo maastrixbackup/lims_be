@@ -269,6 +269,59 @@ const plotDocumentList = async (req, res) => {
   }
 };
 
+const plotDocumentDelete = async (req, res) => {
+  const userId = req.user.id;
+  try {
+    const { fileName } = req.params;
+    if (!fileName) {
+      return res.status(400).json({
+        success: false,
+        message: "File name is required",
+      });
+    }
+    const filePath = path.join(process.cwd(), "uploads/excels", fileName);
+
+    if (!fs.existsSync(filePath)) {
+      return res.status(404).json({
+        success: false,
+        message: "File not found",
+      });
+    }
+
+    fs.unlinkSync(filePath);
+    await logAction(
+      userId,
+      "plot excel delete",
+      "success",
+      "Plot Excel file deleted successfully",
+      { fileName },
+      null
+    );
+
+    return res.status(200).json({
+      success: true,
+      message: "File deleted successfully",
+      deletedFile: fileName,
+    });
+  } catch (err) {
+    console.error("Error deleting file:", err);
+
+    await logAction(
+      userId,
+      "plot excel delete",
+      "failed",
+      "Failed to delete plot Excel file",
+      null,
+      err.message
+    );
+
+    return res.status(500).json({
+      success: false,
+      message: "Server error while deleting file",
+    });
+  }
+};
+
 const createPlot = async (req, res) => {
   const userId = req.user.id;
   const safeRequestPayload = req.body;
@@ -905,4 +958,5 @@ module.exports = {
   paymentReady,
   getAllPaymentReady,
   exportPlot,
+  plotDocumentDelete,
 };
