@@ -2,12 +2,18 @@ const db = require("../config/db");
 const { countAll } = require("./logModel");
 
 const Project = {
-  async create(project_name, status = 0, client_code) {
+  async create(project_name, status = 0, client_code, project_location) {
     const [result] = await db.query(
-      "INSERT INTO projects (project_name, status, client_code) VALUES (?, ?, ?)",
-      [project_name, status, client_code]
+      "INSERT INTO projects (project_name, status, client_code, project_location) VALUES (?, ?, ?, ?)",
+      [project_name, status, client_code, project_location]
     );
-    return { id: result.insertId, project_name, status, client_code };
+    return {
+      id: result.insertId,
+      project_name,
+      status,
+      client_code,
+      project_location,
+    };
   },
 
   async findAll() {
@@ -53,12 +59,12 @@ const Project = {
     return rows;
   },
 
-  async update(id, project_name, status, client_code) {
+  async update(id, project_name, status, client_code, project_location) {
     await db.query(
-      "UPDATE projects SET project_name = ?, status = ?, client_code = ?, updated_at = NOW() WHERE id = ?",
-      [project_name, status, client_code, id]
+      "UPDATE projects SET project_name = ?, status = ?, client_code = ?, project_location = ?, updated_at = NOW() WHERE id = ?",
+      [project_name, status, client_code, project_location, id]
     );
-    return { id, project_name, status, client_code };
+    return { id, project_name, status, client_code, project_location };
   },
 
   async delete(id) {
