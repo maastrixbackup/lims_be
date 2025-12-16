@@ -3,6 +3,7 @@ const logAction = require("../utils/logger");
 
 const createProject = async (req, res) => {
   const userId = req.user.id;
+  const roleId = req.user.role_id;
   const { project_name, status = 0, client_code, project_location } = req.body;
   const safeRequestPayload = { project_name, status, client_code };
 
@@ -28,6 +29,11 @@ const createProject = async (req, res) => {
       client_code,
       project_location
     );
+
+    if (roleId === 2) {
+      await Project.assignUserToProject(userId, project.id);
+    }
+
     await logAction(
       userId,
       "create project",

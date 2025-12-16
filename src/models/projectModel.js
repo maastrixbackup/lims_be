@@ -40,6 +40,13 @@ const Project = {
     return rows;
   },
 
+  async assignUserToProject(userId, projectId) {
+    await db.query(
+      "INSERT INTO user_projects (user_id, project_id) VALUES (?, ?)",
+      [userId, projectId]
+    );
+  },
+
   async getAccessedProjects(userId) {
     return db.query("SELECT project_id from user_projects WHERE user_id = ?", [
       userId,
