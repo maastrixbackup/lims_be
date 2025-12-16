@@ -3,11 +3,11 @@ const logAction = require("../utils/logger");
 
 const createProject = async (req, res) => {
   const userId = req.user.id;
-  const { project_name, status = 0, client_code } = req.body;
+  const { project_name, status = 0, client_code, project_location } = req.body;
   const safeRequestPayload = { project_name, status, client_code };
 
   try {
-    if (!project_name || !client_code) {
+    if (!project_name || !client_code || !project_location) {
       return res.status(400).json({
         success: false,
         message: "All fields are required",
@@ -22,7 +22,12 @@ const createProject = async (req, res) => {
       });
     }
 
-    const project = await Project.create(project_name, status, client_code);
+    const project = await Project.create(
+      project_name,
+      status,
+      client_code,
+      project_location
+    );
     await logAction(
       userId,
       "create project",
@@ -106,9 +111,15 @@ const getActiveProjects = async (req, res) => {
 const updateProject = async (req, res) => {
   const userId = req.user.id;
   const { id } = req.params;
-  const { project_name, status, client_code } = req.body;
+  const { project_name, status, client_code, project_location } = req.body;
 
-  const safeRequestPayload = { id, project_name, status, client_code };
+  const safeRequestPayload = {
+    id,
+    project_name,
+    status,
+    client_code,
+    project_location,
+  };
 
   try {
     if (!id || isNaN(id)) {
@@ -120,7 +131,8 @@ const updateProject = async (req, res) => {
     if (
       project_name === undefined &&
       status === undefined &&
-      client_code === undefined
+      client_code === undefined &&
+      project_location === undefined
     ) {
       return res.status(400).json({
         success: false,
@@ -147,7 +159,8 @@ const updateProject = async (req, res) => {
       id,
       project_name,
       status,
-      client_code
+      client_code,
+      project_location
     );
     await logAction(
       userId,
