@@ -108,7 +108,16 @@ const Khata = {
       p.project_name, 
       v.village_name,v.village_code,
 
-      COUNT(pl.id) AS plot_count,
+      COUNT(DISTINCT pl.id) AS plot_count,
+      (SELECT COUNT(*)
+        FROM khata_documents kd
+        WHERE kd.khata_id = k.id
+      ) AS khata_document_count,
+
+      (SELECT COUNT(*)
+        FROM khata_map_documents km
+        WHERE km.khata_id = k.id
+      ) AS khata_map_document_count,
 
       SUM(pl.land_area_total_acres) AS land_area_total_acres,
       SUM(pl.land_area_total_hectares) AS land_area_total_hectares,
@@ -146,6 +155,8 @@ const Khata = {
       ON pl.khata_no = k.khata_no
       AND pl.project_id = k.project_id
       AND pl.type = k.type
+
+    
  
     WHERE 1=1
   `;
