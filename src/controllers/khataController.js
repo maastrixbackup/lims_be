@@ -138,8 +138,11 @@ const khataList = async (req, res) => {
     console.error("Fetch Khata Error FULL:", err);
     return res.status(500).json({
       success: false,
-      message: err.sqlMessage || err.message,
+      message: err.message,
+      sqlMessage: err.sqlMessage,
       code: err.code,
+      errno: err.errno,
+      sqlState: err.sqlState,
       sql: err.sql,
     });
   }
