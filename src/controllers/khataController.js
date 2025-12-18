@@ -82,33 +82,11 @@ async function addKhata(req, res) {
 }
 
 const khataList = async (req, res) => {
-  
   try {
-    // let { project_id, village_id, type, page = 1, limit = 10 } = req.query;
-    // if (village_id) {
-    //   village_id = village_id.split(",").map((id) => parseInt(id.trim()));
-    // }
     let { project_id, village_id, type, page = 1, limit = 10 } = req.query;
-
-    // if (village_id && village_id.trim() !== "") {
-    //   village_id = village_id
-    //     .split(",")
-    //     .map((id) => parseInt(id.trim()))
-    //     .filter((id) => !isNaN(id));
-    // } else {
-    //   village_id = null;
-    // }
-    if (typeof village_id === "string") {
-      village_id = village_id
-        .split(",")
-        .map((v) => Number(v))
-        .filter((v) => Number.isInteger(v));
+    if (village_id) {
+      village_id = village_id.split(",").map((id) => parseInt(id.trim()));
     }
-
-    if (!Array.isArray(village_id) || village_id.length === 0) {
-      village_id = null;
-    }
-
     page = parseInt(page);
     limit = parseInt(limit);
     const offset = (page - 1) * limit;
@@ -136,16 +114,10 @@ const khataList = async (req, res) => {
       khatas,
     });
   } catch (err) {
-    console.error("KHATA ERROR FULL:", err);
-
+    console.error("Fetch Khata Error:", err);
     return res.status(500).json({
       success: false,
-      message: err.message,
-      sqlMessage: err.sqlMessage,
-      code: err.code,
-      errno: err.errno,
-      sqlState: err.sqlState,
-      sql: err.sql,
+      message: "Server error",
     });
   }
 };
