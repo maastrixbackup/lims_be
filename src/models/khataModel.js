@@ -214,14 +214,14 @@ const Khata = {
       params.push(project_id);
     }
 
-    // if (village_id) {
-    //   query += " AND village_id = ?";
-    //   params.push(village_id);
-    // }
-    if (village_id && Array.isArray(village_id)) {
-      const placeholders = village_id.map(() => "?").join(",");
-      query += ` AND village_id IN (${placeholders})`;
-      params.push(...village_id);
+    if (Array.isArray(village_id) && village_id.length > 0) {
+      const validVillageIds = village_id.filter((id) => Number.isInteger(id));
+
+      if (validVillageIds.length > 0) {
+        const placeholders = validVillageIds.map(() => "?").join(",");
+        query += ` AND village_id IN (${placeholders})`;
+        params.push(...validVillageIds);
+      }
     }
 
     if (type) {

@@ -89,12 +89,22 @@ const khataList = async (req, res) => {
     // }
     let { project_id, village_id, type, page = 1, limit = 10 } = req.query;
 
-    if (village_id && village_id.trim() !== "") {
+    // if (village_id && village_id.trim() !== "") {
+    //   village_id = village_id
+    //     .split(",")
+    //     .map((id) => parseInt(id.trim()))
+    //     .filter((id) => !isNaN(id));
+    // } else {
+    //   village_id = null;
+    // }
+    if (typeof village_id === "string") {
       village_id = village_id
         .split(",")
-        .map((id) => parseInt(id.trim()))
-        .filter((id) => !isNaN(id));
-    } else {
+        .map((v) => Number(v))
+        .filter((v) => Number.isInteger(v));
+    }
+
+    if (!Array.isArray(village_id) || village_id.length === 0) {
       village_id = null;
     }
 
