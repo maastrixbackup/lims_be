@@ -193,18 +193,8 @@ const Khata = {
   `;
     params.push(limit, offset);
 
-    // const [rows] = await db.query(query, params);
-    // return rows;
-
-    try {
-      const [rows] = await db.query(query, params);
-      return rows;
-    } catch (err) {
-      console.error("SQL Error:", err.message); // server log
-      console.error("SQL:", query);
-      console.error("Params:", params);
-      throw err; // re-throw to controller
-    }
+    const [rows] = await db.query(query, params);
+    return rows;
   },
   async paginationCountAll({
     project_id = null,

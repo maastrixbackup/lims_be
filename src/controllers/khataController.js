@@ -83,10 +83,21 @@ async function addKhata(req, res) {
 
 const khataList = async (req, res) => {
   try {
+    // let { project_id, village_id, type, page = 1, limit = 10 } = req.query;
+    // if (village_id) {
+    //   village_id = village_id.split(",").map((id) => parseInt(id.trim()));
+    // }
     let { project_id, village_id, type, page = 1, limit = 10 } = req.query;
-    if (village_id) {
-      village_id = village_id.split(",").map((id) => parseInt(id.trim()));
+
+    if (village_id && village_id.trim() !== "") {
+      village_id = village_id
+        .split(",")
+        .map((id) => parseInt(id.trim()))
+        .filter((id) => !isNaN(id));
+    } else {
+      village_id = null;
     }
+
     page = parseInt(page);
     limit = parseInt(limit);
     const offset = (page - 1) * limit;
@@ -114,11 +125,10 @@ const khataList = async (req, res) => {
       khatas,
     });
   } catch (err) {
-    console.error("Fetch Khata Error:", err); // server log
+    console.error("Fetch Khata Error:", err);
     return res.status(500).json({
       success: false,
       message: "Server error",
-      error: err.message, // This will appear in browser
     });
   }
 };
