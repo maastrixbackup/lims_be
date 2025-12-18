@@ -197,7 +197,7 @@ const Khata = {
   p.project_name,
   v.village_name,
   v.village_code
-    ORDER BY k.id DESC
+    ORDER BY id DESC
     LIMIT ? OFFSET ?
   `;
     params.push(limit, offset);
