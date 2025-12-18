@@ -104,9 +104,18 @@ const Khata = {
   }) {
     let query = `
     SELECT 
-      k.*, 
-      p.project_name, 
-      v.village_name,v.village_code,
+      MIN(k.id) AS id,
+      MIN(k.unique_id) AS unique_id,
+      MIN(k.project_id) AS project_id,
+      MIN(k.village_id) AS village_id,
+      MIN(k.khata_no) AS khata_no,
+      MIN(k.type) AS type,
+      MIN(k.created_at) AS created_at,
+      MIN(k.updated_at) AS updated_at,
+
+      MIN(p.project_name) AS project_name,
+      MIN(v.village_name) AS village_name,
+      MIN(v.village_code) AS village_code,
 
       COUNT(DISTINCT pl.id) AS plot_count,
       (SELECT COUNT(*)
@@ -155,8 +164,6 @@ const Khata = {
       ON pl.khata_no = k.khata_no
       AND pl.project_id = k.project_id
       AND pl.type = k.type
-
-    
  
     WHERE 1=1
   `;
