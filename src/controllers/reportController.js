@@ -80,7 +80,9 @@ async function getAllKhataDocuments(req, res) {
       grouped[doc.khata_id].uploaded_documents.push({
         document_type: doc.document_type,
         file_name: doc.file_name,
-        url: `${baseUrl}/uploads/khata_docs/${doc.file_name}`,
+        url: `${req.protocol}://${req.get("host")}${
+          req.get("host").includes("localhost") ? "" : "/api"
+        }/uploads/khata/${doc.file_name}`,
         uploaded_at: doc.created_at,
       });
     });
