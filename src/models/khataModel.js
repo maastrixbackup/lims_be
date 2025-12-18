@@ -187,17 +187,8 @@ const Khata = {
     }
 
     query += `
-    GROUP BY
-  k.id,
-  k.unique_id,
-  k.project_id,
-  k.village_id,
-  k.khata_no,
-  k.type,
-  p.project_name,
-  v.village_name,
-  v.village_code
-    ORDER BY id DESC
+    GROUP BY k.id
+    ORDER BY k.id DESC
     LIMIT ? OFFSET ?
   `;
     params.push(limit, offset);
@@ -223,14 +214,14 @@ const Khata = {
       params.push(project_id);
     }
 
-    if (Array.isArray(village_id) && village_id.length > 0) {
-      const validVillageIds = village_id.filter((id) => Number.isInteger(id));
-
-      if (validVillageIds.length > 0) {
-        const placeholders = validVillageIds.map(() => "?").join(",");
-        query += ` AND village_id IN (${placeholders})`;
-        params.push(...validVillageIds);
-      }
+    // if (village_id) {
+    //   query += " AND village_id = ?";
+    //   params.push(village_id);
+    // }
+    if (village_id && Array.isArray(village_id)) {
+      const placeholders = village_id.map(() => "?").join(",");
+      query += ` AND village_id IN (${placeholders})`;
+      params.push(...village_id);
     }
 
     if (type) {
