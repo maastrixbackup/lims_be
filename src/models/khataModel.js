@@ -187,7 +187,16 @@ const Khata = {
     }
 
     query += `
-    GROUP BY k.id
+    GROUP BY
+  k.id,
+  k.unique_id,
+  k.project_id,
+  k.village_id,
+  k.khata_no,
+  k.type,
+  p.project_name,
+  v.village_name,
+  v.village_code
     ORDER BY k.id DESC
     LIMIT ? OFFSET ?
   `;
