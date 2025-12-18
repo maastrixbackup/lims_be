@@ -84,8 +84,16 @@ async function addKhata(req, res) {
 const khataList = async (req, res) => {
   try {
     let { project_id, village_id, type, page = 1, limit = 10 } = req.query;
+    // if (village_id) {
+    //   village_id = village_id.split(",").map((id) => parseInt(id.trim()));
+    // }
     if (village_id) {
-      village_id = village_id.split(",").map((id) => parseInt(id.trim()));
+      village_id = village_id
+        .split(",")
+        .map((id) => parseInt(id.trim()))
+        .filter((id) => !isNaN(id)); // remove NaN
+    } else {
+      village_id = null; // important
     }
     page = parseInt(page);
     limit = parseInt(limit);
