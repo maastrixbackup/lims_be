@@ -325,31 +325,66 @@ const plotDocumentDelete = async (req, res) => {
 const createPlot = async (req, res) => {
   const userId = req.user.id;
   const safeRequestPayload = req.body;
+  Object.keys(safeRequestPayload).forEach((key) => {
+    if (safeRequestPayload[key] === "") {
+      safeRequestPayload[key] = null;
+    }
+  });
+  // if (!["PDF", "PAF"].includes(safeRequestPayload.displaced_affected_person)) {
+  //   safeRequestPayload.displaced_affected_person = null;
+  // }
   try {
-    if (
-      !safeRequestPayload.project_id ||
-      !safeRequestPayload.la_case_file_no ||
-      !safeRequestPayload.name_of_recorded_tenant ||
-      !safeRequestPayload.name_of_present_tenant ||
-      !safeRequestPayload.village_name ||
-      !safeRequestPayload.village_code ||
-      !safeRequestPayload.tahasil_name ||
-      !safeRequestPayload.ri_circle_name ||
-      !safeRequestPayload.thana_no ||
-      !safeRequestPayload.khata_no ||
-      !safeRequestPayload.plot_no ||
-      !safeRequestPayload.kissam_of_land ||
-      !safeRequestPayload.land_category ||
-      !safeRequestPayload.land_area_total_acres ||
-      !safeRequestPayload.land_area_total_hectares ||
-      !safeRequestPayload.land_area_acquired_acres ||
-      !safeRequestPayload.land_area_acquired_hectares ||
-      !safeRequestPayload.type
-    ) {
-      return res.status(400).json({
-        success: false,
-        message: "All fields are required",
-      });
+    // if (
+    //   !safeRequestPayload.project_id ||
+    //   !safeRequestPayload.la_case_file_no ||
+    //   // !safeRequestPayload.name_of_recorded_tenant ||
+    //   // !safeRequestPayload.name_of_present_tenant ||
+    //   !safeRequestPayload.village_name ||
+    //   !safeRequestPayload.village_code ||
+    //   !safeRequestPayload.tahasil_name ||
+    //   !safeRequestPayload.ri_circle_name ||
+    //   !safeRequestPayload.thana_no ||
+    //   !safeRequestPayload.khata_no ||
+    //   !safeRequestPayload.plot_no ||
+    //   !safeRequestPayload.kissam_of_land ||
+    //   !safeRequestPayload.land_category ||
+    //   // !safeRequestPayload.land_area_total_acres ||
+    //   // !safeRequestPayload.land_area_total_hectares ||
+    //   // !safeRequestPayload.land_area_acquired_acres ||
+    //   // !safeRequestPayload.land_area_acquired_hectares ||
+    //   !safeRequestPayload.type
+    // ) {
+    //   return res.status(400).json({
+    //     success: false,
+    //     message: "All fields are required",
+    //   });
+    // }
+
+    const requiredFields = [
+      "project_id",
+      "la_case_file_no",
+      "village_name",
+      "village_code",
+      "tahasil_name",
+      "ri_circle_name",
+      "thana_no",
+      "khata_no",
+      "plot_no",
+      "kissam_of_land",
+      "land_category",
+      "type",
+    ];
+
+    for (const field of requiredFields) {
+      if (
+        safeRequestPayload[field] === null ||
+        safeRequestPayload[field] === undefined
+      ) {
+        return res.status(400).json({
+          success: false,
+          message: "All fields are required",
+        });
+      }
     }
 
     const existingPlot = await Plot.findByCaseFileNo(
