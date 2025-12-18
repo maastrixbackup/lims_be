@@ -135,7 +135,8 @@ const khataList = async (req, res) => {
       khatas,
     });
   } catch (err) {
-    console.error("Fetch Khata Error FULL:", err);
+    console.error("KHATA ERROR FULL:", err);
+
     return res.status(500).json({
       success: false,
       message: err.message,
