@@ -82,6 +82,7 @@ async function addKhata(req, res) {
 }
 
 const khataList = async (req, res) => {
+  return res.json({ running: "LATEST BACKEND CODE" });
   try {
     // let { project_id, village_id, type, page = 1, limit = 10 } = req.query;
     // if (village_id) {
