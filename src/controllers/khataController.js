@@ -114,10 +114,11 @@ const khataList = async (req, res) => {
       khatas,
     });
   } catch (err) {
-    console.error("Fetch Khata Error:", err);
+    console.error("Fetch Khata Error:", err); // server log
     return res.status(500).json({
       success: false,
       message: "Server error",
+      error: err.message, // This will appear in browser
     });
   }
 };
