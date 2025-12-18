@@ -324,10 +324,17 @@ const plotDocumentDelete = async (req, res) => {
 
 const createPlot = async (req, res) => {
   const userId = req.user.id;
-  const safeRequestPayload = req.body;
-  Object.keys(safeRequestPayload).forEach((key) => {
-    if (safeRequestPayload[key] === "") {
-      safeRequestPayload[key] = null;
+  // const safeRequestPayload = req.body;
+  const safeRequestPayload = { ...req.body };
+
+  // Object.keys(safeRequestPayload).forEach((key) => {
+  //   if (safeRequestPayload[key] === "") {
+  //     safeRequestPayload[key] = null;
+  //   }
+  // });
+  Object.keys(safeRequestPayload).forEach((k) => {
+    if (safeRequestPayload[k] === "" || safeRequestPayload[k] === undefined) {
+      safeRequestPayload[k] = null;
     }
   });
   // if (!["PDF", "PAF"].includes(safeRequestPayload.displaced_affected_person)) {
@@ -363,15 +370,15 @@ const createPlot = async (req, res) => {
     const requiredFields = [
       "project_id",
       "la_case_file_no",
-      "village_name",
-      "village_code",
-      "tahasil_name",
-      "ri_circle_name",
-      "thana_no",
-      "khata_no",
-      "plot_no",
-      "kissam_of_land",
-      "land_category",
+      // "village_name",
+      // "village_code",
+      // "tahasil_name",
+      // "ri_circle_name",
+      // "thana_no",
+      // "khata_no",
+      // "plot_no",
+      // "kissam_of_land",
+      // "land_category",
       "type",
     ];
 
@@ -386,6 +393,35 @@ const createPlot = async (req, res) => {
         });
       }
     }
+
+    const enumMaps = {
+      displaced_affected_person: ["PDF", "PAF"],
+      family_with_orphan_members: ["Y", "N"],
+      tribunal: ["Y", "N"],
+      abatement: ["Yes", "No"],
+    };
+
+    Object.entries(enumMaps).forEach(([key, allowed]) => {
+      if (!allowed.includes(safeRequestPayload[key])) {
+        safeRequestPayload[key] = null;
+      }
+    });
+
+    const dateFields = [
+      "date_of_award",
+      "grievance_date",
+      "land_case_date",
+      "tribunal_deposit_date",
+    ];
+
+    dateFields.forEach((f) => {
+      if (safeRequestPayload[f]) {
+        const d = new Date(safeRequestPayload[f]);
+        safeRequestPayload[f] = isNaN(d.getTime())
+          ? null
+          : d.toISOString().slice(0, 10);
+      }
+    });
 
     const existingPlot = await Plot.findByCaseFileNo(
       safeRequestPayload.la_case_file_no
