@@ -95,9 +95,22 @@ const khataList = async (req, res) => {
     } else {
       village_id = null; // important
     }
-    page = parseInt(page);
-    limit = parseInt(limit);
-    const offset = (page - 1) * limit;
+    page = parseInt(page) || 1;
+    limit = parseInt(limit) || 10;
+    let offset = (page - 1) * limit;
+
+    const total = await Khata.paginationCountAll({
+      project_id,
+      village_id,
+      type,
+    });
+
+    if (village_id && village_id.length > 0) {
+      page = 1;
+      limit = total;
+      offset = 0;
+    }
+
     const khatas = await Khata.findAll({
       project_id,
       village_id,
@@ -106,19 +119,14 @@ const khataList = async (req, res) => {
       offset,
     });
 
-    const total = await Khata.paginationCountAll({
-      project_id,
-      village_id,
-      type,
-    });
-
     return res.status(200).json({
       success: true,
       message: "Khata list fetched successfully",
       page,
       limit,
       total,
-      totalPages: Math.ceil(total / limit),
+      totalPages:
+        village_id && village_id.length > 0 ? 1 : Math.ceil(total / limit),
       khatas,
     });
   } catch (err) {
