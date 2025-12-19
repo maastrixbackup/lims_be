@@ -1,18 +1,82 @@
 const db = require("../config/db");
 
 const Khata = {
-  async create(project_id, village_id, khata_no, type, unique_id) {
-    const [result] = await db.query(
-      "INSERT INTO khatas(project_id, village_id, khata_no, type, unique_id) VALUES (?,?,?,?,?)",
-      [project_id, village_id, khata_no, type, unique_id]
-    );
-    return {
-      id: result.insertId,
+  async create(data) {
+    const {
       project_id,
       village_id,
       khata_no,
       type,
       unique_id,
+
+      plot_no,
+      kissam_of_land,
+      land_category,
+      land_area_total_acres,
+      land_area_total_hectares,
+      land_area_acquired_acres,
+      land_area_acquired_hectares,
+      lo13_remarks,
+      tahasil_name,
+      ri_circle_name,
+      thana_no,
+      date_of_award,
+      name_of_recorded_tenant,
+      name_of_present_tenant,
+      present_address,
+      displaced_affected_person,
+    } = data;
+    const [result] = await db.query(
+      `INSERT INTO khatas(
+        project_id,
+        village_id,
+        khata_no,
+        type,
+        unique_id,
+        plot_no,
+        kissam_of_land,
+        land_category,
+        land_area_total_acres,
+        land_area_total_hectares,
+        land_area_acquired_acres,
+        land_area_acquired_hectares,
+        lo13_remarks,
+        tahasil_name,
+        ri_circle_name,
+        thana_no,
+        date_of_award,
+        name_of_recorded_tenant,
+        name_of_present_tenant,
+        present_address,
+        displaced_affected_person
+      ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
+      [
+        project_id,
+        village_id,
+        khata_no,
+        type,
+        unique_id,
+        plot_no,
+        kissam_of_land,
+        land_category,
+        land_area_total_acres,
+        land_area_total_hectares,
+        land_area_acquired_acres,
+        land_area_acquired_hectares,
+        lo13_remarks,
+        tahasil_name,
+        ri_circle_name,
+        thana_no,
+        date_of_award,
+        name_of_recorded_tenant,
+        name_of_present_tenant,
+        present_address,
+        displaced_affected_person,
+      ]
+    );
+    return {
+      id: result.insertId,
+      ...data,
     };
   },
 

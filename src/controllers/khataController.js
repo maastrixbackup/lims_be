@@ -10,8 +10,40 @@ const PDFDocument = require("pdfkit");
 
 async function addKhata(req, res) {
   const userId = req.user.id;
-  const { project_id, village_id, khata_no, type } = req.body;
-  const safeRequestPayload = req.body;
+  const safeRequestPayload = { ...req.body };
+
+  Object.keys(safeRequestPayload).forEach((key) => {
+    if (
+      safeRequestPayload[key] === "" ||
+      safeRequestPayload[key] === undefined
+    ) {
+      safeRequestPayload[key] = null;
+    }
+  });
+  const {
+    project_id,
+    village_id,
+    khata_no,
+    type,
+
+    plot_no,
+    kissam_of_land,
+    land_category,
+    land_area_total_acres,
+    land_area_total_hectares,
+    land_area_acquired_acres,
+    land_area_acquired_hectares,
+    lo13_remarks,
+    tahasil_name,
+    ri_circle_name,
+    thana_no,
+    date_of_award,
+    name_of_recorded_tenant,
+    name_of_present_tenant,
+    present_address,
+    displaced_affected_person,
+  } = safeRequestPayload;
+
   try {
     if (!project_id || !village_id || !khata_no || !type) {
       return res.status(400).json({
@@ -46,13 +78,30 @@ async function addKhata(req, res) {
       });
     }
 
-    const khata = await Khata.create(
+    const khata = await Khata.create({
       project_id,
       village_id,
       khata_no,
       type,
-      unique_id
-    );
+      unique_id,
+
+      plot_no,
+      kissam_of_land,
+      land_category,
+      land_area_total_acres,
+      land_area_total_hectares,
+      land_area_acquired_acres,
+      land_area_acquired_hectares,
+      lo13_remarks,
+      tahasil_name,
+      ri_circle_name,
+      thana_no,
+      date_of_award,
+      name_of_recorded_tenant,
+      name_of_present_tenant,
+      present_address,
+      displaced_affected_person,
+    });
     await logAction(
       userId,
       "create khata",
