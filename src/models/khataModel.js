@@ -416,12 +416,82 @@ const Khata = {
     return rows[0];
   },
 
-  async update(id, project_id, village_id, khata_no, type) {
+  async update(data) {
+    const {
+      khataId,
+      project_id,
+      village_id,
+      khata_no,
+      type,
+
+      plot_no,
+      kissam_of_land,
+      land_category,
+      land_area_total_acres,
+      land_area_total_hectares,
+      land_area_acquired_acres,
+      land_area_acquired_hectares,
+      lo13_remarks,
+      tahasil_name,
+      ri_circle_name,
+      thana_no,
+      date_of_award,
+      name_of_recorded_tenant,
+      name_of_present_tenant,
+      present_address,
+      displaced_affected_person,
+    } = data;
     await db.query(
-      "UPDATE khatas SET project_id = ?, village_id = ?, khata_no = ?, type = ?, updated_at = NOW() WHERE id = ?",
-      [project_id, village_id, khata_no, type, id]
+      `UPDATE khatas SET
+        project_id = ?,
+        village_id = ?,
+        khata_no = ?,
+        type = ?,
+        plot_no = ?,
+        kissam_of_land = ?,
+        land_category = ?,
+        land_area_total_acres = ?,
+        land_area_total_hectares = ?,
+        land_area_acquired_acres = ?,
+        land_area_acquired_hectares = ?,
+        lo13_remarks = ?,
+        tahasil_name = ?,
+        ri_circle_name = ?,
+        thana_no = ?,
+        date_of_award = ?,
+        name_of_recorded_tenant = ?,
+        name_of_present_tenant = ?,
+        present_address = ?,
+        displaced_affected_person = ?,
+        updated_at = NOW()
+        WHERE id = ?`,
+      [
+        project_id,
+        village_id,
+        khata_no,
+        type,
+
+        plot_no,
+        kissam_of_land,
+        land_category,
+        land_area_total_acres,
+        land_area_total_hectares,
+        land_area_acquired_acres,
+        land_area_acquired_hectares,
+        lo13_remarks,
+        tahasil_name,
+        ri_circle_name,
+        thana_no,
+        date_of_award,
+        name_of_recorded_tenant,
+        name_of_present_tenant,
+        present_address,
+        displaced_affected_person,
+
+        khataId,
+      ]
     );
-    return { id, project_id, village_id, khata_no, type };
+    return { khataId, ...data };
   },
 
   async delete(id) {
