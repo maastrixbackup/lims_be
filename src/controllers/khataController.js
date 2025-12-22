@@ -190,8 +190,40 @@ const khataList = async (req, res) => {
 const updateKhata = async (req, res) => {
   const userId = req.user.id;
   const khataId = req.params.id;
-  const { project_id, village_id, khata_no, type } = req.body;
-  const safeRequestPayload = req.body;
+
+  const safeRequestPayload = { ...req.body };
+  Object.keys(safeRequestPayload).forEach((key) => {
+    if (
+      safeRequestPayload[key] === "" ||
+      safeRequestPayload[key] === undefined
+    ) {
+      safeRequestPayload[key] = null;
+    }
+  });
+
+  const {
+    project_id,
+    village_id,
+    khata_no,
+    type,
+    plot_no,
+    kissam_of_land,
+    land_category,
+    land_area_total_acres,
+    land_area_total_hectares,
+    land_area_acquired_acres,
+    land_area_acquired_hectares,
+    lo13_remarks,
+    tahasil_name,
+    ri_circle_name,
+    thana_no,
+    date_of_award,
+    name_of_recorded_tenant,
+    name_of_present_tenant,
+    present_address,
+    displaced_affected_person,
+  } = safeRequestPayload;
+  // const safeRequestPayload = req.body;
 
   try {
     const existingKhata = await Khata.findById(khataId);
@@ -201,13 +233,41 @@ const updateKhata = async (req, res) => {
         message: "Khata not found",
       });
     }
-    const updatedKhata = await Khata.update(
+
+    // if (
+    //   displaced_affected_person &&
+    //   !["PDF", "PAF"].includes(displaced_affected_person)
+    // ) {
+    //   return res.status(400).json({
+    //     success: false,
+    //     message: "Invalid displaced_affected_person value",
+    //   });
+    // }
+
+    const updatedKhata = await Khata.update({
       khataId,
       project_id,
       village_id,
       khata_no,
-      type
-    );
+      type,
+
+      plot_no,
+      kissam_of_land,
+      land_category,
+      land_area_total_acres,
+      land_area_total_hectares,
+      land_area_acquired_acres,
+      land_area_acquired_hectares,
+      lo13_remarks,
+      tahasil_name,
+      ri_circle_name,
+      thana_no,
+      date_of_award,
+      name_of_recorded_tenant,
+      name_of_present_tenant,
+      present_address,
+      displaced_affected_person,
+    });
     await logAction(
       userId,
       "update khata",
