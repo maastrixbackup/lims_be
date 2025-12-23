@@ -403,7 +403,11 @@ const createPlot = async (req, res) => {
     };
 
     Object.entries(enumMaps).forEach(([key, allowed]) => {
-      if (!allowed.includes(safeRequestPayload[key])) {
+      if (
+        safeRequestPayload[key] !== null &&
+        safeRequestPayload[key] !== undefined &&
+        !allowed.includes(safeRequestPayload[key])
+      ) {
         safeRequestPayload[key] = null;
       }
     });
@@ -445,6 +449,7 @@ const createPlot = async (req, res) => {
     } else {
       plot = await Plot.create(safeRequestPayload);
       message = "Plot created successfully";
+
       await logAction(
         userId,
         "create plot",
@@ -454,7 +459,22 @@ const createPlot = async (req, res) => {
         plot
       );
     }
-    return res.status(201).json({
+
+    await Village.insertVillageForManualPlot(
+      safeRequestPayload,
+      safeRequestPayload.project_id,
+      safeRequestPayload.type
+    );
+
+    if (safeRequestPayload.khata_no) {
+      await Khata.insertKhataFromManualPlot({
+        project_id: safeRequestPayload.project_id,
+        type: safeRequestPayload.type,
+        khata_no: safeRequestPayload.khata_no,
+      });
+    }
+
+    return res.status(existingPlot ? 200 : 201).json({
       success: true,
       message: message,
     });

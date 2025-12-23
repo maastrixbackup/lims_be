@@ -782,6 +782,97 @@ const Khata = {
     );
   },
 
+  async insertKhataFromManualPlot({ project_id, type, khata_no }) {
+    if (!project_id || !type || !khata_no) return;
+
+    await db.query(
+      `
+    INSERT INTO khatas (
+      unique_id,
+      project_id,
+      village_id,
+      khata_no,
+      type,
+
+      plot_no,
+      kissam_of_land,
+      land_category,
+
+      land_area_total_acres,
+      land_area_total_hectares,
+      land_area_acquired_acres,
+      land_area_acquired_hectares,
+
+      lo13_remarks,
+      tahasil_name,
+      ri_circle_name,
+      thana_no,
+      date_of_award,
+
+      name_of_recorded_tenant,
+      name_of_present_tenant,
+      present_address,
+      displaced_affected_person
+    )
+    SELECT
+      CONCAT(p.client_code, '/', v.village_code, '/', pl.khata_no),
+      pl.project_id,
+      v.id,
+      pl.khata_no,
+      pl.type,
+
+      GROUP_CONCAT(DISTINCT pl.plot_no ORDER BY pl.plot_no SEPARATOR ', '),
+      GROUP_CONCAT(DISTINCT pl.kissam_of_land SEPARATOR ', '),
+      GROUP_CONCAT(DISTINCT pl.land_category SEPARATOR ', '),
+
+      SUM(pl.land_area_total_acres),
+      SUM(pl.land_area_total_hectares),
+      SUM(pl.land_area_acquired_acres),
+      SUM(pl.land_area_acquired_hectares),
+
+      GROUP_CONCAT(DISTINCT pl.lo13_remarks SEPARATOR ', '),
+      MIN(pl.tahasil_name),
+      GROUP_CONCAT(DISTINCT pl.ri_circle_name SEPARATOR ', '),
+      MIN(pl.thana_no),
+      MIN(pl.date_of_award),
+
+      GROUP_CONCAT(DISTINCT pl.name_of_recorded_tenant SEPARATOR ', '),
+      GROUP_CONCAT(DISTINCT pl.name_of_present_tenant SEPARATOR ', '),
+      GROUP_CONCAT(DISTINCT pl.present_address SEPARATOR ', '),
+      GROUP_CONCAT(DISTINCT pl.displaced_affected_person SEPARATOR ', ')
+    FROM plots pl
+    JOIN villages v
+      ON v.village_name = pl.village_name
+    AND v.project_id = pl.project_id
+    JOIN projects p
+      ON p.id = pl.project_id
+    WHERE pl.project_id = ?
+      AND pl.type = ?
+      AND pl.khata_no = ?
+    GROUP BY pl.project_id, v.id, pl.khata_no, pl.type
+    ON DUPLICATE KEY UPDATE
+      plot_no = VALUES(plot_no),
+      kissam_of_land = VALUES(kissam_of_land),
+      land_category = VALUES(land_category),
+      land_area_total_acres = VALUES(land_area_total_acres),
+      land_area_total_hectares = VALUES(land_area_total_hectares),
+      land_area_acquired_acres = VALUES(land_area_acquired_acres),
+      land_area_acquired_hectares = VALUES(land_area_acquired_hectares),
+      lo13_remarks = VALUES(lo13_remarks),
+      tahasil_name = VALUES(tahasil_name),
+      ri_circle_name = VALUES(ri_circle_name),
+      thana_no = VALUES(thana_no),
+      date_of_award = VALUES(date_of_award),
+      name_of_recorded_tenant = VALUES(name_of_recorded_tenant),
+      name_of_present_tenant = VALUES(name_of_present_tenant),
+      present_address = VALUES(present_address),
+      displaced_affected_person = VALUES(displaced_affected_person),
+      updated_at = NOW()
+    `,
+      [project_id, type, khata_no]
+    );
+  },
+
   // async countAll(projectId = null) {
   //   let query = "SELECT COUNT(*) AS total FROM khatas";
   //   let params = [];
