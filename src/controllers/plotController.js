@@ -148,9 +148,10 @@ const uploadPlots = async (req, res) => {
       type
     );
 
+    const insertedPlots = await Plot.bulkInsert(data, project_id, type);
+
     await Khata.insertKhatasFromExcel(data, project_id, type);
 
-    const insertedPlots = await Plot.bulkInsert(data, project_id, type);
     await logAction(
       userId,
       "plot excel upload",

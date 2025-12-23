@@ -536,62 +536,250 @@ const Khata = {
     return result.affectedRows > 0;
   },
 
+  // async insertKhatasFromExcel(data, project_id, type) {
+  //   const [project] = await db.query(
+  //     "SELECT client_code FROM projects WHERE id = ?",
+  //     [project_id]
+  //   );
+  //   if (!project.length) throw new Error("Invalid project_id");
+  //   const clientCode = project[0].client_code;
+
+  //   for (const row of data) {
+  //     // const villageName = row["Name of Village"];
+  //     // const khataNo = row["Khata No."];
+  //     // if (!villageName || !khataNo) continue;
+  //     const villageName =
+  //       row["Name of Village"]?.trim() ||
+  //       row["name of village"]?.trim() ||
+  //       null;
+  //     // const khataNo =
+  //     //   row["Khata No."] !== undefined && row["Khata No."] !== null
+  //     //     ? row["Khata No."].toString().trim()
+  //     //     : null;
+  //     const khataNo =
+  //       (row["Khata No."] || row["Khata No"])?.toString().trim() || null;
+
+  //     const tahasil =
+  //       row["Name of the Tahasil"]?.trim() ||
+  //       row["Tahasil/Thana"]?.trim() ||
+  //       null;
+
+  //     if (!villageName || !khataNo || !tahasil) continue;
+
+  //     // const [village] = await db.query(
+  //     //   "SELECT id, village_code FROM villages WHERE village_name = ?",
+  //     //   [villageName]
+  //     // );
+  //     // if (!village.length) continue;
+  //     const [village] = await db.query(
+  //       "SELECT id, village_code FROM villages WHERE village_name = ? AND tahasil = ? AND project_id = ?",
+  //       [villageName, tahasil, project_id]
+  //     );
+  //     if (!village.length) continue;
+
+  //     const village_id = village[0].id;
+  //     const village_code = village[0].village_code;
+  //     const unique_id = `${clientCode}/${village_code}/${khataNo}`;
+
+  //     await db.query(
+  //       `INSERT INTO khatas (unique_id, project_id, village_id, khata_no, type)
+  //        VALUES (?, ?, ?, ?, ?)
+  //        ON DUPLICATE KEY UPDATE
+  //        project_id = VALUES(project_id),
+  //        village_id = VALUES(village_id),
+  //        khata_no = VALUES(khata_no),
+  //        type = VALUES(type)`,
+  //       [unique_id, project_id, village_id, khataNo, type]
+  //     );
+  //   }
+  // },
+
+  // async insertKhatasFromExcel(data, project_id, type) {
+  //   const [project] = await db.query(
+  //     "SELECT client_code FROM projects WHERE id = ?",
+  //     [project_id]
+  //   );
+  //   if (!project.length) throw new Error("Invalid project_id");
+  //   const clientCode = project[0].client_code;
+
+  //   for (const row of data) {
+  //     const villageName =
+  //       row["Name of Village"]?.trim() ||
+  //       row["name of village"]?.trim() ||
+  //       null;
+
+  //     const khataNo =
+  //       (row["Khata No."] || row["Khata No"])?.toString().trim() || null;
+
+  //     const tahasil =
+  //       row["Name of the Tahasil"]?.trim() ||
+  //       row["Tahasil/Thana"]?.trim() ||
+  //       null;
+
+  //     if (!villageName || !khataNo || !tahasil) continue;
+
+  //     const [village] = await db.query(
+  //       `SELECT id, village_code
+  //      FROM villages
+  //      WHERE village_name = ? AND tahasil = ? AND project_id = ?`,
+  //       [villageName, tahasil, project_id]
+  //     );
+  //     if (!village.length) continue;
+
+  //     const village_id = village[0].id;
+  //     const village_code = village[0].village_code;
+  //     const unique_id = `${clientCode}/${village_code}/${khataNo}`;
+
+  //     await db.query(
+  //       `
+  //     INSERT INTO khatas (
+  //       unique_id, project_id, village_id, khata_no, type,
+  //       plot_no, kissam_of_land, land_category,
+  //       land_area_total_acres, land_area_total_hectares,
+  //       land_area_acquired_acres, land_area_acquired_hectares,
+  //       lo13_remarks, tahasil_name, ri_circle_name, thana_no,
+  //       date_of_award, name_of_recorded_tenant,
+  //       name_of_present_tenant, present_address,
+  //       displaced_affected_person
+  //     )
+  //     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+  //     ON DUPLICATE KEY UPDATE
+  //       plot_no = VALUES(plot_no),
+  //       kissam_of_land = VALUES(kissam_of_land),
+  //       land_category = VALUES(land_category),
+  //       land_area_total_acres = VALUES(land_area_total_acres),
+  //       land_area_total_hectares = VALUES(land_area_total_hectares),
+  //       land_area_acquired_acres = VALUES(land_area_acquired_acres),
+  //       land_area_acquired_hectares = VALUES(land_area_acquired_hectares),
+  //       lo13_remarks = VALUES(lo13_remarks),
+  //       tahasil_name = VALUES(tahasil_name),
+  //       ri_circle_name = VALUES(ri_circle_name),
+  //       thana_no = VALUES(thana_no),
+  //       date_of_award = VALUES(date_of_award),
+  //       name_of_recorded_tenant = VALUES(name_of_recorded_tenant),
+  //       name_of_present_tenant = VALUES(name_of_present_tenant),
+  //       present_address = VALUES(present_address),
+  //       displaced_affected_person = VALUES(displaced_affected_person),
+  //       updated_at = NOW()
+  //     `,
+  //       [
+  //         unique_id,
+  //         project_id,
+  //         village_id,
+  //         khataNo,
+  //         type,
+
+  //         row["Plot No."] || null,
+  //         row["Kissam of the Land"] || row["Kissam"] || null,
+  //         row["LO12-Category of Land"] || null,
+
+  //         row["LA1-Land Area (Total Area in Acres)"] || null,
+  //         row["LA2-Land Area (Total Area in Ha.)"] || null,
+  //         row["Land Area (Total Acquired Area in Acres)"] || null,
+  //         row["Land Area (Total Acquired Area in Ha.)"] || null,
+
+  //         row["LO13-Remarks"] || null,
+  //         tahasil,
+  //         row["Name of the R.I. Circle"] || null,
+  //         row["Thana No."] || row["Thana no"] || null,
+  //         row["Date of Award"] || null,
+
+  //         row["LO1-Name of Recorded Tenant (RT)"] ||
+  //           row["Name of Tenant"] ||
+  //           null,
+  //         row["LO2-Name of Present Tenant(s)"] || row["Name of Tenant"] || null,
+  //         row["Present Address"] || null,
+  //         row["Displaced/Affected Person"] || null,
+  //       ]
+  //     );
+  //   }
+  // },
+
   async insertKhatasFromExcel(data, project_id, type) {
-    const [project] = await db.query(
-      "SELECT client_code FROM projects WHERE id = ?",
-      [project_id]
+    await db.query(
+      `
+    INSERT INTO khatas (
+      unique_id,
+      project_id,
+      village_id,
+      khata_no,
+      type,
+
+      plot_no,
+      kissam_of_land,
+      land_category,
+
+      land_area_total_acres,
+      land_area_total_hectares,
+      land_area_acquired_acres,
+      land_area_acquired_hectares,
+
+      lo13_remarks,
+      tahasil_name,
+      ri_circle_name,
+      thana_no,
+      date_of_award,
+
+      name_of_recorded_tenant,
+      name_of_present_tenant,
+      present_address,
+      displaced_affected_person
+    )
+    SELECT
+      CONCAT(p.client_code, '/', v.village_code, '/', pl.khata_no) AS unique_id,
+      pl.project_id,
+      v.id AS village_id,
+      pl.khata_no,
+      pl.type,
+
+      GROUP_CONCAT(DISTINCT pl.plot_no SEPARATOR ', ') AS plot_no,
+      GROUP_CONCAT(DISTINCT pl.kissam_of_land SEPARATOR ', ') AS kissam_of_land,
+      GROUP_CONCAT(DISTINCT pl.land_category SEPARATOR ', ') AS land_category,
+
+      SUM(pl.land_area_total_acres),
+      SUM(pl.land_area_total_hectares),
+      SUM(pl.land_area_acquired_acres),
+      SUM(pl.land_area_acquired_hectares),
+
+      GROUP_CONCAT(DISTINCT pl.lo13_remarks SEPARATOR ', '),
+      MIN(pl.tahasil_name),
+      GROUP_CONCAT(DISTINCT pl.ri_circle_name SEPARATOR ', '),
+      MIN(pl.thana_no),
+      MIN(pl.date_of_award),
+
+      GROUP_CONCAT(DISTINCT pl.name_of_recorded_tenant SEPARATOR ', '),
+      GROUP_CONCAT(DISTINCT pl.name_of_present_tenant SEPARATOR ', '),
+      GROUP_CONCAT(DISTINCT pl.present_address SEPARATOR ', '),
+      GROUP_CONCAT(DISTINCT pl.displaced_affected_person SEPARATOR ', ')
+    FROM plots pl
+    JOIN villages v
+      ON v.village_name = pl.village_name
+      AND v.project_id = pl.project_id
+    JOIN projects p ON p.id = pl.project_id
+    WHERE pl.project_id = ?
+      AND pl.type = ?
+    GROUP BY pl.project_id, v.id, pl.khata_no, pl.type
+    ON DUPLICATE KEY UPDATE
+      plot_no = VALUES(plot_no),
+      kissam_of_land = VALUES(kissam_of_land),
+      land_category = VALUES(land_category),
+      land_area_total_acres = VALUES(land_area_total_acres),
+      land_area_total_hectares = VALUES(land_area_total_hectares),
+      land_area_acquired_acres = VALUES(land_area_acquired_acres),
+      land_area_acquired_hectares = VALUES(land_area_acquired_hectares),
+      lo13_remarks = VALUES(lo13_remarks),
+      tahasil_name = VALUES(tahasil_name),
+      ri_circle_name = VALUES(ri_circle_name),
+      thana_no = VALUES(thana_no),
+      date_of_award = VALUES(date_of_award),
+      name_of_recorded_tenant = VALUES(name_of_recorded_tenant),
+      name_of_present_tenant = VALUES(name_of_present_tenant),
+      present_address = VALUES(present_address),
+      displaced_affected_person = VALUES(displaced_affected_person),
+      updated_at = NOW()
+    `,
+      [project_id, type]
     );
-    if (!project.length) throw new Error("Invalid project_id");
-    const clientCode = project[0].client_code;
-
-    for (const row of data) {
-      // const villageName = row["Name of Village"];
-      // const khataNo = row["Khata No."];
-      // if (!villageName || !khataNo) continue;
-      const villageName =
-        row["Name of Village"]?.trim() ||
-        row["name of village"]?.trim() ||
-        null;
-      // const khataNo =
-      //   row["Khata No."] !== undefined && row["Khata No."] !== null
-      //     ? row["Khata No."].toString().trim()
-      //     : null;
-      const khataNo =
-        (row["Khata No."] || row["Khata No"])?.toString().trim() || null;
-
-      const tahasil =
-        row["Name of the Tahasil"]?.trim() ||
-        row["Tahasil/Thana"]?.trim() ||
-        null;
-
-      if (!villageName || !khataNo || !tahasil) continue;
-
-      // const [village] = await db.query(
-      //   "SELECT id, village_code FROM villages WHERE village_name = ?",
-      //   [villageName]
-      // );
-      // if (!village.length) continue;
-      const [village] = await db.query(
-        "SELECT id, village_code FROM villages WHERE village_name = ? AND tahasil = ? AND project_id = ?",
-        [villageName, tahasil, project_id]
-      );
-      if (!village.length) continue;
-
-      const village_id = village[0].id;
-      const village_code = village[0].village_code;
-      const unique_id = `${clientCode}/${village_code}/${khataNo}`;
-
-      await db.query(
-        `INSERT INTO khatas (unique_id, project_id, village_id, khata_no, type)
-         VALUES (?, ?, ?, ?, ?)
-         ON DUPLICATE KEY UPDATE
-         project_id = VALUES(project_id),
-         village_id = VALUES(village_id),
-         khata_no = VALUES(khata_no),
-         type = VALUES(type)`,
-        [unique_id, project_id, village_id, khataNo, type]
-      );
-    }
   },
 
   // async countAll(projectId = null) {
