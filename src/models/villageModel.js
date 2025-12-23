@@ -266,6 +266,63 @@ const Village = {
 
     return insertedCount;
   },
+
+  async insertVillageForManualPlot(plot, project_id, type) {
+    if (!plot || !plot.village_name || !plot.tahasil_name) {
+      return null;
+    }
+
+    const normalize = (v) =>
+      v === null || v === undefined ? null : v.toString().trim();
+
+    const villageName = normalize(plot.village_name);
+    const villageCode = normalize(plot.village_code);
+    const tahasil = normalize(plot.tahasil_name);
+    const thanaNo = normalize(plot.thana_no);
+    const presentAddress = normalize(plot.present_address);
+
+    if (!villageName || !tahasil) return null;
+
+    // Extract district
+    let district = null;
+    if (presentAddress) {
+      const match = presentAddress.match(/Dist[-: ]+([A-Za-z\s]+)/i);
+      district = match?.[1]?.trim() || null;
+    }
+
+    // Check if village already exists
+    const [existing] = await db.query(
+      `SELECT id
+     FROM villages
+     WHERE village_name = ?
+       AND tahasil = ?
+       AND project_id = ?
+       AND type = ?`,
+      [plot.village_name, plot.tahasil_name, project_id, type]
+    );
+
+    // Village already exists
+    if (existing.length > 0) {
+      return existing[0].id;
+    }
+
+    // Insert new village
+    const [result] = await db.query(
+      `INSERT INTO villages
+     (village_name, village_code, tahasil, district, project_id, type)
+     VALUES (?, ?, ?, ?, ?, ?)`,
+      [
+        plot.village_name,
+        plot.village_code || null,
+        plot.tahasil_name,
+        null,
+        project_id,
+        type,
+      ]
+    );
+
+    return result.insertId;
+  },
 };
 
 module.exports = Village;
