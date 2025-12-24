@@ -308,7 +308,7 @@ const Village = {
 
     // Insert new village
     const [result] = await db.query(
-      `INSERT INTO villages
+      `INSERT IGNORE INTO villages
      (village_name, village_code, tahasil, district, project_id, type)
      VALUES (?, ?, ?, ?, ?, ?)`,
       [
