@@ -306,26 +306,39 @@ const Khata = {
       v.village_name,
       v.village_code,
 
-      COUNT(DISTINCT pl.id) AS plot_count,
-
-      (SELECT COUNT(*)
-        FROM khata_documents kd
-        WHERE kd.khata_id = k.id
-      ) AS khata_document_count,
-
-      (SELECT COUNT(*)
-        FROM khata_map_documents km
-        WHERE km.khata_id = k.id
-      ) AS khata_map_document_count
+      IFNULL(pc.plot_count, 0) AS plot_count,
+      IFNULL(kd.doc_count, 0) AS khata_document_count,
+      IFNULL(km.map_count, 0) AS khata_map_document_count
 
     FROM khatas k
-    LEFT JOIN projects p ON k.project_id = p.id
-    LEFT JOIN villages v ON k.village_id = v.id
 
-    LEFT JOIN plots pl
-      ON pl.khata_no = k.khata_no
-      AND pl.project_id = k.project_id
-      AND pl.type = k.type
+    LEFT JOIN projects p ON p.id = k.project_id
+    LEFT JOIN villages v ON v.id = k.village_id
+
+    LEFT JOIN (
+      SELECT
+        project_id,
+        type,
+        khata_no,
+        COUNT(*) AS plot_count
+      FROM plots
+      GROUP BY project_id, type, khata_no
+    ) pc
+      ON pc.project_id = k.project_id
+     AND pc.type = k.type
+     AND pc.khata_no = k.khata_no
+
+    LEFT JOIN (
+      SELECT khata_id, COUNT(*) AS doc_count
+      FROM khata_documents
+      GROUP BY khata_id
+    ) kd ON kd.khata_id = k.id
+
+    LEFT JOIN (
+      SELECT khata_id, COUNT(*) AS map_count
+      FROM khata_map_documents
+      GROUP BY khata_id
+    ) km ON km.khata_id = k.id
 
     WHERE 1=1
   `;
@@ -337,9 +350,8 @@ const Khata = {
       params.push(project_id);
     }
 
-    if (village_id && Array.isArray(village_id) && village_id.length > 0) {
-      const placeholders = village_id.map(() => "?").join(",");
-      query += ` AND k.village_id IN (${placeholders})`;
+    if (Array.isArray(village_id) && village_id.length > 0) {
+      query += ` AND k.village_id IN (${village_id.map(() => "?").join(",")})`;
       params.push(...village_id);
     }
 
@@ -349,7 +361,6 @@ const Khata = {
     }
 
     query += `
-    GROUP BY k.id
     ORDER BY k.id DESC
     LIMIT ? OFFSET ?
   `;
