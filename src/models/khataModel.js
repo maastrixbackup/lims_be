@@ -726,7 +726,11 @@ const Khata = {
       displaced_affected_person
     )
     SELECT
-      CONCAT(p.client_code, '/', v.village_code, '/', pl.khata_no) AS unique_id,
+      CONCAT(
+        MIN(p.client_code), '/',
+        MIN(v.village_code), '/',
+        pl.khata_no
+      ) AS unique_id,
       pl.project_id,
       v.id AS village_id,
       pl.khata_no,
@@ -815,7 +819,11 @@ const Khata = {
       displaced_affected_person
     )
     SELECT
-      CONCAT(p.client_code, '/', v.village_code, '/', pl.khata_no),
+      CONCAT(
+        MIN(p.client_code), '/',
+        MIN(v.village_code), '/',
+        pl.khata_no
+      ) AS unique_id,
       pl.project_id,
       v.id,
       pl.khata_no,
