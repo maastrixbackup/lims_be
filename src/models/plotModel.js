@@ -830,8 +830,16 @@ const Plot = {
   async bulkInsert(plots, project_id, type) {
     if (!plots || plots.length === 0) return;
 
+    // fetch project name
+    const [projectRows] = await db.query(
+      "SELECT project_name FROM projects WHERE id = ?",
+      [project_id]
+    );
+
+    const projectName = projectRows[0].project_name;
+
     const values = plots.map((plot) => {
-      // --- Handle date formatting ---
+      //Handle date formatting
       let dateValue = plot["Date of Award"];
       let formattedDate = null;
 
@@ -859,7 +867,7 @@ const Plot = {
         }
       }
 
-      // --- Land area conversion logic ---
+      //Land area conversion logic
       let totalAcres = null;
       let totalHectares = null;
       let acquiredAcres = null;
@@ -892,15 +900,16 @@ const Plot = {
       if (acquiredHectares && !acquiredAcres)
         acquiredAcres = parseFloat((acquiredHectares / 2.471).toFixed(4));
 
-      // const villageCode = plot["Village Code"] || plot["village code"] || "NA";
+      const villageCode = plot["Village Code"] || plot["village code"] || "NA";
 
-      // const khataNo = plot["Khata No."] || plot["Khata No"] || "NA";
-      // const laCaseFileNo = `${projectName}/${villageCode}/${khataNo}`;
-      // --- Return final row array ---
+      const khataNo = plot["Khata No."] || plot["Khata No"] || "NA";
+      const laCaseFileNo = `${projectName}/${villageCode}/${khataNo}`;
+      //Return final row array
       return [
         project_id,
         plot["SES Survey No."] || null,
-        plot["LA Case File No."] || null,
+        // plot["LA Case File No."] || null,
+        laCaseFileNo,
         formattedDate || null,
         plot["LO1-Name of Recorded Tenant (RT)"] ||
           plot["Name of Tenant"] ||
@@ -2232,11 +2241,19 @@ const Plot = {
     return rows;
   },
 
-  async addPaymentProof(land_cost_id, filePath) {
-    return db.query(`UPDATE plot_payments SET payment_proof = ? WHERE id = ?`, [
+  async fetchLandCostById(land_cost_id) {
+    const [rows] = await db.query(`SELECT * FROM plot_payments WHERE id = ?`, [
       land_cost_id,
-      filePath,
     ]);
+    return rows[0];
+  },
+
+  async addPaymentProof(land_cost_id, filePath) {
+    const [result] = await db.query(
+      `UPDATE plot_payments SET payment_proof = ? WHERE id = ?`,
+      [filePath, land_cost_id]
+    );
+    return result;
   },
 };
 

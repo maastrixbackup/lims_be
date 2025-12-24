@@ -904,13 +904,13 @@ const landCostPaymentUpload = async (req, res) => {
       });
     }
 
-    // const landCostData = await LandCost.findById(land_cost_id);
-    // if (!landCostData) {
-    //   return res.status(404).json({
-    //     success: false,
-    //     message: "Land cost record not found",
-    //   });
-    // }
+    const landCostData = await Plot.fetchLandCostById(land_cost_id);
+    if (!landCostData) {
+      return res.status(404).json({
+        success: false,
+        message: "Land cost record not found",
+      });
+    }
 
     // const filePath = `uploads/land_cost_payments/${req.file.filename}`;
 
