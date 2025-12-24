@@ -1,6 +1,9 @@
 const express = require("express");
 const router = express.Router();
-const { uploadPlotExcel } = require("../middleware/upload");
+const {
+  uploadPlotExcel,
+  uploadLandCostPayment,
+} = require("../middleware/upload");
 const {
   uploadPlots,
   plotList,
@@ -14,6 +17,7 @@ const {
   getAllPaymentReady,
   exportPlot,
   plotDocumentDelete,
+  landCostPaymentUpload,
 } = require("../controllers/plotController");
 
 router.post("/upload", uploadPlotExcel.single("file"), uploadPlots);
@@ -28,5 +32,10 @@ router.post("/paymentReady", paymentReady);
 router.get("/getCompensationDetails", getAllPaymentReady);
 router.get("/exportPlot", exportPlot);
 router.delete("/plotDocumentDelete/:fileName", plotDocumentDelete);
+router.post(
+  "/landCostPaymentUpload",
+  uploadLandCostPayment.single("payment_proof"),
+  landCostPaymentUpload
+);
 
 module.exports = router;

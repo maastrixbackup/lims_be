@@ -125,9 +125,45 @@ const uploadMapDocument = multer({
   limits: { fileSize: 10 * 1024 * 1024 }, // 10MB limit
 });
 
+// Upload payment proof
+const paymentStorage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    cb(null, "uploads/land_cost_payments");
+  },
+  filename: (req, file, cb) => {
+    const originalname = file.originalname.replace(/\s+/g, "_");
+    cb(null, originalname);
+  },
+});
+
+const paymentFileFilter = (req, file, cb) => {
+  const allowedMimeTypes = [
+    "application/pdf",
+    "image/jpeg",
+    "image/jpg",
+    "image/png",
+  ];
+
+  if (allowedMimeTypes.includes(file.mimetype)) {
+    cb(null, true);
+  } else {
+    cb(
+      new Error("Only PDF or image files (jpg, jpeg, png) are allowed"),
+      false
+    );
+  }
+};
+
+const uploadLandCostPayment = multer({
+  storage: paymentStorage,
+  fileFilter: paymentFileFilter,
+  limits: { fileSize: 5 * 1024 * 1024 }, // 5MB
+});
+
 module.exports = {
   uploadPlotExcel,
   uploadProfilePic,
   uploadKhata,
   uploadMapDocument,
+  uploadLandCostPayment,
 };

@@ -892,6 +892,10 @@ const Plot = {
       if (acquiredHectares && !acquiredAcres)
         acquiredAcres = parseFloat((acquiredHectares / 2.471).toFixed(4));
 
+      // const villageCode = plot["Village Code"] || plot["village code"] || "NA";
+
+      // const khataNo = plot["Khata No."] || plot["Khata No"] || "NA";
+      // const laCaseFileNo = `${projectName}/${villageCode}/${khataNo}`;
       // --- Return final row array ---
       return [
         project_id,
@@ -2226,6 +2230,13 @@ const Plot = {
 
     const [rows] = await db.query(query, params);
     return rows;
+  },
+
+  async addPaymentProof(land_cost_id, filePath) {
+    return db.query(`UPDATE plot_payments SET payment_proof = ? WHERE id = ?`, [
+      land_cost_id,
+      filePath,
+    ]);
   },
 };
 
