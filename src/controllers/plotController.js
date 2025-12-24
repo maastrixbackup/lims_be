@@ -43,25 +43,6 @@ const uploadPlots = async (req, res) => {
         .json({ success: false, message: "Excel file is empty" });
     }
 
-    // const requiredColumns = [
-    //   "LA Case File No.",
-    //   "LO1-Name of Recorded Tenant (RT)",
-    //   "LO2-Name of Present Tenant(s)",
-    //   "Name of Village",
-    //   "Village Code",
-    //   "Name of the Tahasil",
-    //   "Name of the R.I. Circle",
-    //   "Thana No.",
-    //   "Khata No.",
-    //   "Plot No.",
-    //   "Kissam of the Land",
-    //   "LO12-Category of Land",
-    //   "LA1-Land Area (Total Area in Acres)",
-    //   "LA2-Land Area (Total Area in Ha.)",
-    //   "Land Area (Total Acquired Area in Acres)",
-    //   "Land Area (Total Acquired Area in Ha.)",
-    // ];
-
     const requiredColumns = {
       "LA Case File No.": [],
       "LO1-Name of Recorded Tenant (RT)": ["Name of Tenant"],
@@ -105,43 +86,6 @@ const uploadPlots = async (req, res) => {
       });
     }
 
-    // const excelColumns = Object.keys(data[0]);
-    // const missingColumns = requiredColumns.filter(
-    //   (col) => !excelColumns.includes(col)
-    // );
-
-    // if (missingColumns.length > 0) {
-    //   fs.unlinkSync(req.file.path);
-    //   return res.status(400).json({
-    //     success: false,
-    //     message: "Invalid Excel format.Missing columns",
-    //   });
-    // }
-
-    // const invalidRows = [];
-    // data.forEach((row, index) => {
-    //   requiredColumns.forEach((col) => {
-    //     const value = row[col];
-    //     if (
-    //       value === undefined ||
-    //       value === null ||
-    //       value === "" ||
-    //       (typeof value === "string" && value.trim() === "")
-    //     ) {
-    //       invalidRows.push({ row: index + 2, column: col }); // +2 = header + 1-based row
-    //     }
-    //   });
-    // });
-
-    // if (invalidRows.length > 0) {
-    //   fs.unlinkSync(req.file.path);
-    //   const firstError = invalidRows[0];
-    //   return res.status(400).json({
-    //     success: false,
-    //     message: `Missing value in required field "${firstError.column}" at row ${firstError.row}. All required values must be filled.`,
-    //   });
-    // }
-
     const insertedVillages = await Village.insertVillagesFromExcel(
       data,
       project_id,
@@ -177,7 +121,13 @@ const uploadPlots = async (req, res) => {
       null
     );
     console.error("Upload Plots Error:", err);
-    return res.status(500).json({ success: false, message: "Server error" });
+    // return res.status(500).json({ success: false, message: "Server error" });
+    return res.status(500).json({
+      success: false,
+      message: err.sqlMessage || err.message,
+      sqlState: err.sqlState,
+      sqlCode: err.code,
+    });
   }
 };
 
@@ -934,6 +884,70 @@ const getAllPaymentReady = async (req, res) => {
   }
 };
 
+const landCostPaymentUpload = async (req, res) => {
+  const userId = req.user.id;
+
+  try {
+    const { land_cost_id } = req.body;
+
+    if (!land_cost_id) {
+      return res.status(400).json({
+        success: false,
+        message: "Land cost ID is required",
+      });
+    }
+
+    if (!req.file) {
+      return res.status(400).json({
+        success: false,
+        message: "Payment proof file is required",
+      });
+    }
+
+    // const landCostData = await LandCost.findById(land_cost_id);
+    // if (!landCostData) {
+    //   return res.status(404).json({
+    //     success: false,
+    //     message: "Land cost record not found",
+    //   });
+    // }
+
+    // const filePath = `uploads/land_cost_payments/${req.file.filename}`;
+
+    await Plot.addPaymentProof(land_cost_id, req.file.filename);
+
+    await logAction(
+      userId,
+      "upload land cost payment proof",
+      "success",
+      "Payment proof uploaded successfully",
+      { land_cost_id },
+      null
+    );
+
+    res.status(200).json({
+      success: true,
+      message: "Payment proof uploaded successfully",
+    });
+  } catch (err) {
+    console.error("UPLOAD ERROR:", err);
+
+    await logAction(
+      userId,
+      "upload land cost payment proof",
+      "failure",
+      err.message,
+      null,
+      null
+    );
+
+    res.status(500).json({
+      success: false,
+      message: "Failed to upload payment proof",
+    });
+  }
+};
+
 const exportPlot = async (req, res) => {
   const userId = req.user.id;
 
@@ -1051,4 +1065,5 @@ module.exports = {
   getAllPaymentReady,
   exportPlot,
   plotDocumentDelete,
+  landCostPaymentUpload,
 };
