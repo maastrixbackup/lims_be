@@ -762,6 +762,8 @@ const Khata = {
     JOIN projects p ON p.id = pl.project_id
     WHERE pl.project_id = ?
       AND pl.type = ?
+      AND pl.khata_no IS NOT NULL
+      AND pl.khata_no <> ''
     GROUP BY pl.project_id, v.id, pl.khata_no, pl.type
     ON DUPLICATE KEY UPDATE
       plot_no = VALUES(plot_no),

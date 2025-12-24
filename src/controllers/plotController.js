@@ -121,13 +121,13 @@ const uploadPlots = async (req, res) => {
       null
     );
     console.error("Upload Plots Error:", err);
-    // return res.status(500).json({ success: false, message: "Server error" });
-    return res.status(500).json({
-      success: false,
-      message: err.sqlMessage || err.message,
-      sqlState: err.sqlState,
-      sqlCode: err.code,
-    });
+    return res.status(500).json({ success: false, message: "Server error" });
+    // return res.status(500).json({
+    //   success: false,
+    //   message: err.sqlMessage || err.message,
+    //   sqlState: err.sqlState,
+    //   sqlCode: err.code,
+    // });
   }
 };
 
