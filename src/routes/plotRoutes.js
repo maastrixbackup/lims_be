@@ -18,6 +18,7 @@ const {
   exportPlot,
   plotDocumentDelete,
   landCostPaymentUpload,
+  updatePlotPayment,
 } = require("../controllers/plotController");
 
 router.post("/upload", uploadPlotExcel.single("file"), uploadPlots);
@@ -37,5 +38,6 @@ router.post(
   uploadLandCostPayment.single("payment_proof"),
   landCostPaymentUpload
 );
+router.put("/updatePlotPayment/:id", updatePlotPayment);
 
 module.exports = router;
