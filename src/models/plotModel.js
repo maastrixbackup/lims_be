@@ -2022,7 +2022,7 @@ const Plot = {
       incidental_charges = ?,
       total = ?,
       abatement = ?,
-      full_part = ?,
+      full_part = ?
       WHERE id = ? AND is_deleted = 0`,
       [
         project_id,
