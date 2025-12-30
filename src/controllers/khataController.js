@@ -42,6 +42,7 @@ async function addKhata(req, res) {
     name_of_present_tenant,
     present_address,
     displaced_affected_person,
+    full_part,
   } = safeRequestPayload;
 
   try {
@@ -101,6 +102,7 @@ async function addKhata(req, res) {
       name_of_present_tenant,
       present_address,
       displaced_affected_person,
+      full_part,
     });
     await logAction(
       userId,
@@ -222,6 +224,7 @@ const updateKhata = async (req, res) => {
     name_of_present_tenant,
     present_address,
     displaced_affected_person,
+    full_part,
   } = safeRequestPayload;
   // const safeRequestPayload = req.body;
 
@@ -267,6 +270,7 @@ const updateKhata = async (req, res) => {
       name_of_present_tenant,
       present_address,
       displaced_affected_person,
+      full_part,
     });
     await logAction(
       userId,

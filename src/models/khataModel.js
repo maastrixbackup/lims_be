@@ -25,6 +25,7 @@ const Khata = {
       name_of_present_tenant,
       present_address,
       displaced_affected_person,
+      full_part,
     } = data;
     const [result] = await db.query(
       `INSERT INTO khatas(
@@ -48,8 +49,9 @@ const Khata = {
         name_of_recorded_tenant,
         name_of_present_tenant,
         present_address,
-        displaced_affected_person
-      ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
+        displaced_affected_person,
+        full_part
+      ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
       [
         project_id,
         village_id,
@@ -72,6 +74,7 @@ const Khata = {
         name_of_present_tenant,
         present_address,
         displaced_affected_person,
+        full_part,
       ]
     );
     return {
@@ -404,6 +407,7 @@ const Khata = {
       k.name_of_present_tenant,
       k.present_address,
       k.displaced_affected_person,
+      k.full_part,
 
       kp.plot_nos AS plot_no,
 
@@ -613,6 +617,7 @@ const Khata = {
       name_of_present_tenant,
       present_address,
       displaced_affected_person,
+      full_part,
     } = data;
     await db.query(
       `UPDATE khatas SET
@@ -636,6 +641,7 @@ const Khata = {
         name_of_present_tenant = ?,
         present_address = ?,
         displaced_affected_person = ?,
+        full_part = ?,
         updated_at = NOW()
         WHERE id = ?`,
       [
@@ -660,6 +666,7 @@ const Khata = {
         name_of_present_tenant,
         present_address,
         displaced_affected_person,
+        full_part,
 
         khataId,
       ]
