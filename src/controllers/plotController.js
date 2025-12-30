@@ -859,6 +859,7 @@ const getAllPaymentReady = async (req, res) => {
 
       // Add each tenant row
       groups[row.unique_id].tenants.push({
+        id: row.id,
         plot_no: row.plot_no,
         present_tenant: row.present_tenant_names,
         payment_area: 0,
@@ -1121,6 +1122,80 @@ const updatePlotPayment = async (req, res) => {
   }
 };
 
+const markPaymentCompleted = async (req, res) => {
+  const userId = req.user.id;
+  const { unique_id, project_id } = req.body;
+
+  try {
+    if (!unique_id || !project_id) {
+      return res.status(400).json({
+        success: false,
+        message: "unique_id and project_id are required",
+      });
+    }
+
+    const records = await Plot.getByUniqueId(unique_id, project_id);
+
+    if (!records.length) {
+      return res.status(404).json({
+        success: false,
+        message: "No payment records found",
+      });
+    }
+
+    const invalid = records.find((r) => !r.payment_proof || !r.transaction_no);
+
+    if (invalid) {
+      return res.status(400).json({
+        success: false,
+        message: "Payment proof and transaction number are required",
+      });
+    }
+
+    await Plot.markPaymentSuccess(unique_id, project_id);
+
+    await logAction(
+      userId,
+      "mark payment completed",
+      "success",
+      "Payment marked as Success",
+      { unique_id, project_id },
+      null
+    );
+
+    res.status(200).json({
+      success: true,
+      message: "Payment marked as completed successfully",
+    });
+  } catch (err) {
+    console.error("Payment complete error:", err);
+
+    await logAction(
+      userId,
+      "mark payment completed",
+      "failure",
+      err.message,
+      req.body,
+      null
+    );
+
+    res.status(500).json({
+      success: false,
+      message: "Failed to mark payment completed",
+    });
+  }
+};
+
+// async getByUniqueId(unique_id, project_id) {
+//   const [rows] = await db.query(
+//     `SELECT id, payment_proof, transaction_no
+//      FROM plot_payments
+//      WHERE unique_id = ? AND project_id = ?`,
+//     [unique_id, project_id]
+//   );
+//   return rows;
+// }
+
 module.exports = {
   uploadPlots,
   plotList,
@@ -1132,8 +1207,10 @@ module.exports = {
   restorePlot,
   paymentReady,
   getAllPaymentReady,
+
   exportPlot,
   plotDocumentDelete,
   landCostPaymentUpload,
   updatePlotPayment,
+  markPaymentCompleted,
 };
