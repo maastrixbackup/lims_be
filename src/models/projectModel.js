@@ -74,6 +74,22 @@ const Project = {
     return { id, project_name, status, client_code, project_location };
   },
 
+  async updateClientCodeByProjectId(projectId, newClientCode) {
+    const [result] = await db.query(
+      `
+      UPDATE khatas
+      SET unique_id = CONCAT(
+        ?, '/',
+        SUBSTRING_INDEX(unique_id, '/', -2)
+      )
+      WHERE project_id = ?
+      `,
+      [newClientCode, projectId]
+    );
+
+    return result.affectedRows;
+  },
+
   async delete(id) {
     await db.query("DELETE FROM projects WHERE id = ?", [id]);
   },
