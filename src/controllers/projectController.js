@@ -161,6 +161,9 @@ const updateProject = async (req, res) => {
         });
       }
     }
+
+    const oldClientCode = project.client_code;
+
     const updatedProject = await Project.update(
       id,
       project_name,
@@ -168,6 +171,11 @@ const updateProject = async (req, res) => {
       client_code,
       project_location
     );
+
+    if (client_code && client_code !== oldClientCode) {
+      await Project.updateClientCodeByProjectId(id, client_code);
+    }
+
     await logAction(
       userId,
       "update project",
