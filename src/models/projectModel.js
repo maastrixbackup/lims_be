@@ -16,9 +16,17 @@ const Project = {
     };
   },
 
-  async findAll() {
-    const [rows] = await db.query("SELECT * FROM projects ORDER BY id DESC");
+  async findAll({ limit, offset }) {
+    const [rows] = await db.query(
+      "SELECT * FROM projects ORDER BY id DESC LIMIT ? OFFSET ?",
+      [limit, offset]
+    );
     return rows;
+  },
+
+  async countAll() {
+    const [[row]] = await db.query(`SELECT COUNT(*) AS total FROM projects`);
+    return row.total;
   },
 
   async findActiveProjects() {
@@ -28,16 +36,29 @@ const Project = {
     return rows;
   },
 
-  async findByUserId(userId) {
+  async findByUserId({ userId, limit, offset }) {
     const [rows] = await db.query(
       `SELECT p.*
        FROM projects p
        JOIN user_projects up ON up.project_id = p.id
        WHERE up.user_id = ?
-       ORDER BY p.id DESC`,
-      [userId]
+       ORDER BY p.id DESC LIMIT ? OFFSET ?`,
+      [userId, limit, offset]
     );
     return rows;
+  },
+
+  async countByUserId(userId) {
+    const [[row]] = await db.query(
+      `
+    SELECT COUNT(*) AS total
+    FROM projects p
+    JOIN user_projects pu ON pu.project_id = p.id
+    WHERE pu.user_id = ?
+    `,
+      [userId]
+    );
+    return row.total;
   },
 
   async assignUserToProject(userId, projectId) {
