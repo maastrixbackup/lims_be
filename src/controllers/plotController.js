@@ -701,6 +701,7 @@ const paymentReady = async (req, res) => {
         bank_ac: plot.bank_account_no,
         bank_name: plot.bank_name,
         ifsc: plot.branch_ifsc,
+        type: plot.type,
         status: "Processing",
       };
 
@@ -824,15 +825,22 @@ const paymentReady = async (req, res) => {
 // };
 const getAllPaymentReady = async (req, res) => {
   try {
-    const { project_id } = req.query;
+    const { project_id, type } = req.query;
     if (!project_id) {
       return res.status(400).json({
         success: false,
         message: "project_id is required",
       });
     }
+
+    if (!type) {
+      return res.status(400).json({
+        success: false,
+        message: "type is required",
+      });
+    }
     // Get all records
-    const all = await Plot.getAll(project_id);
+    const all = await Plot.getAll(project_id, type);
 
     if (!all.length) {
       return res.status(404).json({
@@ -851,6 +859,7 @@ const getAllPaymentReady = async (req, res) => {
           unique_id: row.unique_id,
           project_id: row.project_id,
           khata_no: row.khata_no,
+          type: row.type,
           total_area: row.payment_area || 0, // or row.total_area if exists
           total_compensation: row.total_compensation || 0,
           tenants: [],

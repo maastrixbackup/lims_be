@@ -2198,8 +2198,8 @@ const Plot = {
     const sql = `
       INSERT INTO plot_payments 
       (unique_id, plot_id, plot_no, khata_no, project_id, present_tenant_names, payment_area, total_compensation, 
-       bank_ac, bank_name, ifsc, status)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,?)
+       bank_ac, bank_name, ifsc, type, status)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,?,?)
     `;
 
     const params = [
@@ -2214,6 +2214,7 @@ const Plot = {
       data.bank_ac,
       data.bank_name,
       data.ifsc,
+      data.type,
       data.status,
     ];
 
@@ -2236,13 +2237,18 @@ const Plot = {
     return rows;
   },
 
-  async getAll(project_id = null) {
+  async getAll(project_id = null, type = null) {
     let query = `SELECT * FROM plot_payments WHERE 1=1`;
     const params = [];
 
     if (project_id) {
       query += ` AND project_id = ?`;
       params.push(project_id);
+    }
+
+    if (type !== undefined && type !== null) {
+      query += ` AND type = ?`;
+      params.push(type);
     }
 
     const [rows] = await db.query(query, params);
