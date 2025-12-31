@@ -67,13 +67,24 @@ const createProject = async (req, res) => {
 const projectList = async (req, res) => {
   try {
     // const projects = await Project.findAll();
-    let projects;
+    let { page = 1, limit = 10 } = req.query;
+
+    page = parseInt(page);
+    limit = parseInt(limit);
+    const offset = (page - 1) * limit;
+    let projects, total;
     if (req.user.role_id === 1) {
       // Admin can see all projects
-      projects = await Project.findAll();
+      projects = await Project.findAll({ limit, offset });
+      total = await Project.countAll();
     } else {
       // Others sees only their assigned projects
-      projects = await Project.findByUserId(req.user.id);
+      projects = await Project.findByUserId({
+        userId: req.user.id,
+        limit,
+        offset,
+      });
+      total = await Project.countByUserId(req.user.id);
     }
 
     const statusMap = { 0: "Pending", 1: "Active", 2: "Closed" };
@@ -85,6 +96,10 @@ const projectList = async (req, res) => {
     return res.status(200).json({
       success: true,
       message: "Project fetched successfully",
+      page,
+      limit,
+      total,
+      totalPages: Math.ceil(total / limit),
       projects: formattedProjects,
     });
   } catch (err) {
