@@ -42,6 +42,22 @@ async function addKhata(req, res) {
     name_of_present_tenant,
     present_address,
     displaced_affected_person,
+
+    rr_employment,
+    rr_cash_in_lieu,
+    rr_training_skill_upgradation,
+    rr_self_employment,
+    rr_special_allowance_st_ntfp,
+    rr_homestead_allotment,
+    rr_house_building_assistance,
+    rr_constructed_by,
+    rr_transit_shed,
+    rr_transport_allowance,
+    rr_maintenance_allowance,
+    rr_multiple_displacement_allowance,
+    rr_exgratia,
+    rr_other_benefits,
+
     full_part,
   } = safeRequestPayload;
 
@@ -102,6 +118,22 @@ async function addKhata(req, res) {
       name_of_present_tenant,
       present_address,
       displaced_affected_person,
+
+      rr_employment,
+      rr_cash_in_lieu,
+      rr_training_skill_upgradation,
+      rr_self_employment,
+      rr_special_allowance_st_ntfp,
+      rr_homestead_allotment,
+      rr_house_building_assistance,
+      rr_constructed_by,
+      rr_transit_shed,
+      rr_transport_allowance,
+      rr_maintenance_allowance,
+      rr_multiple_displacement_allowance,
+      rr_exgratia,
+      rr_other_benefits,
+
       full_part,
     });
     await logAction(
@@ -224,6 +256,22 @@ const updateKhata = async (req, res) => {
     name_of_present_tenant,
     present_address,
     displaced_affected_person,
+
+    rr_employment,
+    rr_cash_in_lieu,
+    rr_training_skill_upgradation,
+    rr_self_employment,
+    rr_special_allowance_st_ntfp,
+    rr_homestead_allotment,
+    rr_house_building_assistance,
+    rr_constructed_by,
+    rr_transit_shed,
+    rr_transport_allowance,
+    rr_maintenance_allowance,
+    rr_multiple_displacement_allowance,
+    rr_exgratia,
+    rr_other_benefits,
+
     full_part,
   } = safeRequestPayload;
   // const safeRequestPayload = req.body;
@@ -270,6 +318,22 @@ const updateKhata = async (req, res) => {
       name_of_present_tenant,
       present_address,
       displaced_affected_person,
+
+      rr_employment,
+      rr_cash_in_lieu,
+      rr_training_skill_upgradation,
+      rr_self_employment,
+      rr_special_allowance_st_ntfp,
+      rr_homestead_allotment,
+      rr_house_building_assistance,
+      rr_constructed_by,
+      rr_transit_shed,
+      rr_transport_allowance,
+      rr_maintenance_allowance,
+      rr_multiple_displacement_allowance,
+      rr_exgratia,
+      rr_other_benefits,
+
       full_part,
     });
     await logAction(

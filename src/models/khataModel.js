@@ -25,6 +25,22 @@ const Khata = {
       name_of_present_tenant,
       present_address,
       displaced_affected_person,
+
+      rr_employment,
+      rr_cash_in_lieu,
+      rr_training_skill_upgradation,
+      rr_self_employment,
+      rr_special_allowance_st_ntfp,
+      rr_homestead_allotment,
+      rr_house_building_assistance,
+      rr_constructed_by,
+      rr_transit_shed,
+      rr_transport_allowance,
+      rr_maintenance_allowance,
+      rr_multiple_displacement_allowance,
+      rr_exgratia,
+      rr_other_benefits,
+
       full_part,
     } = data;
     const [result] = await db.query(
@@ -50,8 +66,24 @@ const Khata = {
         name_of_present_tenant,
         present_address,
         displaced_affected_person,
+
+        rr_employment,
+        rr_cash_in_lieu,
+        rr_training_skill_upgradation,
+        rr_self_employment,
+        rr_special_allowance_st_ntfp,
+        rr_homestead_allotment,
+        rr_house_building_assistance,
+        rr_constructed_by,
+        rr_transit_shed,
+        rr_transport_allowance,
+        rr_maintenance_allowance,
+        rr_multiple_displacement_allowance,
+        rr_exgratia,
+        rr_other_benefits,
+
         full_part
-      ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
+      ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
       [
         project_id,
         village_id,
@@ -74,6 +106,22 @@ const Khata = {
         name_of_present_tenant,
         present_address,
         displaced_affected_person,
+
+        rr_employment,
+        rr_cash_in_lieu,
+        rr_training_skill_upgradation,
+        rr_self_employment,
+        rr_special_allowance_st_ntfp,
+        rr_homestead_allotment,
+        rr_house_building_assistance,
+        rr_constructed_by,
+        rr_transit_shed,
+        rr_transport_allowance,
+        rr_maintenance_allowance,
+        rr_multiple_displacement_allowance,
+        rr_exgratia,
+        rr_other_benefits,
+
         full_part,
       ]
     );
@@ -419,19 +467,20 @@ const Khata = {
       IFNULL(kd.doc_count, 0) AS khata_document_count,
       IFNULL(km.map_count, 0) AS khata_map_document_count,
 
-      rr.rr_employment,
-      rr.rr_cash_in_lieu,
-      rr.rr_training_skill_upgradation,
-      rr.rr_self_employment,
-      rr.rr_special_allowance_st_ntfp,
-      rr.rr_homestead_allotment,
-      rr.rr_house_building_assistance,
-      rr.rr_transit_shed,
-      rr.rr_transport_allowance,
-      rr.rr_maintenance_allowance,
-      rr.rr_multiple_displacement_allowance,
-      rr.rr_exgratia,
-      rr.rr_other_benefits
+      k.rr_employment,
+      k.rr_cash_in_lieu,
+      k.rr_training_skill_upgradation,
+      k.rr_self_employment,
+      k.rr_special_allowance_st_ntfp,
+      k.rr_homestead_allotment,
+      k.rr_house_building_assistance,
+      k.rr_constructed_by,
+      k.rr_transit_shed,
+      k.rr_transport_allowance,
+      k.rr_maintenance_allowance,
+      k.rr_multiple_displacement_allowance,
+      k.rr_exgratia,
+      k.rr_other_benefits
 
     FROM khatas k
 
@@ -464,34 +513,6 @@ const Khata = {
      AND pc.type = k.type
      AND pc.khata_no = k.khata_no
 
-    LEFT JOIN (
-      SELECT
-        project_id,
-        type,
-        khata_no,
-
-        GROUP_CONCAT(DISTINCT rr_employment SEPARATOR ', ') AS rr_employment,
-        GROUP_CONCAT(DISTINCT rr_cash_in_lieu SEPARATOR ', ') AS rr_cash_in_lieu,
-        GROUP_CONCAT(DISTINCT rr_training_skill_upgradation SEPARATOR ', ') AS rr_training_skill_upgradation,
-        GROUP_CONCAT(DISTINCT rr_self_employment SEPARATOR ', ') AS rr_self_employment,
-        GROUP_CONCAT(DISTINCT rr_special_allowance_st_ntfp SEPARATOR ', ') AS rr_special_allowance_st_ntfp,
-        GROUP_CONCAT(DISTINCT rr_homestead_allotment SEPARATOR ', ') AS rr_homestead_allotment,
-        GROUP_CONCAT(DISTINCT rr_house_building_assistance SEPARATOR ', ') AS rr_house_building_assistance,
-        GROUP_CONCAT(DISTINCT rr_constructed_by SEPARATOR ', ') AS rr_constructed_by,
-        GROUP_CONCAT(DISTINCT rr_transit_shed SEPARATOR ', ') AS rr_transit_shed,
-        GROUP_CONCAT(DISTINCT rr_transport_allowance SEPARATOR ', ') AS rr_transport_allowance,
-        GROUP_CONCAT(DISTINCT rr_maintenance_allowance SEPARATOR ', ') AS rr_maintenance_allowance,
-        GROUP_CONCAT(DISTINCT rr_multiple_displacement_allowance SEPARATOR ', ') AS rr_multiple_displacement_allowance,
-        GROUP_CONCAT(DISTINCT rr_exgratia SEPARATOR ', ') AS rr_exgratia,
-        GROUP_CONCAT(DISTINCT rr_other_benefits SEPARATOR ', ') AS rr_other_benefits
-
-      FROM plots
-      WHERE khata_no IS NOT NULL
-      GROUP BY project_id, type, khata_no
-    ) rr
-      ON rr.project_id = k.project_id
-    AND rr.type = k.type
-    AND rr.khata_no = k.khata_no
 
 
     LEFT JOIN (
@@ -617,6 +638,22 @@ const Khata = {
       name_of_present_tenant,
       present_address,
       displaced_affected_person,
+
+      rr_employment,
+      rr_cash_in_lieu,
+      rr_training_skill_upgradation,
+      rr_self_employment,
+      rr_special_allowance_st_ntfp,
+      rr_homestead_allotment,
+      rr_house_building_assistance,
+      rr_constructed_by,
+      rr_transit_shed,
+      rr_transport_allowance,
+      rr_maintenance_allowance,
+      rr_multiple_displacement_allowance,
+      rr_exgratia,
+      rr_other_benefits,
+
       full_part,
     } = data;
     await db.query(
@@ -641,6 +678,22 @@ const Khata = {
         name_of_present_tenant = ?,
         present_address = ?,
         displaced_affected_person = ?,
+
+        rr_employment = ?,
+        rr_cash_in_lieu = ?,
+        rr_training_skill_upgradation = ?,
+        rr_self_employment = ?,
+        rr_special_allowance_st_ntfp = ?,
+        rr_homestead_allotment = ?,
+        rr_house_building_assistance = ?,
+        rr_constructed_by = ?,
+        rr_transit_shed = ?,
+        rr_transport_allowance = ?,
+        rr_maintenance_allowance = ?,
+        rr_multiple_displacement_allowance = ?,
+        rr_exgratia = ?,
+        rr_other_benefits = ?,
+
         full_part = ?,
         updated_at = NOW()
         WHERE id = ?`,
@@ -666,6 +719,22 @@ const Khata = {
         name_of_present_tenant,
         present_address,
         displaced_affected_person,
+
+        rr_employment,
+        rr_cash_in_lieu,
+        rr_training_skill_upgradation,
+        rr_self_employment,
+        rr_special_allowance_st_ntfp,
+        rr_homestead_allotment,
+        rr_house_building_assistance,
+        rr_constructed_by,
+        rr_transit_shed,
+        rr_transport_allowance,
+        rr_maintenance_allowance,
+        rr_multiple_displacement_allowance,
+        rr_exgratia,
+        rr_other_benefits,
+
         full_part,
 
         khataId,
