@@ -1008,6 +1008,36 @@ const getMapFiles = async (req, res) => {
   }
 };
 
+const getMasterData = async (req, res) => {
+  try {
+    const { project_id, type } = req.query;
+    if (!project_id || !type) {
+      return res.status(400).json({
+        success: false,
+        message: "Project id and type are required",
+      });
+    }
+
+    const villages = await Village.findVillageName(project_id, type);
+
+    const khatas = await Khata.findKhataNo(project_id, type);
+    return res.status(200).json({
+      success: true,
+      message: "Master data fetched successfully",
+      data: {
+        villages,
+        khatas,
+      },
+    });
+  } catch (err) {
+    console.error("Get Master Data Error:", err);
+    return res.status(500).json({
+      success: false,
+      message: "Server error",
+    });
+  }
+};
+
 module.exports = {
   addKhata,
   khataList,
@@ -1021,4 +1051,5 @@ module.exports = {
   printKhata,
   uploadMapDoc,
   getMapFiles,
+  getMasterData,
 };
