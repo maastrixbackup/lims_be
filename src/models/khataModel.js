@@ -786,162 +786,96 @@ const Khata = {
   },
 
   // async insertKhatasFromExcel(data, project_id, type) {
-  //   const [project] = await db.query(
-  //     "SELECT client_code FROM projects WHERE id = ?",
-  //     [project_id]
+  //   await db.query(
+  //     `
+  //   INSERT INTO khatas (
+  //     unique_id,
+  //     project_id,
+  //     village_id,
+  //     khata_no,
+  //     type,
+
+  //     plot_no,
+  //     kissam_of_land,
+  //     land_category,
+
+  //     land_area_total_acres,
+  //     land_area_total_hectares,
+  //     land_area_acquired_acres,
+  //     land_area_acquired_hectares,
+
+  //     lo13_remarks,
+  //     tahasil_name,
+  //     ri_circle_name,
+  //     thana_no,
+  //     date_of_award,
+
+  //     name_of_recorded_tenant,
+  //     name_of_present_tenant,
+  //     present_address,
+  //     displaced_affected_person
+  //   )
+  //   SELECT
+  //     CONCAT(
+  //       MIN(p.client_code), '/',
+  //       MIN(v.village_code), '/',
+  //       pl.khata_no
+  //     ) AS unique_id,
+  //     pl.project_id,
+  //     v.id AS village_id,
+  //     pl.khata_no,
+  //     pl.type,
+
+  //     GROUP_CONCAT(DISTINCT pl.plot_no SEPARATOR ', ') AS plot_no,
+  //     GROUP_CONCAT(DISTINCT pl.kissam_of_land SEPARATOR ', ') AS kissam_of_land,
+  //     GROUP_CONCAT(DISTINCT pl.land_category SEPARATOR ', ') AS land_category,
+
+  //     SUM(pl.land_area_total_acres),
+  //     SUM(pl.land_area_total_hectares),
+  //     SUM(pl.land_area_acquired_acres),
+  //     SUM(pl.land_area_acquired_hectares),
+
+  //     GROUP_CONCAT(DISTINCT pl.lo13_remarks SEPARATOR ', '),
+  //     MIN(pl.tahasil_name),
+  //     GROUP_CONCAT(DISTINCT pl.ri_circle_name SEPARATOR ', '),
+  //     MIN(pl.thana_no),
+  //     MIN(pl.date_of_award),
+
+  //     GROUP_CONCAT(DISTINCT pl.name_of_recorded_tenant SEPARATOR ', '),
+  //     GROUP_CONCAT(DISTINCT pl.name_of_present_tenant SEPARATOR ', '),
+  //     GROUP_CONCAT(DISTINCT pl.present_address SEPARATOR ', '),
+  //     GROUP_CONCAT(DISTINCT pl.displaced_affected_person SEPARATOR ', ')
+  //   FROM plots pl
+  //   JOIN villages v
+  //     ON v.village_name = pl.village_name
+  //     AND v.project_id = pl.project_id
+  //   JOIN projects p ON p.id = pl.project_id
+  //   WHERE pl.project_id = ?
+  //     AND pl.type = ?
+  //     AND pl.khata_no IS NOT NULL
+  //     AND pl.khata_no <> ''
+  //   GROUP BY pl.project_id, v.id, pl.khata_no, pl.type
+  //   ON DUPLICATE KEY UPDATE
+  //     plot_no = VALUES(plot_no),
+  //     kissam_of_land = VALUES(kissam_of_land),
+  //     land_category = VALUES(land_category),
+  //     land_area_total_acres = VALUES(land_area_total_acres),
+  //     land_area_total_hectares = VALUES(land_area_total_hectares),
+  //     land_area_acquired_acres = VALUES(land_area_acquired_acres),
+  //     land_area_acquired_hectares = VALUES(land_area_acquired_hectares),
+  //     lo13_remarks = VALUES(lo13_remarks),
+  //     tahasil_name = VALUES(tahasil_name),
+  //     ri_circle_name = VALUES(ri_circle_name),
+  //     thana_no = VALUES(thana_no),
+  //     date_of_award = VALUES(date_of_award),
+  //     name_of_recorded_tenant = VALUES(name_of_recorded_tenant),
+  //     name_of_present_tenant = VALUES(name_of_present_tenant),
+  //     present_address = VALUES(present_address),
+  //     displaced_affected_person = VALUES(displaced_affected_person),
+  //     updated_at = NOW()
+  //   `,
+  //     [project_id, type]
   //   );
-  //   if (!project.length) throw new Error("Invalid project_id");
-  //   const clientCode = project[0].client_code;
-
-  //   for (const row of data) {
-  //     // const villageName = row["Name of Village"];
-  //     // const khataNo = row["Khata No."];
-  //     // if (!villageName || !khataNo) continue;
-  //     const villageName =
-  //       row["Name of Village"]?.trim() ||
-  //       row["name of village"]?.trim() ||
-  //       null;
-  //     // const khataNo =
-  //     //   row["Khata No."] !== undefined && row["Khata No."] !== null
-  //     //     ? row["Khata No."].toString().trim()
-  //     //     : null;
-  //     const khataNo =
-  //       (row["Khata No."] || row["Khata No"])?.toString().trim() || null;
-
-  //     const tahasil =
-  //       row["Name of the Tahasil"]?.trim() ||
-  //       row["Tahasil/Thana"]?.trim() ||
-  //       null;
-
-  //     if (!villageName || !khataNo || !tahasil) continue;
-
-  //     // const [village] = await db.query(
-  //     //   "SELECT id, village_code FROM villages WHERE village_name = ?",
-  //     //   [villageName]
-  //     // );
-  //     // if (!village.length) continue;
-  //     const [village] = await db.query(
-  //       "SELECT id, village_code FROM villages WHERE village_name = ? AND tahasil = ? AND project_id = ?",
-  //       [villageName, tahasil, project_id]
-  //     );
-  //     if (!village.length) continue;
-
-  //     const village_id = village[0].id;
-  //     const village_code = village[0].village_code;
-  //     const unique_id = `${clientCode}/${village_code}/${khataNo}`;
-
-  //     await db.query(
-  //       `INSERT INTO khatas (unique_id, project_id, village_id, khata_no, type)
-  //        VALUES (?, ?, ?, ?, ?)
-  //        ON DUPLICATE KEY UPDATE
-  //        project_id = VALUES(project_id),
-  //        village_id = VALUES(village_id),
-  //        khata_no = VALUES(khata_no),
-  //        type = VALUES(type)`,
-  //       [unique_id, project_id, village_id, khataNo, type]
-  //     );
-  //   }
-  // },
-
-  // async insertKhatasFromExcel(data, project_id, type) {
-  //   const [project] = await db.query(
-  //     "SELECT client_code FROM projects WHERE id = ?",
-  //     [project_id]
-  //   );
-  //   if (!project.length) throw new Error("Invalid project_id");
-  //   const clientCode = project[0].client_code;
-
-  //   for (const row of data) {
-  //     const villageName =
-  //       row["Name of Village"]?.trim() ||
-  //       row["name of village"]?.trim() ||
-  //       null;
-
-  //     const khataNo =
-  //       (row["Khata No."] || row["Khata No"])?.toString().trim() || null;
-
-  //     const tahasil =
-  //       row["Name of the Tahasil"]?.trim() ||
-  //       row["Tahasil/Thana"]?.trim() ||
-  //       null;
-
-  //     if (!villageName || !khataNo || !tahasil) continue;
-
-  //     const [village] = await db.query(
-  //       `SELECT id, village_code
-  //      FROM villages
-  //      WHERE village_name = ? AND tahasil = ? AND project_id = ?`,
-  //       [villageName, tahasil, project_id]
-  //     );
-  //     if (!village.length) continue;
-
-  //     const village_id = village[0].id;
-  //     const village_code = village[0].village_code;
-  //     const unique_id = `${clientCode}/${village_code}/${khataNo}`;
-
-  //     await db.query(
-  //       `
-  //     INSERT INTO khatas (
-  //       unique_id, project_id, village_id, khata_no, type,
-  //       plot_no, kissam_of_land, land_category,
-  //       land_area_total_acres, land_area_total_hectares,
-  //       land_area_acquired_acres, land_area_acquired_hectares,
-  //       lo13_remarks, tahasil_name, ri_circle_name, thana_no,
-  //       date_of_award, name_of_recorded_tenant,
-  //       name_of_present_tenant, present_address,
-  //       displaced_affected_person
-  //     )
-  //     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-  //     ON DUPLICATE KEY UPDATE
-  //       plot_no = VALUES(plot_no),
-  //       kissam_of_land = VALUES(kissam_of_land),
-  //       land_category = VALUES(land_category),
-  //       land_area_total_acres = VALUES(land_area_total_acres),
-  //       land_area_total_hectares = VALUES(land_area_total_hectares),
-  //       land_area_acquired_acres = VALUES(land_area_acquired_acres),
-  //       land_area_acquired_hectares = VALUES(land_area_acquired_hectares),
-  //       lo13_remarks = VALUES(lo13_remarks),
-  //       tahasil_name = VALUES(tahasil_name),
-  //       ri_circle_name = VALUES(ri_circle_name),
-  //       thana_no = VALUES(thana_no),
-  //       date_of_award = VALUES(date_of_award),
-  //       name_of_recorded_tenant = VALUES(name_of_recorded_tenant),
-  //       name_of_present_tenant = VALUES(name_of_present_tenant),
-  //       present_address = VALUES(present_address),
-  //       displaced_affected_person = VALUES(displaced_affected_person),
-  //       updated_at = NOW()
-  //     `,
-  //       [
-  //         unique_id,
-  //         project_id,
-  //         village_id,
-  //         khataNo,
-  //         type,
-
-  //         row["Plot No."] || null,
-  //         row["Kissam of the Land"] || row["Kissam"] || null,
-  //         row["LO12-Category of Land"] || null,
-
-  //         row["LA1-Land Area (Total Area in Acres)"] || null,
-  //         row["LA2-Land Area (Total Area in Ha.)"] || null,
-  //         row["Land Area (Total Acquired Area in Acres)"] || null,
-  //         row["Land Area (Total Acquired Area in Ha.)"] || null,
-
-  //         row["LO13-Remarks"] || null,
-  //         tahasil,
-  //         row["Name of the R.I. Circle"] || null,
-  //         row["Thana No."] || row["Thana no"] || null,
-  //         row["Date of Award"] || null,
-
-  //         row["LO1-Name of Recorded Tenant (RT)"] ||
-  //           row["Name of Tenant"] ||
-  //           null,
-  //         row["LO2-Name of Present Tenant(s)"] || row["Name of Tenant"] || null,
-  //         row["Present Address"] || null,
-  //         row["Displaced/Affected Person"] || null,
-  //       ]
-  //     );
-  //   }
   // },
 
   async insertKhatasFromExcel(data, project_id, type) {
@@ -1035,8 +969,168 @@ const Khata = {
     `,
       [project_id, type]
     );
-  },
 
+    const addIfValid = (set, value) => {
+      if (value !== undefined && value !== null && value !== "") {
+        set.add(value);
+      }
+    };
+
+    const setToNull = (set) => {
+      if (!set || set.size === 0) return null;
+      return [...set].join(", ");
+    };
+
+    const normalize = (s) => s?.replace(/\s+/g, " ").trim();
+    const rrByKhata = {};
+    // console.log(Object.keys(data[0]));
+    for (const row of data) {
+      const normalizedRow = {};
+      for (const key in row) {
+        normalizedRow[normalize(key)] = row[key];
+      }
+
+      const khataNo = row["Khata No."] || row["Khata No"] || null;
+      if (!khataNo) continue;
+
+      if (!rrByKhata[khataNo]) {
+        rrByKhata[khataNo] = {
+          rr_employment: new Set(),
+          rr_cash_in_lieu: new Set(),
+          rr_training_skill_upgradation: new Set(),
+          rr_self_employment: new Set(),
+          rr_special_allowance_st_ntfp: new Set(),
+          rr_homestead_allotment: new Set(),
+          rr_house_building_assistance: new Set(),
+          rr_constructed_by: new Set(),
+          rr_transit_shed: new Set(),
+          rr_transport_allowance: new Set(),
+          rr_maintenance_allowance: new Set(),
+          rr_multiple_displacement_allowance: new Set(),
+          rr_exgratia: new Set(),
+          rr_other_benefits: new Set(),
+        };
+      }
+
+      const r = rrByKhata[khataNo];
+      addIfValid(
+        r.rr_employment,
+        normalizedRow["RR Assistance (Rehab) - Employment in the Project"]
+      );
+
+      addIfValid(
+        r.rr_cash_in_lieu,
+        row["RR Assistance (Rehab) - Cash in lieu of Employment"]
+      );
+
+      addIfValid(
+        r.rr_training_skill_upgradation,
+        row["RR Assistance (Rehab) - Training for Skill Upgradation"]
+      );
+
+      addIfValid(
+        r.rr_self_employment,
+        row["RR Assistance (Rehab) - Assistance for Self Employment"]
+      );
+
+      addIfValid(
+        r.rr_special_allowance_st_ntfp,
+        row["RR Assistance (Rehab) - Special Allowance to STs for loss of NTFP"]
+      );
+
+      addIfValid(
+        r.rr_homestead_allotment,
+        row["RR Assistance (Resettle) - Homested Land Alloted/Self Relocation"]
+      );
+
+      addIfValid(
+        r.rr_house_building_assistance,
+        row["RR Assistance (Resettle) - House Building Assistance"]
+      );
+
+      addIfValid(
+        r.rr_constructed_by,
+        row["RR Assistance (Resettle) - Constructed by Project Authority/Self"]
+      );
+
+      addIfValid(
+        r.rr_transit_shed,
+        row["RR Assistance (Resettle) - Assistance for Transit Shed"]
+      );
+
+      addIfValid(
+        r.rr_transport_allowance,
+        row["RR Assistance (Resettle) - Transportation Allowance"]
+      );
+
+      addIfValid(
+        r.rr_maintenance_allowance,
+        row["RR Assistance (Resettle) - Maintenance Allowance"]
+      );
+
+      addIfValid(
+        r.rr_multiple_displacement_allowance,
+        row[
+          "RR Assistance (Other) - Special Allowance for Multiple Displacement"
+        ]
+      );
+
+      addIfValid(
+        r.rr_exgratia,
+        row["RR Assistance (Other) - Ex-Gratia (if any)"]
+      );
+
+      addIfValid(
+        r.rr_other_benefits,
+        row["RR Assistance (Other) - Other Benefits (if any)"]
+      );
+    }
+
+    for (const [khataNo, rr] of Object.entries(rrByKhata)) {
+      await db.query(
+        `
+      UPDATE khatas
+      SET
+        rr_employment = ?,
+        rr_cash_in_lieu = ?,
+        rr_training_skill_upgradation = ?,
+        rr_self_employment = ?,
+        rr_special_allowance_st_ntfp = ?,
+        rr_homestead_allotment = ?,
+        rr_house_building_assistance = ?,
+        rr_constructed_by = ?,
+        rr_transit_shed = ?,
+        rr_transport_allowance = ?,
+        rr_maintenance_allowance = ?,
+        rr_multiple_displacement_allowance = ?,
+        rr_exgratia = ?,
+        rr_other_benefits = ?
+      WHERE project_id = ?
+        AND type = ?
+        AND khata_no = ?
+      `,
+        [
+          setToNull(rr.rr_employment),
+          setToNull(rr.rr_cash_in_lieu),
+          setToNull(rr.rr_training_skill_upgradation),
+          setToNull(rr.rr_self_employment),
+          setToNull(rr.rr_special_allowance_st_ntfp),
+          setToNull(rr.rr_homestead_allotment),
+          setToNull(rr.rr_house_building_assistance),
+          setToNull(rr.rr_constructed_by),
+          setToNull(rr.rr_transit_shed),
+          setToNull(rr.rr_transport_allowance),
+          setToNull(rr.rr_maintenance_allowance),
+          setToNull(rr.rr_multiple_displacement_allowance),
+          setToNull(rr.rr_exgratia),
+          setToNull(rr.rr_other_benefits),
+          project_id,
+          type,
+          khataNo,
+        ]
+      );
+    }
+  },
   async insertKhataFromManualPlot({ project_id, type, khata_no }) {
     if (!project_id || !type || !khata_no) return;
 

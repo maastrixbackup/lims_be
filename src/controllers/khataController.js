@@ -235,6 +235,14 @@ const updateKhata = async (req, res) => {
     }
   });
 
+  if (safeRequestPayload.date_of_award) {
+    safeRequestPayload.date_of_award = new Date(
+      safeRequestPayload.date_of_award
+    )
+      .toISOString()
+      .slice(0, 10);
+  }
+
   const {
     project_id,
     village_id,
