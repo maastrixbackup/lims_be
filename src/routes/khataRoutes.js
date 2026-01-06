@@ -14,6 +14,7 @@ const {
   printKhata,
   uploadMapDoc,
   getMapFiles,
+  getMasterData,
 } = require("../controllers/khataController");
 const { uploadKhata, uploadMapDocument } = require("../middleware/upload");
 
@@ -57,5 +58,6 @@ router.post(
   uploadMapDoc
 );
 router.get("/getMapFiles/:khata_id", getMapFiles);
+router.get("/getMasterData", getMasterData);
 
 module.exports = router;

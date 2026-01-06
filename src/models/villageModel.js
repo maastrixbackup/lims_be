@@ -151,6 +151,14 @@ const Village = {
     await db.query("DELETE FROM villages WHERE id = ?", [id]);
   },
 
+  async findVillageName(project_id, type) {
+    const [rows] = await db.query(
+      "SELECT id,village_name FROM villages WHERE project_id = ? AND type = ?",
+      [project_id, type]
+    );
+    return rows;
+  },
+
   // async countAll(projectId = null) {
   //   let query = "SELECT COUNT(*) AS total FROM villages";
   //   let params = [];

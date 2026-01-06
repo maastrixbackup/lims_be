@@ -606,6 +606,14 @@ const Khata = {
     return rows[0] || null;
   },
 
+  async findKhataNo(project_id, type) {
+    const [rows] = await db.query(
+      "SELECT id,khata_no FROM khatas WHERE project_id = ? AND type = ?",
+      [project_id, type]
+    );
+    return rows;
+  },
+
   async getKhataByNumber(khata_no) {
     const [rows] = await db.query(
       `SELECT * FROM khatas WHERE khata_no = ? LIMIT 1`,
