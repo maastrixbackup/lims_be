@@ -160,10 +160,44 @@ const uploadLandCostPayment = multer({
   limits: { fileSize: 5 * 1024 * 1024 }, // 5MB
 });
 
+const govtPlotStorage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    cb(null, "uploads/govt_plots");
+  },
+  filename: (req, file, cb) => {
+    const originalname = file.originalname.replace(/\s+/g, "_");
+    cb(null, originalname);
+    // OR if you want unique name:
+    // cb(null, Date.now() + "_" + originalname);
+  },
+});
+
+const govtPlotFileFilter = (req, file, cb) => {
+  const allowedMimeTypes = [
+    "application/pdf",
+    "image/jpeg",
+    "image/jpg",
+    "image/png",
+  ];
+
+  if (allowedMimeTypes.includes(file.mimetype)) {
+    cb(null, true);
+  } else {
+    cb(new Error("Only PDF or image files are allowed"), false);
+  }
+};
+
+const uploadGovtPlotAttachments = multer({
+  storage: govtPlotStorage,
+  fileFilter: govtPlotFileFilter,
+  limits: { fileSize: 10 * 1024 * 1024 }, // 10MB
+});
+
 module.exports = {
   uploadPlotExcel,
   uploadProfilePic,
   uploadKhata,
   uploadMapDocument,
   uploadLandCostPayment,
+  uploadGovtPlotAttachments,
 };

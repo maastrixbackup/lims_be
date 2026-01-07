@@ -3,6 +3,7 @@ const router = express.Router();
 const {
   uploadPlotExcel,
   uploadLandCostPayment,
+  uploadGovtPlotAttachments,
 } = require("../middleware/upload");
 const {
   uploadPlots,
@@ -20,6 +21,7 @@ const {
   landCostPaymentUpload,
   updatePlotPayment,
 } = require("../controllers/plotController");
+const { addGovtPlot } = require("../controllers/govtPlotController");
 
 router.post("/upload", uploadPlotExcel.single("file"), uploadPlots);
 router.get("/plotList", plotList);
@@ -39,5 +41,18 @@ router.post(
   landCostPaymentUpload
 );
 router.put("/updatePlotPayment/:id", updatePlotPayment);
+
+// router.post("/addGovtPlot/", addGovtPlot);
+
+router.post(
+  "/addGovtPlot",
+  uploadGovtPlotAttachments.fields([
+    { name: "ri_report_attachment", maxCount: 1 },
+    { name: "tree_enumeration_attachment", maxCount: 1 },
+    { name: "lease_to_idco_attachment", maxCount: 1 },
+    { name: "lease_to_ua_attachment", maxCount: 1 },
+  ]),
+  addGovtPlot
+);
 
 module.exports = router;
