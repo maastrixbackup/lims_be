@@ -111,7 +111,7 @@ const addGovtPlot = async (req, res) => {
 
 const govtPlotList = async (req, res) => {
   try {
-    let { page, limit } = req.query;
+    let { page = 1, limit = 10 } = req.query;
 
     page = parseInt(page) || 1;
     limit = parseInt(limit) || 10;
@@ -122,13 +122,47 @@ const govtPlotList = async (req, res) => {
       offset,
     });
 
+    const buildFileUrl = (req, folder, fileName) => {
+      if (!fileName) return null;
+
+      const base = req.get("host").includes("localhost")
+        ? `${req.protocol}://${req.get("host")}`
+        : `${req.protocol}://${req.get("host")}/api`;
+
+      return `${base}/uploads/${folder}/${fileName}`;
+    };
+
+    const dataWithUrls = result.data.map((plot) => ({
+      ...plot,
+      ri_report_attachment: buildFileUrl(
+        req,
+        "govt_plots",
+        plot.ri_report_attachment
+      ),
+      tree_enumeration_attachment: buildFileUrl(
+        req,
+        "govt_plots",
+        plot.tree_enumeration_attachment
+      ),
+      lease_to_idco_attachment: buildFileUrl(
+        req,
+        "govt_plots",
+        plot.lease_to_idco_attachment
+      ),
+      lease_to_ua_attachment: buildFileUrl(
+        req,
+        "govt_plots",
+        plot.lease_to_ua_attachment
+      ),
+    }));
+
     return res.status(200).json({
       success: true,
       message: "Govt plots fetched successfully",
       page,
       limit,
       total: result.total,
-      data: result.data,
+      data: dataWithUrls,
     });
   } catch (err) {
     console.error("Govt Plot Listing Error:", err);

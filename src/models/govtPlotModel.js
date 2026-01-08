@@ -130,13 +130,13 @@ const GovtPlot = {
     };
   },
 
-  async findAll({ limit, offset }) {
+  async findAll({ limit = 10, offset = 0 }) {
     const sql = `SELECT * FROM govt_plots
       WHERE is_deleted = 0
       ORDER BY id DESC
       LIMIT ? OFFSET ?`;
 
-    const [rows] = await db.execute(sql, [limit, offset]);
+    const [rows] = await db.query(sql, [limit, offset]);
 
     const countSql = `
       SELECT COUNT(*) AS total
@@ -144,7 +144,7 @@ const GovtPlot = {
       WHERE is_deleted = 0
     `;
 
-    const [countRows] = await db.execute(countSql);
+    const [countRows] = await db.query(countSql);
 
     return {
       data: rows,
