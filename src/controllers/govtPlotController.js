@@ -111,13 +111,21 @@ const addGovtPlot = async (req, res) => {
 
 const govtPlotList = async (req, res) => {
   try {
-    let { page = 1, limit = 10 } = req.query;
+    let { page = 1, limit = 10, project_id } = req.query;
+
+    if (!project_id) {
+      return res.status(400).json({
+        success: false,
+        message: "project_id is required",
+      });
+    }
 
     page = parseInt(page) || 1;
     limit = parseInt(limit) || 10;
     const offset = (page - 1) * limit;
 
     const result = await GovtPlot.findAll({
+      project_id,
       limit,
       offset,
     });
