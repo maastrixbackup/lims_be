@@ -129,6 +129,28 @@ const GovtPlot = {
       ...data,
     };
   },
+
+  async findAll({ limit, offset }) {
+    const sql = `SELECT * FROM govt_plots
+      WHERE is_deleted = 0
+      ORDER BY id DESC
+      LIMIT ? OFFSET ?`;
+
+    const [rows] = await db.execute(sql, [limit, offset]);
+
+    const countSql = `
+      SELECT COUNT(*) AS total
+      FROM govt_plots
+      WHERE is_deleted = 0
+    `;
+
+    const [countRows] = await db.execute(countSql);
+
+    return {
+      data: rows,
+      total: countRows[0].total,
+    };
+  },
 };
 
 module.exports = GovtPlot;

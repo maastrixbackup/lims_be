@@ -88,12 +88,12 @@ async function addKhata(req, res) {
     const unique_id = `${project.client_code}/${village.village_code}/${khata_no}`;
 
     const existsUniqueId = await Khata.existsByUniqueId(unique_id);
-    // if (existsUniqueId) {
-    //   return res.status(400).json({
-    //     success: false,
-    //     message: `Khata with unique_id '${unique_id}' already exists`,
-    //   });
-    // }
+    if (existsUniqueId) {
+      return res.status(400).json({
+        success: false,
+        message: `Khata with unique_id '${unique_id}' already exists`,
+      });
+    }
 
     const khata = await Khata.create({
       project_id,
@@ -151,6 +151,13 @@ async function addKhata(req, res) {
       khata,
     });
   } catch (err) {
+    if (err.code === "ER_DUP_ENTRY") {
+      return res.status(400).json({
+        success: false,
+        message:
+          "Khata with same project, village and khata number already exists",
+      });
+    }
     await logAction(
       userId,
       "create khata",
@@ -293,15 +300,38 @@ const updateKhata = async (req, res) => {
       });
     }
 
-    // if (
-    //   displaced_affected_person &&
-    //   !["PDF", "PAF"].includes(displaced_affected_person)
-    // ) {
-    //   return res.status(400).json({
-    //     success: false,
-    //     message: "Invalid displaced_affected_person value",
-    //   });
-    // }
+    const project = await Project.findById(project_id);
+    if (!project) {
+      return res.status(404).json({ message: "Project not found" });
+    }
+
+    const village = await Village.findById(village_id);
+    if (!village) {
+      return res.status(404).json({ message: "Village not found" });
+    }
+
+    const unique_id = `${project.client_code}/${village.village_code}/${khata_no}`;
+    const existsUniqueId = await Khata.existsByUniqueIdExcept(
+      unique_id,
+      khataId
+    );
+
+    if (existsUniqueId) {
+      return res.status(400).json({
+        success: false,
+        message: `Khata with unique_id '${unique_id}' already exists`,
+      });
+    }
+
+    if (
+      displaced_affected_person &&
+      !["PDF", "PAF"].includes(displaced_affected_person)
+    ) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid displaced_affected_person value",
+      });
+    }
 
     const updatedKhata = await Khata.update({
       khataId,

@@ -64,7 +64,8 @@ const addGovtPlot = async (req, res) => {
       });
     }
 
-    data.ri_report_attachment = files?.ri_report_attachment?.[0]?.filename || null;
+    data.ri_report_attachment =
+      files?.ri_report_attachment?.[0]?.filename || null;
 
     data.tree_enumeration_attachment =
       files?.tree_enumeration_attachment?.[0]?.filename || null;
@@ -108,4 +109,34 @@ const addGovtPlot = async (req, res) => {
   }
 };
 
-module.exports = { addGovtPlot };
+const govtPlotList = async (req, res) => {
+  try {
+    let { page, limit } = req.query;
+
+    page = parseInt(page) || 1;
+    limit = parseInt(limit) || 10;
+    const offset = (page - 1) * limit;
+
+    const result = await GovtPlot.findAll({
+      limit,
+      offset,
+    });
+
+    return res.status(200).json({
+      success: true,
+      message: "Govt plots fetched successfully",
+      page,
+      limit,
+      total: result.total,
+      data: result.data,
+    });
+  } catch (err) {
+    console.error("Govt Plot Listing Error:", err);
+    return res.status(500).json({
+      success: false,
+      message: "Server error",
+    });
+  }
+};
+
+module.exports = { addGovtPlot, govtPlotList };
