@@ -3,8 +3,12 @@ const router = express.Router();
 
 const { uploadGovtPlotAttachments } = require("../middleware/upload");
 
-const { addGovtPlot } = require("../controllers/govtPlotController");
+const {
+  addGovtPlot,
+  govtPlotList,
+} = require("../controllers/govtPlotController");
 
+//Routes
 router.post(
   "/addGovtPlot",
   uploadGovtPlotAttachments.fields([
@@ -15,5 +19,7 @@ router.post(
   ]),
   addGovtPlot
 );
+
+router.get("/govtPlotList", govtPlotList);
 
 module.exports = router;
