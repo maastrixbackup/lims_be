@@ -751,6 +751,21 @@ const Khata = {
     return { khataId, ...data };
   },
 
+  async existsByUniqueIdExcept(unique_id, excludeId) {
+    const [rows] = await db.query(
+      `
+    SELECT id
+    FROM khatas
+    WHERE unique_id = ?
+      AND id <> ?
+    LIMIT 1
+    `,
+      [unique_id, excludeId]
+    );
+
+    return rows.length > 0;
+  },
+
   async delete(id) {
     await db.query("DELETE FROM khatas WHERE ID = ?", [id]);
   },
