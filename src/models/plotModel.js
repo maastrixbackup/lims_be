@@ -2509,6 +2509,16 @@ const Plot = {
     return rows[0];
   },
 
+  async updatePaymentRecordStatus(plot_id, status) {
+    await db.query(
+      `UPDATE plot_payments 
+     SET status = ?
+     WHERE plot_id = ?`,
+      [status, plot_id]
+    );
+    return true;
+  },
+
   async getCompensationByPlotId(plot_id) {
     const [rows] = await db.query(
       `SELECT * FROM plot_payments 
