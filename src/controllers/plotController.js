@@ -675,13 +675,13 @@ const paymentReady = async (req, res) => {
       });
     }
 
-    // const allowedStatuses = ["ready", "processing", "complete"];
-    // if (!allowedStatuses.includes(payment_status)) {
-    //   return res.status(400).json({
-    //     success: false,
-    //     message: "Invalid payment_status",
-    //   });
-    // }
+    const allowedStatuses = ["ready", "processing"];
+    if (!allowedStatuses.includes(payment_status)) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid payment_status for this action",
+      });
+    }
 
     const plot = await Plot.findById(plot_id);
     if (!plot) {
@@ -691,12 +691,31 @@ const paymentReady = async (req, res) => {
       });
     }
 
+    if (payment_status === "processing") {
+      const existing = await Plot.hasProcessingPayments(plot_id);
+      if (existing) {
+        return res.status(400).json({
+          success: false,
+          message: "Payment already in processing state",
+        });
+      }
+    }
+
     const khata = await Khata.getKhataByNumber(plot.khata_no);
     const unique_id = khata ? khata.unique_id : null;
     // Update plot status
     await Plot.updatePaymentStatus(plot_id, payment_status);
 
     if (payment_status === "ready") {
+      await logAction(
+        userId,
+        "Payment marked ready",
+        "success",
+        "Payment marked as ready",
+        { plot_id, payment_status },
+        []
+      );
+
       return res.status(200).json({
         success: true,
         message: "Payment marked as ready",
@@ -710,52 +729,51 @@ const paymentReady = async (req, res) => {
 
     const records = [];
 
-    if (payment_status === "processing") {
-      for (const tenant of tenants) {
-        const data = {
-          unique_id,
-          plot_id: plot.id,
-          plot_no: plot.plot_no,
-          khata_no: plot.khata_no,
-          project_id: plot.project_id,
-          present_tenant_names: tenant,
-          payment_area: plot.land_area_total_acres,
-          total_compensation: plot.total_compensation,
-          bank_ac: plot.bank_account_no,
-          bank_name: plot.bank_name,
-          ifsc: plot.branch_ifsc,
-          type: plot.type,
-          status: payment_status,
-        };
-        const rec = await Plot.addPaymentRecord(data);
-        records.push(rec);
-      }
-    } else {
-      await Plot.updatePaymentRecordStatus(plot_id, payment_status);
+    for (const tenant of tenants) {
+      const data = {
+        unique_id,
+        plot_id: plot.id,
+        plot_no: plot.plot_no,
+        khata_no: plot.khata_no,
+        project_id: plot.project_id,
+        present_tenant_names: tenant,
+        payment_area: plot.land_area_total_acres,
+        total_compensation: plot.total_compensation,
+        bank_ac: plot.bank_account_no,
+        bank_name: plot.bank_name,
+        ifsc: plot.branch_ifsc,
+        type: plot.type,
+        status: payment_status,
+      };
+      const rec = await Plot.addPaymentRecord(data);
+      records.push(rec);
     }
+    // } else {
+    //   await Plot.updatePaymentRecordStatus(plot_id, payment_status);
+    // }
 
-    let message = "Payment updated successfully";
+    // let message = "Payment updated successfully";
 
-    if (payment_status === "ready") {
-      message = "Payment marked as ready";
-    } else if (payment_status === "processing") {
-      message = "Payment processing started";
-    } else if (payment_status === "complete") {
-      message = "Payment completed successfully";
-    }
+    // if (payment_status === "ready") {
+    //   message = "Payment marked as ready";
+    // } else if (payment_status === "processing") {
+    //   message = "Payment processing started";
+    // } else if (payment_status === "complete") {
+    //   message = "Payment completed successfully";
+    // }
 
     await logAction(
       userId,
-      "Payment ready",
+      "Payment processed",
       "success",
-      message,
+      "Payment processing started",
       { plot_id },
       records
     );
 
     return res.status(200).json({
       success: true,
-      message,
+      message: "Payment processing started",
       data: records,
     });
   } catch (err) {
@@ -1175,22 +1193,30 @@ const updatePlotPayment = async (req, res) => {
 
 const markPaymentCompleted = async (req, res) => {
   const userId = req.user.id;
-  const { unique_id, project_id } = req.body;
+  const { unique_id, project_id, type } = req.body;
 
   try {
-    if (!unique_id || !project_id) {
+    if (!unique_id || !project_id || !type) {
       return res.status(400).json({
         success: false,
-        message: "unique_id and project_id are required",
+        message: "unique_id,project_id and type are required",
       });
     }
 
-    const records = await Plot.getByUniqueId(unique_id, project_id);
+    const records = await Plot.getByUniqueId(unique_id, project_id, type);
 
     if (!records.length) {
       return res.status(404).json({
         success: false,
         message: "No payment records found",
+      });
+    }
+
+    const notProcessing = records.find((r) => r.status !== "processing");
+    if (notProcessing) {
+      return res.status(400).json({
+        success: false,
+        message: "Only processing payments can be completed",
       });
     }
 
@@ -1203,20 +1229,20 @@ const markPaymentCompleted = async (req, res) => {
       });
     }
 
-    await Plot.markPaymentSuccess(unique_id, project_id);
+    await Plot.markPaymentComplete(unique_id, project_id, type);
 
     await logAction(
       userId,
       "mark payment completed",
       "success",
-      "Payment marked as Success",
-      { unique_id, project_id },
+      "Payment Completed",
+      { unique_id, project_id, type },
       null
     );
 
     res.status(200).json({
       success: true,
-      message: "Payment marked as completed successfully",
+      message: "Payment completed successfully",
     });
   } catch (err) {
     console.error("Payment complete error:", err);

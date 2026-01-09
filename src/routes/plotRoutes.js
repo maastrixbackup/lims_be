@@ -20,6 +20,7 @@ const {
   plotDocumentDelete,
   landCostPaymentUpload,
   updatePlotPayment,
+  markPaymentCompleted,
 } = require("../controllers/plotController");
 // const { addGovtPlot } = require("../controllers/govtPlotController");
 
@@ -42,6 +43,7 @@ router.post(
 );
 router.put("/updatePlotPayment/:id", updatePlotPayment);
 
+router.put("/paymentCompleted", markPaymentCompleted);
 // router.post("/addGovtPlot/", addGovtPlot);
 
 // router.post(
