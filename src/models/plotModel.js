@@ -2518,7 +2518,7 @@ const Plot = {
     return rows;
   },
 
-  async getAll(project_id = null, type = null) {
+  async getAll(project_id = null, type = null, plot_id = null) {
     let query = `SELECT * FROM plot_payments WHERE 1=1`;
     const params = [];
 
@@ -2530,6 +2530,11 @@ const Plot = {
     if (type !== undefined && type !== null) {
       query += ` AND type = ?`;
       params.push(type);
+    }
+
+    if (plot_id) {
+      query += " AND plot_id = ?";
+      params.push(plot_id);
     }
 
     const [rows] = await db.query(query, params);
