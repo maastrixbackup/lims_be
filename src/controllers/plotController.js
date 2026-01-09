@@ -825,7 +825,7 @@ const paymentReady = async (req, res) => {
 // };
 const getAllPaymentReady = async (req, res) => {
   try {
-    const { project_id, type } = req.query;
+    const { project_id, type, plot_id } = req.query;
     if (!project_id) {
       return res.status(400).json({
         success: false,
@@ -840,7 +840,13 @@ const getAllPaymentReady = async (req, res) => {
       });
     }
     // Get all records
-    const all = await Plot.getAll(project_id, type);
+    let all = [];
+
+    if (plot_id) {
+      all = await Plot.getAll(project_id, type, plot_id);
+    } else {
+      all = await Plot.getAll(project_id, type);
+    }
 
     if (!all.length) {
       return res.status(404).json({
@@ -857,6 +863,7 @@ const getAllPaymentReady = async (req, res) => {
         // Initialize group using first row values (all rows have same totals)
         groups[row.unique_id] = {
           unique_id: row.unique_id,
+          plot_id: row.plot_id,
           project_id: row.project_id,
           khata_no: row.khata_no,
           type: row.type,
