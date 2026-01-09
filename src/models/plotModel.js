@@ -2509,15 +2509,30 @@ const Plot = {
     return rows[0];
   },
 
-  async updatePaymentRecordStatus(plot_id, status) {
-    await db.query(
-      `UPDATE plot_payments 
-     SET status = ?
-     WHERE plot_id = ?`,
-      [status, plot_id]
+  async hasProcessingPayments(plot_id) {
+    const [rows] = await db.query(
+      `
+    SELECT 1
+    FROM plot_payments
+    WHERE plot_id = ?
+      AND status = 'processing'
+    LIMIT 1
+    `,
+      [plot_id]
     );
-    return true;
+
+    return rows.length > 0;
   },
+
+  // async updatePaymentRecordStatus(plot_id, status) {
+  //   await db.query(
+  //     `UPDATE plot_payments
+  //    SET status = ?
+  //    WHERE plot_id = ?`,
+  //     [status, plot_id]
+  //   );
+  //   return true;
+  // },
 
   async getCompensationByPlotId(plot_id) {
     const [rows] = await db.query(
@@ -2605,33 +2620,59 @@ const Plot = {
     return true;
   },
 
-  async getByUniqueId(unique_id, project_id) {
+  async getByUniqueId(unique_id, project_id, type) {
     const [rows] = await db.query(
-      `SELECT id, payment_proof, transaction_no
-     FROM plot_payments
-     WHERE unique_id = ? AND project_id = ?`,
-      [unique_id, project_id]
+      `
+    SELECT id, plot_id, status, payment_proof, transaction_no
+    FROM plot_payments
+    WHERE unique_id = ?
+      AND project_id = ?
+      AND type = ?
+    `,
+      [unique_id, project_id, type]
     );
     return rows;
   },
 
-  async markPaymentSuccess(unique_id, project_id) {
+  async markPaymentComplete(unique_id, project_id, type) {
+    // get plot_id first
+    const [rows] = await db.query(
+      `
+    SELECT DISTINCT plot_id
+    FROM plot_payments
+    WHERE unique_id = ?
+      AND project_id = ?
+      AND type = ?
+    `,
+      [unique_id, project_id, type]
+    );
+
+    if (!rows.length) return false;
+
+    const plotId = rows[0].plot_id;
+
     // update plots table
     await db.query(
-      `UPDATE plots
-     SET payment_status = 'Success',
-         updated_at = NOW()
-     WHERE unique_id = ? AND project_id = ?`, //Add type also
-      [unique_id, project_id]
+      `
+    UPDATE plots
+    SET payment_status = 'complete',
+        updated_at = NOW()
+    WHERE id = ?
+    `,
+      [plotId]
     );
 
     // update plot_payments table
     await db.query(
-      `UPDATE plot_payments
-     SET status = 'Success',
-         updated_at = NOW()
-     WHERE unique_id = ? AND project_id = ?`, //Add type also
-      [unique_id, project_id]
+      `
+    UPDATE plot_payments
+    SET status = 'complete',
+        updated_at = NOW()
+    WHERE unique_id = ?
+      AND project_id = ?
+      AND type = ?
+    `,
+      [unique_id, project_id, type]
     );
 
     return true;
