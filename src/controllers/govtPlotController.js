@@ -8,6 +8,111 @@ const logAction = require("../utils/logger");
 // const Khata = require("../models/khataModel");
 const ExcelJS = require("exceljs");
 
+// const uploadGovtPlot = async (req, res) => {
+//   try {
+//     const { project_id, type } = req.body;
+
+//     if (!project_id || !type) {
+//       return res.status(400).json({
+//         success: false,
+//         message: "project_id and type are required",
+//       });
+//     }
+
+//     if (!req.file) {
+//       return res.status(400).json({
+//         success: false,
+//         message: "Excel file is required",
+//       });
+//     }
+
+//     const workbook = xlsx.readFile(req.file.path);
+//     const sheetName = workbook.SheetNames[0];
+//     const rows = xlsx.utils.sheet_to_json(workbook.Sheets[sheetName], {
+//       defval: null,
+//     });
+//     console.log("Rows name", rows);
+
+//     if (!rows.length) {
+//       fs.unlinkSync(req.file.path);
+//       return res.status(400).json({
+//         success: false,
+//         message: "Excel file is empty",
+//       });
+//     }
+
+//     await GovtPlot.bulkInsertFromExcel(rows, project_id, type);
+//     await GovtKhata.upsertFromExcel(rows);
+
+//     fs.unlinkSync(req.file.path);
+
+//     return res.status(201).json({
+//       success: true,
+//       message: "Govt plots & khatas uploaded successfully",
+//     });
+//   } catch (err) {
+//     console.error("Govt Plot Excel Upload Error:", err);
+//     return res.status(500).json({
+//       success: false,
+//       message: "Server error",
+//     });
+//   }
+// };
+
+const uploadGovtPlot = async (req, res) => {
+  try {
+    const { project_id, type } = req.body;
+
+    if (!project_id || !type) {
+      return res.status(400).json({
+        success: false,
+        message: "project_id and type are required",
+      });
+    }
+
+    if (!req.file) {
+      return res.status(400).json({
+        success: false,
+        message: "Excel file is required",
+      });
+    }
+
+    const workbook = xlsx.readFile(req.file.path);
+    const sheetName = workbook.SheetNames[0];
+
+    const rawRows = xlsx.utils.sheet_to_json(workbook.Sheets[sheetName], {
+      defval: null,
+    });
+
+    const normalizeKey = (key) =>
+      key?.replace(/\r?\n/g, " ").replace(/\s+/g, " ").trim().toLowerCase();
+
+    // normalize headers
+    const rows = rawRows.map((r) => {
+      const obj = {};
+      for (const k in r) {
+        obj[normalizeKey(k)] = r[k];
+      }
+      return obj;
+    });
+
+    console.log("Header name", rows);
+    await GovtPlot.bulkInsertFromExcel(rows, project_id, type);
+    // await GovtKhata.upsertFromExcel(rows);
+
+    return res.status(201).json({
+      success: true,
+      message: "Govt plot excel uploaded successfully",
+    });
+  } catch (err) {
+    console.error("Govt Plot Excel Upload Error:", err);
+    return res.status(500).json({
+      success: false,
+      message: "Server error",
+    });
+  }
+};
+
 const addGovtPlot = async (req, res) => {
   //   console.log(123);
   const userId = req.user.id;
@@ -140,28 +245,64 @@ const govtPlotList = async (req, res) => {
       return `${base}/uploads/${folder}/${fileName}`;
     };
 
+    // const dataWithUrls = result.data.map((plot) => ({
+    //   ...plot,
+    //   ri_report_attachment: buildFileUrl(
+    //     req,
+    //     "govt_plots",
+    //     plot.ri_report_attachment
+    //   ),
+    //   tree_enumeration_attachment: buildFileUrl(
+    //     req,
+    //     "govt_plots",
+    //     plot.tree_enumeration_attachment
+    //   ),
+    //   lease_to_idco_attachment: buildFileUrl(
+    //     req,
+    //     "govt_plots",
+    //     plot.lease_to_idco_attachment
+    //   ),
+    //   lease_to_ua_attachment: buildFileUrl(
+    //     req,
+    //     "govt_plots",
+    //     plot.lease_to_ua_attachment
+    //   ),
+    // }));
+
     const dataWithUrls = result.data.map((plot) => ({
       ...plot,
-      ri_report_attachment: buildFileUrl(
-        req,
-        "govt_plots",
-        plot.ri_report_attachment
-      ),
-      tree_enumeration_attachment: buildFileUrl(
-        req,
-        "govt_plots",
-        plot.tree_enumeration_attachment
-      ),
-      lease_to_idco_attachment: buildFileUrl(
-        req,
-        "govt_plots",
-        plot.lease_to_idco_attachment
-      ),
-      lease_to_ua_attachment: buildFileUrl(
-        req,
-        "govt_plots",
-        plot.lease_to_ua_attachment
-      ),
+
+      ri_report_attachment: plot.ri_report_attachment
+        ? {
+            file_name: plot.ri_report_attachment,
+            url: buildFileUrl(req, "govt_plots", plot.ri_report_attachment),
+          }
+        : null,
+
+      tree_enumeration_attachment: plot.tree_enumeration_attachment
+        ? {
+            file_name: plot.tree_enumeration_attachment,
+            url: buildFileUrl(
+              req,
+              "govt_plots",
+              plot.tree_enumeration_attachment
+            ),
+          }
+        : null,
+
+      lease_to_idco_attachment: plot.lease_to_idco_attachment
+        ? {
+            file_name: plot.lease_to_idco_attachment,
+            url: buildFileUrl(req, "govt_plots", plot.lease_to_idco_attachment),
+          }
+        : null,
+
+      lease_to_ua_attachment: plot.lease_to_ua_attachment
+        ? {
+            file_name: plot.lease_to_ua_attachment,
+            url: buildFileUrl(req, "govt_plots", plot.lease_to_ua_attachment),
+          }
+        : null,
     }));
 
     return res.status(200).json({
@@ -181,4 +322,4 @@ const govtPlotList = async (req, res) => {
   }
 };
 
-module.exports = { addGovtPlot, govtPlotList };
+module.exports = { uploadGovtPlot, addGovtPlot, govtPlotList };
