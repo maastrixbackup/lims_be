@@ -193,6 +193,37 @@ const uploadGovtPlotAttachments = multer({
   limits: { fileSize: 10 * 1024 * 1024 }, // 10MB
 });
 
+const govtPlotExcelStorage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    cb(null, "uploads/govt_plot_excels");
+  },
+  filename: (req, file, cb) => {
+    const originalname = file.originalname.replace(/\s+/g, "_");
+    cb(null, originalname);
+    // OR if you want unique:
+    // cb(null, Date.now() + "_" + originalname);
+  },
+});
+
+const govtPlotExcelFileFilter = (req, file, cb) => {
+  const allowedMimeTypes = [
+    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    "application/vnd.ms-excel",
+  ];
+
+  if (allowedMimeTypes.includes(file.mimetype)) {
+    cb(null, true);
+  } else {
+    cb(new Error("Only Excel files (.xls, .xlsx) are allowed"), false);
+  }
+};
+
+const uploadGovtPlotExcel = multer({
+  storage: govtPlotExcelStorage,
+  fileFilter: govtPlotExcelFileFilter,
+  limits: { fileSize: 10 * 1024 * 1024 }, // 10 MB
+});
+
 module.exports = {
   uploadPlotExcel,
   uploadProfilePic,
@@ -200,4 +231,5 @@ module.exports = {
   uploadMapDocument,
   uploadLandCostPayment,
   uploadGovtPlotAttachments,
+  uploadGovtPlotExcel,
 };

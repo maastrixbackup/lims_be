@@ -1,11 +1,15 @@
 const express = require("express");
 const router = express.Router();
 
-const { uploadGovtPlotAttachments } = require("../middleware/upload");
+const {
+  uploadGovtPlotAttachments,
+  uploadGovtPlotExcel,
+} = require("../middleware/upload");
 
 const {
   addGovtPlot,
   govtPlotList,
+  uploadGovtPlot,
 } = require("../controllers/govtPlotController");
 
 //Routes
@@ -21,5 +25,10 @@ router.post(
 );
 
 router.get("/govtPlotList", govtPlotList);
+router.post(
+  "/uploadGovtPlotExcel",
+  uploadGovtPlotExcel.single("file"),
+  uploadGovtPlot
+);
 
 module.exports = router;
