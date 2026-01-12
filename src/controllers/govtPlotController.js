@@ -269,8 +269,16 @@ const govtPlotList = async (req, res) => {
     //   ),
     // }));
 
+    const PRESENT_STATUS_MAP = {
+      1: "Lease Case to Sub-Collector",
+      2: "Lease Case to ADM (Rev.Sec)",
+      3: "Demand Raised",
+      4: "Lease Sanctioned by Collector",
+    };
     const dataWithUrls = result.data.map((plot) => ({
       ...plot,
+
+      present_status_text: PRESENT_STATUS_MAP[plot.present_status] || "N/A",
 
       ri_report_attachment: plot.ri_report_attachment
         ? {
