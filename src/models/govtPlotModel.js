@@ -407,8 +407,6 @@ const GovtPlot = {
   // },
 
   async bulkInsertFromExcel(rows, project_id, type) {
-    /* ---------------- HELPERS ---------------- */
-
     const yesNoToBool = (val) => {
       if (!val) return 0;
       return String(val).trim().toLowerCase() === "yes" ? 1 : 0;
@@ -433,8 +431,6 @@ const GovtPlot = {
       return null;
     };
 
-    /* --------- FILTER VALID ROWS --------- */
-
     const validRows = rows.filter((r) => {
       const khata = r["khata no"];
       const plot = r["plot no"];
@@ -449,8 +445,6 @@ const GovtPlot = {
     });
 
     if (!validRows.length) return 0;
-
-    /* --------- MAP VALUES --------- */
 
     const values = validRows.map((r) => [
       project_id,
@@ -501,8 +495,6 @@ const GovtPlot = {
 
       r["remarks"] || null,
     ]);
-
-    /* --------- INSERT / UPDATE --------- */
 
     await db.query(
       `
