@@ -548,6 +548,14 @@ const GovtPlot = {
 
     return values.length;
   },
+
+  async govtPlotDelete(id) {
+    const [result] = await db.query(
+      `UPDATE govt_plots SET is_deleted = 1 WHERE id = ? AND is_deleted = 0`,
+      [id]
+    );
+    return result.affectedRows;
+  },
 };
 
 module.exports = GovtPlot;

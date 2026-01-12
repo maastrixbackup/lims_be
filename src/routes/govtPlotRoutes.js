@@ -10,6 +10,7 @@ const {
   addGovtPlot,
   govtPlotList,
   uploadGovtPlot,
+  deleteGovtPlot,
 } = require("../controllers/govtPlotController");
 
 //Routes
@@ -30,5 +31,6 @@ router.post(
   uploadGovtPlotExcel.single("file"),
   uploadGovtPlot
 );
+router.delete("/deleteGovtPlot/:id", deleteGovtPlot);
 
 module.exports = router;

@@ -1,5 +1,7 @@
 const xlsx = require("xlsx");
 const GovtPlot = require("../models/govtPlotModel");
+const GovtVillage = require("../models/govtVillageModel");
+const GovtKhata = require("../models/govtKhataModel");
 const path = require("path");
 const fs = require("fs");
 
@@ -60,6 +62,7 @@ const ExcelJS = require("exceljs");
 // };
 
 const uploadGovtPlot = async (req, res) => {
+  const userId = req.user.id;
   try {
     const { project_id, type } = req.body;
 
@@ -96,15 +99,41 @@ const uploadGovtPlot = async (req, res) => {
       return obj;
     });
 
-    console.log("Header name", rows);
+    // console.log("Header name", rows);
+    const villageMap = await GovtVillage.upsertFromExcel(
+      rows,
+      project_id,
+      type
+    );
+
+    // 2️⃣ govt_khata
+    const khataMap = await GovtKhata.upsertFromExcel(rows, villageMap);
+
     await GovtPlot.bulkInsertFromExcel(rows, project_id, type);
     // await GovtKhata.upsertFromExcel(rows);
+
+    await logAction(
+      userId,
+      "Govt plot excel upload",
+      "success",
+      "Govt plots inserted successfully",
+      { project_id },
+      null
+    );
 
     return res.status(201).json({
       success: true,
       message: "Govt plot excel uploaded successfully",
     });
   } catch (err) {
+    await logAction(
+      userId,
+      "Govt plot excel upload",
+      "failure",
+      err.message,
+      null,
+      null
+    );
     console.error("Govt Plot Excel Upload Error:", err);
     return res.status(500).json({
       success: false,
@@ -330,4 +359,40 @@ const govtPlotList = async (req, res) => {
   }
 };
 
-module.exports = { uploadGovtPlot, addGovtPlot, govtPlotList };
+const deleteGovtPlot = async (req, res) => {
+  const userId = req.user.id;
+  const plotId = req.params.id;
+
+  try {
+    const deleted = await GovtPlot.govtPlotDelete(plotId);
+    if (!deleted) {
+      return res
+        .status(404)
+        .json({ success: false, message: "Plot not found" });
+    }
+    await logAction(
+      userId,
+      "delete govt plot",
+      "success",
+      "Govt plot soft deleted",
+      { plotId },
+      null
+    );
+
+    return res
+      .status(200)
+      .json({ success: true, message: "Plot soft deleted successfully" });
+  } catch (err) {
+    await logAction(
+      userId,
+      "delete govt plot",
+      "failure",
+      err.message,
+      { plotId },
+      null
+    );
+    res.status(500).json({ success: false, message: err.message });
+  }
+};
+
+module.exports = { uploadGovtPlot, addGovtPlot, govtPlotList, deleteGovtPlot };
