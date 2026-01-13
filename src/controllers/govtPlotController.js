@@ -538,6 +538,145 @@ const govtPlotDocumentDelete = async (req, res) => {
   }
 };
 
+const updateGovtPlot = async (req, res) => {
+  const userId = req.user.id;
+  const { id } = req.params; // govt_plot id
+  // const data = req.body;
+  // const files = req.files;
+  const data = req.body || {};
+  const files = req.files || {};
+
+  const normalize = (value) =>
+    value === "" || value === undefined ? null : value;
+
+  Object.keys(data).forEach((key) => {
+    data[key] = normalize(data[key]);
+  });
+
+  try {
+    if (!id) {
+      return res.status(400).json({
+        success: false,
+        message: "Govt plot id is required",
+      });
+    }
+
+    // if (!data.project_id || !data.type) {
+    //   return res.status(400).json({
+    //     success: false,
+    //     message: "Project id and type are required",
+    //   });
+    // }
+    if (data.project_id !== undefined && !data.project_id) {
+      return res.status(400).json({ message: "Project id is required" });
+    }
+
+    // 🔍 check existing plot
+    const existingPlot = await GovtPlot.findByPk(id);
+    if (!existingPlot) {
+      return res.status(404).json({
+        success: false,
+        message: "Govt plot not found",
+      });
+    }
+
+    // ✅ validations (same as add)
+    if (
+      data.ri_report === "Complete" &&
+      !files?.ri_report_attachment &&
+      !existingPlot.ri_report_attachment
+    ) {
+      return res.status(400).json({
+        success: false,
+        message: "RI report attachment is required when RI Report is Complete",
+      });
+    }
+
+    if (
+      data.tree_enumeration === "Complete" &&
+      !files?.tree_enumeration_attachment &&
+      !existingPlot.tree_enumeration_attachment
+    ) {
+      return res.status(400).json({
+        success: false,
+        message: "Tree Enumeration report is required when status is Complete",
+      });
+    }
+
+    if (
+      data.lease_to_idco == "1" &&
+      !files?.lease_to_idco_attachment &&
+      !existingPlot.lease_to_idco_attachment
+    ) {
+      return res.status(400).json({
+        success: false,
+        message: "Lease attachment is required for IDCO",
+      });
+    }
+
+    if (
+      data.lease_to_ua == "1" &&
+      !files?.lease_to_ua_attachment &&
+      !existingPlot.lease_to_ua_attachment
+    ) {
+      return res.status(400).json({
+        success: false,
+        message: "Lease attachment is required for UA",
+      });
+    }
+
+    // 📎 attachments (keep old if new not uploaded)
+    data.ri_report_attachment =
+      files?.ri_report_attachment?.[0]?.filename ??
+      existingPlot.ri_report_attachment;
+
+    data.tree_enumeration_attachment =
+      files?.tree_enumeration_attachment?.[0]?.filename ??
+      existingPlot.tree_enumeration_attachment;
+
+    data.lease_to_idco_attachment =
+      files?.lease_to_idco_attachment?.[0]?.filename ??
+      existingPlot.lease_to_idco_attachment;
+
+    data.lease_to_ua_attachment =
+      files?.lease_to_ua_attachment?.[0]?.filename ??
+      existingPlot.lease_to_ua_attachment;
+
+    // 📝 update
+    const updatedPlot = await GovtPlot.updateById(id, data);
+
+    await logAction(
+      userId,
+      "edit govt plot",
+      "success",
+      "Govt plot updated successfully",
+      req.body,
+      updatedPlot
+    );
+
+    return res.status(200).json({
+      success: true,
+      message: "Govt plot updated successfully",
+      govtPlot: updatedPlot,
+    });
+  } catch (err) {
+    await logAction(
+      userId,
+      "edit govt plot",
+      "failure",
+      err.message,
+      req.body,
+      null
+    );
+
+    console.error("Edit Govt Plot Error:", err);
+    return res.status(500).json({
+      success: false,
+      message: "Server error",
+    });
+  }
+};
+
 module.exports = {
   uploadGovtPlot,
   addGovtPlot,
@@ -545,4 +684,5 @@ module.exports = {
   deleteGovtPlot,
   govtPlotDocumentList,
   govtPlotDocumentDelete,
+  updateGovtPlot,
 };

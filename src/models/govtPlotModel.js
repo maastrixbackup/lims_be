@@ -556,6 +556,42 @@ const GovtPlot = {
     );
     return result.affectedRows;
   },
+
+  async findByPk(id) {
+    const [rows] = await db.query(
+      `SELECT * FROM govt_plots WHERE id = ? AND is_deleted = 0`,
+      [id]
+    );
+
+    return rows.length ? rows[0] : null;
+  },
+
+  async updateById(id, data) {
+    const fields = [];
+    const values = [];
+
+    Object.entries(data).forEach(([key, value]) => {
+      if (value !== undefined) {
+        fields.push(`${key} = ?`);
+        values.push(value);
+      }
+    });
+
+    if (!fields.length) {
+      throw new Error("No data provided for update");
+    }
+
+    const sql = `
+      UPDATE govt_plots
+      SET ${fields.join(", ")},
+          updated_at = NOW()
+      WHERE id = ? AND is_deleted = 0
+    `;
+
+    await db.query(sql, [...values, id]);
+
+    return this.findByPk(id);
+  },
 };
 
 module.exports = GovtPlot;
