@@ -939,6 +939,10 @@ const getAllPaymentReady = async (req, res) => {
         ifsc: row.ifsc,
         transaction_no: row.transaction_no,
         status: row.status,
+        filename: row.payment_proof,
+        file_url: `${req.protocol}://${req.get("host")}${
+          req.get("host").includes("localhost") ? "" : "/api"
+        }/uploads/land_cost_payments/${row.payment_proof}`,
       });
     }
 
