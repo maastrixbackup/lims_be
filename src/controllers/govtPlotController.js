@@ -431,14 +431,6 @@ const govtPlotDocumentList = async (req, res) => {
 
     const files = fs.readdirSync(uploadsDir);
 
-    // if (!files.length) {
-    //   return res.status(200).json({
-    //     success: true,
-    //     message: "No govt plot documents found",
-    //     files: [],
-    //   });
-    // }
-
     const excelFiles = files.filter((f) => f.match(/\.(xls|xlsx)$/i));
 
     if (excelFiles.length === 0) {
@@ -477,10 +469,80 @@ const govtPlotDocumentList = async (req, res) => {
   }
 };
 
+const govtPlotDocumentDelete = async (req, res) => {
+  const userId = req.user.id;
+
+  try {
+    const { fileName } = req.params;
+
+    if (!fileName) {
+      return res.status(400).json({
+        success: false,
+        message: "File name is required",
+      });
+    }
+
+    // ✅ allow only Excel files
+    // if (!/\.(xls|xlsx)$/i.test(fileName)) {
+    //   return res.status(400).json({
+    //     success: false,
+    //     message: "Invalid file format. Only Excel files can be deleted",
+    //   });
+    // }
+
+    const filePath = path.join(
+      process.cwd(),
+      "uploads/govt_plot_excels",
+      fileName
+    );
+
+    if (!fs.existsSync(filePath)) {
+      return res.status(404).json({
+        success: false,
+        message: "File not found",
+      });
+    }
+
+    fs.unlinkSync(filePath);
+
+    await logAction(
+      userId,
+      "govt plot excel delete",
+      "success",
+      "Govt plot Excel file deleted successfully",
+      { fileName },
+      null
+    );
+
+    return res.status(200).json({
+      success: true,
+      message: "File deleted successfully",
+      deletedFile: fileName,
+    });
+  } catch (err) {
+    console.error("Govt Plot Excel Delete Error:", err);
+
+    await logAction(
+      userId,
+      "govt plot excel delete",
+      "failed",
+      "Failed to delete govt plot Excel file",
+      null,
+      err.message
+    );
+
+    return res.status(500).json({
+      success: false,
+      message: "Server error while deleting govt plot Excel file",
+    });
+  }
+};
+
 module.exports = {
   uploadGovtPlot,
   addGovtPlot,
   govtPlotList,
   deleteGovtPlot,
   govtPlotDocumentList,
+  govtPlotDocumentDelete,
 };

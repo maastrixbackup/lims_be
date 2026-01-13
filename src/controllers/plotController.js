@@ -937,6 +937,7 @@ const getAllPaymentReady = async (req, res) => {
         bank_ac: row.bank_ac,
         bank_name: row.bank_name,
         ifsc: row.ifsc,
+        transaction_no: row.transaction_no,
         status: row.status,
       });
     }

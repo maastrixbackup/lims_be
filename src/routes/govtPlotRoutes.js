@@ -12,6 +12,7 @@ const {
   uploadGovtPlot,
   deleteGovtPlot,
   govtPlotDocumentList,
+  govtPlotDocumentDelete,
 } = require("../controllers/govtPlotController");
 
 //Routes
@@ -34,5 +35,6 @@ router.post(
 );
 router.delete("/deleteGovtPlot/:id", deleteGovtPlot);
 router.get("/govtPlotDocumentList", govtPlotDocumentList);
+router.delete("/govtPlotDocumentDelete/:fileName", govtPlotDocumentDelete);
 
 module.exports = router;
