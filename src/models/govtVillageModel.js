@@ -7,10 +7,16 @@ const govtVillage = {
     rows.forEach((r) => {
       if (!r["mouza"]) return;
 
-      const key = `${r["mouza"]}_${r["tahasil"]}`;
+      const mouza = String(r["mouza"]).trim();
+      const tahasil = String(r["tahasil"]).trim();
+
+      if (!mouza || !tahasil) return;
+
+      // const key = `${r["mouza"]}_${r["tahasil"]}`;
+      const key = `${mouza}_${tahasil}`;
       villageMap.set(key, {
-        village_name: r["mouza"].trim(),
-        tahasil: r["tahasil"] || null,
+        village_name: mouza,
+        tahasil: tahasil,
       });
     });
 
