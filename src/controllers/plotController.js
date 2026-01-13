@@ -1263,16 +1263,6 @@ const markPaymentCompleted = async (req, res) => {
   }
 };
 
-// async getByUniqueId(unique_id, project_id) {
-//   const [rows] = await db.query(
-//     `SELECT id, payment_proof, transaction_no
-//      FROM plot_payments
-//      WHERE unique_id = ? AND project_id = ?`,
-//     [unique_id, project_id]
-//   );
-//   return rows;
-// }
-
 module.exports = {
   uploadPlots,
   plotList,
@@ -1284,7 +1274,6 @@ module.exports = {
   restorePlot,
   paymentReady,
   getAllPaymentReady,
-
   exportPlot,
   plotDocumentDelete,
   landCostPaymentUpload,

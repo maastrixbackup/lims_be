@@ -83,6 +83,13 @@ const uploadGovtPlot = async (req, res) => {
     const workbook = xlsx.readFile(req.file.path);
     const sheetName = workbook.SheetNames[0];
 
+    if (workbook.SheetNames.length !== 1) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid Excel format. Only ONE sheet is allowed inside file.",
+      });
+    }
+
     const rawRows = xlsx.utils.sheet_to_json(workbook.Sheets[sheetName], {
       defval: null,
     });
@@ -99,6 +106,21 @@ const uploadGovtPlot = async (req, res) => {
       return obj;
     });
 
+    const REQUIRED_HEADERS = ["mouza", "tahasil", "khata no", "plot no"];
+    const excelHeaders = Object.keys(rows[0]);
+
+    const missingHeaders = REQUIRED_HEADERS.filter(
+      (h) => !excelHeaders.includes(h)
+    );
+
+    if (missingHeaders.length) {
+      return res.status(400).json({
+        success: false,
+        message: `Invalid Excel format. Missing columns: ${missingHeaders.join(
+          ", "
+        )}`,
+      });
+    }
     // console.log("Header name", rows);
     const villageMap = await GovtVillage.upsertFromExcel(
       rows,
@@ -395,4 +417,70 @@ const deleteGovtPlot = async (req, res) => {
   }
 };
 
-module.exports = { uploadGovtPlot, addGovtPlot, govtPlotList, deleteGovtPlot };
+const govtPlotDocumentList = async (req, res) => {
+  try {
+    const uploadsDir = path.join(process.cwd(), "uploads/govt_plot_excels");
+
+    if (!fs.existsSync(uploadsDir)) {
+      return res.status(200).json({
+        success: true,
+        message: "Govt plot documents directory not found",
+        files: [],
+      });
+    }
+
+    const files = fs.readdirSync(uploadsDir);
+
+    // if (!files.length) {
+    //   return res.status(200).json({
+    //     success: true,
+    //     message: "No govt plot documents found",
+    //     files: [],
+    //   });
+    // }
+
+    const excelFiles = files.filter((f) => f.match(/\.(xls|xlsx)$/i));
+
+    if (excelFiles.length === 0) {
+      return res.status(200).json({
+        success: true,
+        message: "No Excel files found",
+        files: [],
+      });
+    }
+
+    const fileList = excelFiles.map((file) => {
+      const filePath = path.join(uploadsDir, file);
+      const stats = fs.statSync(filePath);
+
+      return {
+        name: file,
+        // size: `${(stats.size / 1024).toFixed(2)} KB`,
+        uploadedAt: stats.mtime,
+        documentUrl: `${req.protocol}://${req.get("host")}${
+          req.get("host").includes("localhost") ? "" : "/api"
+        }/uploads/govt_plot_excels/${file}`,
+      };
+    });
+
+    return res.status(200).json({
+      success: true,
+      total: fileList.length,
+      files: fileList,
+    });
+  } catch (err) {
+    console.error("Govt Plot Document List Error:", err);
+    return res.status(500).json({
+      success: false,
+      message: "Server error while fetching govt plot documents",
+    });
+  }
+};
+
+module.exports = {
+  uploadGovtPlot,
+  addGovtPlot,
+  govtPlotList,
+  deleteGovtPlot,
+  govtPlotDocumentList,
+};

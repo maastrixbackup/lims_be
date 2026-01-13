@@ -2544,7 +2544,9 @@ const Plot = {
   },
 
   async getAll(project_id = null, type = null, plot_id = null) {
-    let query = `SELECT * FROM plot_payments WHERE 1=1`;
+    let query = `SELECT * FROM plot_payments
+    WHERE status <> 'complete'
+    `;
     const params = [];
 
     if (project_id) {
