@@ -131,7 +131,12 @@ const uploadGovtPlot = async (req, res) => {
     );
 
     // 2️⃣ govt_khata
-    const khataMap = await GovtKhata.upsertFromExcel(rows, villageMap);
+    const khataMap = await GovtKhata.upsertFromExcel(
+      rows,
+      villageMap,
+      project_id,
+      type
+    );
 
     await GovtPlot.bulkInsertFromExcel(rows, project_id, type);
     // await GovtKhata.upsertFromExcel(rows);
