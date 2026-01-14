@@ -84,6 +84,7 @@ const uploadGovtPlot = async (req, res) => {
     const sheetName = workbook.SheetNames[0];
 
     if (workbook.SheetNames.length !== 1) {
+      fs.unlinkSync(req.file.path);
       return res.status(400).json({
         success: false,
         message: "Invalid Excel format. Only ONE sheet is allowed inside file.",
@@ -114,6 +115,7 @@ const uploadGovtPlot = async (req, res) => {
     );
 
     if (missingHeaders.length) {
+      fs.unlinkSync(req.file.path);
       return res.status(400).json({
         success: false,
         message: `Invalid Excel format. Missing columns: ${missingHeaders.join(
@@ -165,9 +167,8 @@ const uploadGovtPlot = async (req, res) => {
 };
 
 const addGovtPlot = async (req, res) => {
-  //   console.log(123);
   const userId = req.user.id;
-  const data = req.body;
+  const data = req.body || {};
   const files = req.files;
 
   const normalize = (value) =>
@@ -232,6 +233,42 @@ const addGovtPlot = async (req, res) => {
     data.lease_to_ua_attachment =
       files?.lease_to_ua_attachment?.[0]?.filename || null;
 
+    const rows = [
+      {
+        mouza: data.mouza,
+        tahasil: data.tahasil,
+        "khata no": data.khata_no,
+        "plot no": data.plot_no,
+        "kissam of land": data.kissam || null,
+        "lease case no": data.lease_case_no || null,
+        "case details/ deservation req.": data.case_details || null,
+      },
+    ];
+    // Village upsert
+    const villageMap = await GovtVillage.upsertFromExcel(
+      rows,
+      data.project_id,
+      data.type
+    );
+
+    const villageKey = `${data.mouza}_${data.tahasil}`;
+    const villageId = villageMap[villageKey];
+
+    if (!villageId) {
+      return res.status(400).json({
+        success: false,
+        message: "Unable to create/find village",
+      });
+    }
+
+    // Khata upsert
+    const khataMap = await GovtKhata.upsertFromExcel(rows, villageMap);
+
+    const khataKey = `${villageId}_${data.khata_no}`;
+    const khataId = khataMap[khataKey] || null;
+
+    // data.village_id = villageId;
+    // data.khata_id = khataId;
     const govtPlot = await GovtPlot.create(data);
 
     await logAction(
@@ -267,12 +304,12 @@ const addGovtPlot = async (req, res) => {
 
 const govtPlotList = async (req, res) => {
   try {
-    let { page = 1, limit = 10, project_id } = req.query;
+    let { page = 1, limit = 10, project_id, type } = req.query;
 
-    if (!project_id) {
+    if (!project_id || !type) {
       return res.status(400).json({
         success: false,
-        message: "project_id is required",
+        message: "project id and type is required",
       });
     }
 
@@ -282,6 +319,7 @@ const govtPlotList = async (req, res) => {
 
     const result = await GovtPlot.findAll({
       project_id,
+      type,
       limit,
       offset,
     });
@@ -541,8 +579,7 @@ const govtPlotDocumentDelete = async (req, res) => {
 const updateGovtPlot = async (req, res) => {
   const userId = req.user.id;
   const { id } = req.params; // govt_plot id
-  // const data = req.body;
-  // const files = req.files;
+
   const data = req.body || {};
   const files = req.files || {};
 
@@ -580,7 +617,6 @@ const updateGovtPlot = async (req, res) => {
       });
     }
 
-    // ✅ validations (same as add)
     if (
       data.ri_report === "Complete" &&
       !files?.ri_report_attachment &&
@@ -625,7 +661,7 @@ const updateGovtPlot = async (req, res) => {
       });
     }
 
-    // 📎 attachments (keep old if new not uploaded)
+    // attachments (keep old if new not uploaded)
     data.ri_report_attachment =
       files?.ri_report_attachment?.[0]?.filename ??
       existingPlot.ri_report_attachment;
@@ -642,7 +678,7 @@ const updateGovtPlot = async (req, res) => {
       files?.lease_to_ua_attachment?.[0]?.filename ??
       existingPlot.lease_to_ua_attachment;
 
-    // 📝 update
+    // update
     const updatedPlot = await GovtPlot.updateById(id, data);
 
     await logAction(
