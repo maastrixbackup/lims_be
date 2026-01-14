@@ -95,6 +95,49 @@ const GovtKhata = {
 
     return resultMap;
   },
+
+  async create(data) {
+    const {
+      project_id,
+      type,
+      khata_no,
+      village_id,
+
+      kissam_of_land,
+      plot_no,
+      lease_case_no,
+      present_status,
+      case_details,
+    } = data;
+    const [result] = await db.query(
+      `INSERT INTO govt_khata(
+        project_id,
+        type,
+        khata_no,
+        village_id,
+        kissam_of_land,
+        plot_no,
+        lease_case_no,
+        present_status,
+        case_details
+      ) VALUES (?,?,?,?,?,?,?,?,?)`,
+      [
+        project_id,
+        type,
+        khata_no,
+        village_id,
+        kissam_of_land,
+        plot_no,
+        lease_case_no,
+        present_status,
+        case_details,
+      ]
+    );
+    return {
+      id: result.insertId,
+      ...data,
+    };
+  },
 };
 
 module.exports = GovtKhata;

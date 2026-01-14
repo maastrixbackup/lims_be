@@ -9,6 +9,7 @@ const plotRoutes = require("./routes/plotRoutes");
 const govtPlotRoutes = require("./routes/govtPlotRoutes");
 const villageRoutes = require("./routes/villageRoutes");
 const khataRoutes = require("./routes/khataRoutes");
+const govtkhataRoutes = require("./routes/govtKhataRoutes");
 const dashboardRoutes = require("./routes/dashboardRoutes");
 const reportRoutes = require("./routes/reportRoutes");
 const authMiddleware = require("./middleware/authMiddleware");
@@ -40,6 +41,7 @@ app.use("/api/plots", authMiddleware, plotRoutes);
 app.use("/api/govtplots", authMiddleware, govtPlotRoutes);
 app.use("/api/village", authMiddleware, villageRoutes);
 app.use("/api/khata", authMiddleware, khataRoutes);
+app.use("/api/govtkhata", authMiddleware, govtkhataRoutes);
 app.use("/api", authMiddleware, dashboardRoutes);
 app.use("/api/report", authMiddleware, reportRoutes);
 
