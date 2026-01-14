@@ -130,29 +130,31 @@ const GovtPlot = {
     };
   },
 
-  async findAll({ project_id, limit = 10, offset = 0 }) {
-    const sql = `SELECT * FROM govt_plots
-      WHERE is_deleted = 0
-      AND project_id = ${project_id}
-      ORDER BY id DESC
-      LIMIT ? OFFSET ?`;
+  // async findAll({ project_id, type, limit = 10, offset = 0 }) {
+  //   const sql = `SELECT * FROM govt_plots
+  //     WHERE is_deleted = 0
+  //     AND project_id = ${project_id}
+  //     AND type = ?
+  //     ORDER BY id DESC
+  //     LIMIT ? OFFSET ?`;
 
-    const [rows] = await db.query(sql, [limit, offset]);
+  //   const [rows] = await db.query(sql, [project_id, type, limit, offset]);
 
-    const countSql = `
-      SELECT COUNT(*) AS total
-      FROM govt_plots
-      WHERE is_deleted = 0
-      AND project_id = ${project_id}
-    `;
+  //   const countSql = `
+  //     SELECT COUNT(*) AS total
+  //     FROM govt_plots
+  //     WHERE is_deleted = 0
+  //     AND project_id = ${project_id}
+  //     AND type = ?
+  //   `;
 
-    const [countRows] = await db.query(countSql);
+  //   const [countRows] = await db.query(countSql, [project_id, type]);
 
-    return {
-      data: rows,
-      total: countRows[0].total,
-    };
-  },
+  //   return {
+  //     data: rows,
+  //     total: countRows[0].total,
+  //   };
+  // },
 
   // async bulkInsertFromExcel(rows, project_id, type) {
   //   const values = rows.map((r) => [
@@ -405,6 +407,35 @@ const GovtPlot = {
   //     [values]
   //   );
   // },
+
+  async findAll({ project_id, type, limit = 10, offset = 0 }) {
+    const sql = `
+    SELECT *
+    FROM govt_plots
+    WHERE is_deleted = 0
+      AND project_id = ?
+      AND type = ?
+    ORDER BY id DESC
+    LIMIT ? OFFSET ?
+  `;
+
+    const [rows] = await db.query(sql, [project_id, type, limit, offset]);
+
+    const countSql = `
+    SELECT COUNT(*) AS total
+    FROM govt_plots
+    WHERE is_deleted = 0
+      AND project_id = ?
+      AND type = ?
+  `;
+
+    const [countRows] = await db.query(countSql, [project_id, type]);
+
+    return {
+      data: rows,
+      total: countRows[0].total,
+    };
+  },
 
   async bulkInsertFromExcel(rows, project_id, type) {
     const yesNoToBool = (val) => {
