@@ -1,7 +1,7 @@
 const db = require("../config/db");
 
 const GovtKhata = {
-  async upsertFromExcel(rows, villageMap) {
+  async upsertFromExcel(rows, villageMap, project_id, type) {
     const khataMap = new Map();
 
     // const yesNoToBool = (val) => {
@@ -40,6 +40,8 @@ const GovtKhata = {
       const key = `${villageId}_${khataNo}`;
 
       khataMap.set(key, {
+        project_id,
+        type,
         khata_no: khataNo,
         village_id: villageId,
         kissam_of_land: r["kissam of land"] || null,
@@ -53,6 +55,8 @@ const GovtKhata = {
     if (!khataMap.size) return {};
 
     const values = [...khataMap.values()].map((k) => [
+      k.project_id,
+      k.type,
       k.khata_no,
       k.village_id,
       k.kissam_of_land,
@@ -65,7 +69,7 @@ const GovtKhata = {
     await db.query(
       `
       INSERT INTO govt_khata
-        (khata_no, village_id, kissam_of_land, plot_no,
+        (project_id, type, khata_no, village_id, kissam_of_land, plot_no,
          lease_case_no, present_status, case_details)
       VALUES ?
       ON DUPLICATE KEY UPDATE
@@ -83,9 +87,9 @@ const GovtKhata = {
       `
       SELECT id, khata_no, village_id
       FROM govt_khata
-      WHERE (khata_no, village_id) IN (?)
+      WHERE (project_id, type, khata_no, village_id) IN (?)
       `,
-      [values.map((v) => [v[0], v[1]])]
+      [values.map((v) => [v[0], v[1], v[2], v[3]])]
     );
 
     const resultMap = {};
