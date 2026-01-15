@@ -267,7 +267,12 @@ const addGovtPlot = async (req, res) => {
     }
 
     // Khata upsert
-    const khataMap = await GovtKhata.upsertFromExcel(rows, villageMap);
+    const khataMap = await GovtKhata.upsertFromExcel(
+      rows,
+      villageMap,
+      data.project_id,
+      data.type
+    );
 
     const khataKey = `${villageId}_${data.khata_no}`;
     const khataId = khataMap[khataKey] || null;
