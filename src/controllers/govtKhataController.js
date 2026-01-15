@@ -104,6 +104,55 @@ const addGovtKhata = async (req, res) => {
   }
 };
 
+const govtKhataList = async (req, res) => {
+  try {
+    let {
+      project_id,
+      type,
+      village_id,
+      khata_no,
+      page = 1,
+      limit = 10,
+    } = req.query;
+
+    if (!project_id || !type) {
+      return res.status(400).json({
+        success: false,
+        message: "project_id and type are required",
+      });
+    }
+
+    page = parseInt(page);
+    limit = parseInt(limit);
+    const offset = (page - 1) * limit;
+
+    const result = await GovtKhata.findAll({
+      project_id,
+      type,
+      village_id,
+      khata_no,
+      limit,
+      offset,
+    });
+
+    return res.status(200).json({
+      success: true,
+      message: "Govt khata list fetched successfully",
+      page,
+      limit,
+      total: result.total,
+      data: result.data,
+    });
+  } catch (err) {
+    console.error("Govt Khata List Error:", err);
+    return res.status(500).json({
+      success: false,
+      message: "Server error",
+    });
+  }
+};
+
 module.exports = {
   addGovtKhata,
+  govtKhataList,
 };
