@@ -243,8 +243,63 @@ const updateGovtKhata = async (req, res) => {
   }
 };
 
+const deleteGovtKhata = async (req, res) => {
+  const userId = req.user.id;
+  const { id } = req.params;
+
+  try {
+    if (!id) {
+      return res.status(400).json({
+        success: false,
+        message: "Khata id is required",
+      });
+    }
+
+    //Check khata exists
+    const existingKhata = await GovtKhata.findById(id);
+    if (!existingKhata) {
+      return res.status(404).json({
+        success: false,
+        message: "Govt khata not found",
+      });
+    }
+
+    await GovtKhata.deleteKhataById(id);
+
+    await logAction(
+      userId,
+      "delete govt khata",
+      "success",
+      "Govt khata permanently deleted",
+      { id },
+      existingKhata
+    );
+
+    return res.status(200).json({
+      success: true,
+      message: "Govt khata deleted successfully",
+    });
+  } catch (err) {
+    await logAction(
+      userId,
+      "delete govt khata",
+      "failure",
+      err.message,
+      { id },
+      null
+    );
+
+    console.error("Delete Govt Khata Error:", err);
+    return res.status(500).json({
+      success: false,
+      message: "Server error",
+    });
+  }
+};
+
 module.exports = {
   addGovtKhata,
   govtKhataList,
   updateGovtKhata,
+  deleteGovtKhata,
 };

@@ -244,6 +244,10 @@ const GovtKhata = {
     await db.query(sql, [...values, id]);
     return this.findById(id);
   },
+
+  async deleteKhataById(id) {
+    await db.query(`DELETE FROM govt_khata WHERE id = ?`, [id]);
+  },
 };
 
 module.exports = GovtKhata;
