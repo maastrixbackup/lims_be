@@ -154,29 +154,33 @@ const GovtKhata = {
     const where = [];
     const params = [];
 
-    where.push("project_id = ?");
+    where.push("k.project_id = ?");
     params.push(project_id);
 
-    where.push("type = ?");
+    where.push("k.type = ?");
     params.push(type);
 
     if (village_id) {
-      where.push("village_id = ?");
+      where.push("k.village_id = ?");
       params.push(village_id);
     }
 
     const whereSql = where.length ? `WHERE ${where.join(" And ")}` : "";
 
     const dataSql = `
-      SELECT *
-        FROM govt_khata
+      SELECT
+        k.*,
+        v.village_name
+        FROM govt_khata k
+        LEFT JOIN villages v ON v.id = k.village_id
         ${whereSql}
-        ORDER BY id DESC
+        ORDER BY k.id DESC
         LIMIT ? OFFSET ?
     `;
 
     const countSql = `SELECT COUNT(*) AS total
-      FROM govt_khata
+      FROM govt_khata k
+      LEFT JOIN villages v ON v.id = k.village_id
       ${whereSql}
     `;
 
