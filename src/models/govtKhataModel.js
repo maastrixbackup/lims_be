@@ -192,6 +192,58 @@ const GovtKhata = {
       total: countRows[0].total,
     };
   },
+
+  async findById(id) {
+    const [rows] = await db.query(`SELECT * FROM govt_khata WHERE id = ?`, [
+      id,
+    ]);
+    return rows.length ? rows[0] : null;
+  },
+
+  async existsKhata({ project_id, type, village_id, khata_no, excludeId }) {
+    const params = [project_id, type, village_id, khata_no];
+    let sql = `
+    SELECT id FROM govt_khata
+    WHERE project_id = ?
+      AND type = ?
+      AND village_id = ?
+      AND khata_no = ?
+  `;
+
+    if (excludeId) {
+      sql += " AND id != ?";
+      params.push(excludeId);
+    }
+
+    const [rows] = await db.query(sql, params);
+    return rows.length > 0;
+  },
+
+  async updateKhataById(id, data) {
+    const fields = [];
+    const values = [];
+
+    Object.entries(data).forEach(([key, value]) => {
+      if (value !== undefined) {
+        fields.push(`${key} = ?`);
+        values.push(value);
+      }
+    });
+
+    if (!fields.length) {
+      throw new Error("No data provided for update");
+    }
+
+    const sql = `
+    UPDATE govt_khata
+    SET ${fields.join(", ")},
+        updated_at = NOW()
+    WHERE id = ?
+  `;
+
+    await db.query(sql, [...values, id]);
+    return this.findById(id);
+  },
 };
 
 module.exports = GovtKhata;

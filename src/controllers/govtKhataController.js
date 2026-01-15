@@ -152,7 +152,99 @@ const govtKhataList = async (req, res) => {
   }
 };
 
+const updateGovtKhata = async (req, res) => {
+  const userId = req.user.id;
+  const { id } = req.params;
+
+  if (!id) {
+    return res.status(400).json({
+      success: false,
+      message: "Khata id is required",
+    });
+  }
+
+  const data = { ...req.body };
+
+  // normalize empty values
+  Object.keys(data).forEach((key) => {
+    if (data[key] === "" || data[key] === undefined) {
+      data[key] = null;
+    }
+  });
+
+  try {
+    // existing khata
+    const existingKhata = await GovtKhata.findById(id);
+    if (!existingKhata) {
+      return res.status(404).json({
+        success: false,
+        message: "Govt khata not found",
+      });
+    }
+
+    // do not allow changing project_id & type
+    delete data.project_id;
+    delete data.type;
+
+    // duplicate check (if khata_no or village_id changes)
+    if (
+      (data.khata_no && data.khata_no !== existingKhata.khata_no) ||
+      (data.village_id && data.village_id !== existingKhata.village_id)
+    ) {
+      const exists = await GovtKhata.existsKhata({
+        project_id: existingKhata.project_id,
+        type: existingKhata.type,
+        village_id: data.village_id || existingKhata.village_id,
+        khata_no: data.khata_no || existingKhata.khata_no,
+        excludeId: id,
+      });
+
+      if (exists) {
+        return res.status(400).json({
+          success: false,
+          message:
+            "Khata with same project, village and khata number already exists",
+        });
+      }
+    }
+
+    // update
+    const updatedKhata = await GovtKhata.updateKhataById(id, data);
+
+    await logAction(
+      userId,
+      "edit govt khata",
+      "success",
+      "Govt khata updated successfully",
+      req.body,
+      updatedKhata
+    );
+
+    return res.status(200).json({
+      success: true,
+      message: "Govt khata updated successfully",
+      khata: updatedKhata,
+    });
+  } catch (err) {
+    await logAction(
+      userId,
+      "edit govt khata",
+      "failure",
+      err.message,
+      req.body,
+      null
+    );
+
+    console.error("Edit Govt Khata Error:", err);
+    return res.status(500).json({
+      success: false,
+      message: "Server error",
+    });
+  }
+};
+
 module.exports = {
   addGovtKhata,
   govtKhataList,
+  updateGovtKhata,
 };
