@@ -142,6 +142,52 @@ const GovtKhata = {
       ...data,
     };
   },
+
+  async findAll({
+    project_id,
+    type,
+    village_id,
+    khata_no,
+    limit = 10,
+    offset = 0,
+  }) {
+    const where = [];
+    const params = [];
+
+    where.push("project_id = ?");
+    params.push(project_id);
+
+    where.push("type = ?");
+    params.push(type);
+
+    if (village_id) {
+      where.push("village_id = ?");
+      params.push(village_id);
+    }
+
+    const whereSql = where.length ? `WHERE ${where.join(" And ")}` : "";
+
+    const dataSql = `
+      SELECT *
+        FROM govt_khata
+        ${whereSql}
+        ORDER BY id DESC
+        LIMIT ? OFFSET ?
+    `;
+
+    const countSql = `SELECT COUNT(*) AS total
+      FROM govt_khata
+      ${whereSql}
+    `;
+
+    const [rows] = await db.query(dataSql, [...params, limit, offset]);
+    const [countRows] = await db.query(countSql, params);
+
+    return {
+      data: rows,
+      total: countRows[0].total,
+    };
+  },
 };
 
 module.exports = GovtKhata;
