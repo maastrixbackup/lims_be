@@ -1515,6 +1515,72 @@ const Plot = {
     return updatedRows;
   },
 
+  async insertDocument(data) {
+    const sql = `
+      INSERT IGNORE INTO pvt_plot_documents
+      (project_id, type, filename, original_filename, file_path, uploaded_by)
+      VALUES (?, ?, ?, ?, ?, ?)
+    `;
+
+    const params = [
+      data.project_id,
+      data.type,
+      data.filename,
+      data.original_filename,
+      data.file_path,
+      data.uploaded_by,
+    ];
+
+    const [result] = await db.query(sql, params);
+    return result.insertId;
+  },
+
+  async findAllDocuments({ project_id, type }) {
+    let sql = `
+      SELECT
+        id,
+        project_id,
+        type,
+        original_filename,
+        filename,
+        created_at
+      FROM pvt_plot_documents
+      WHERE 1 = 1
+    `;
+
+    const params = [];
+
+    if (project_id) {
+      sql += ` AND project_id = ?`;
+      params.push(project_id);
+    }
+
+    if (type) {
+      sql += ` AND type = ?`;
+      params.push(type);
+    }
+
+    sql += ` ORDER BY created_at DESC`;
+
+    const [rows] = await db.query(sql, params);
+    return rows;
+  },
+
+  async findDocumentByFilename(filename) {
+    const sql = `
+    SELECT
+      filename,
+      original_filename,
+      file_path
+    FROM pvt_plot_documents
+    WHERE filename = ?
+    LIMIT 1
+  `;
+
+    const [rows] = await db.query(sql, [filename]);
+    return rows[0];
+  },
+
   async countAll(project_id, type) {
     // const [rows] = await db.query(
     //   `SELECT COUNT(*) AS total FROM plots WHERE is_deleted = 0 AND project_id = ?`,

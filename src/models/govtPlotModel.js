@@ -130,6 +130,26 @@ const GovtPlot = {
     };
   },
 
+  async insertDocument(data) {
+    const sql = `
+      INSERT IGNORE INTO govt_plot_documents
+      (project_id, type, filename, original_filename, file_path, uploaded_by)
+      VALUES (?, ?, ?, ?, ?, ?)
+    `;
+
+    const params = [
+      data.project_id,
+      data.type,
+      data.filename,
+      data.original_filename,
+      data.file_path,
+      data.uploaded_by,
+    ];
+
+    const [result] = await db.query(sql, params);
+    return result.insertId;
+  },
+
   // async findAll({ project_id, type, limit = 10, offset = 0 }) {
   //   const sql = `SELECT * FROM govt_plots
   //     WHERE is_deleted = 0
@@ -435,6 +455,52 @@ const GovtPlot = {
       data: rows,
       total: countRows[0].total,
     };
+  },
+
+  async findAllDocuments({ project_id, type }) {
+    let sql = `
+      SELECT
+        id,
+        project_id,
+        type,
+        original_filename,
+        filename,
+        created_at
+      FROM govt_plot_documents
+      WHERE 1 = 1
+    `;
+
+    const params = [];
+
+    if (project_id) {
+      sql += ` AND project_id = ?`;
+      params.push(project_id);
+    }
+
+    if (type) {
+      sql += ` AND type = ?`;
+      params.push(type);
+    }
+
+    sql += ` ORDER BY created_at DESC`;
+
+    const [rows] = await db.query(sql, params);
+    return rows;
+  },
+
+  async findDocumentByFilename(filename) {
+    const sql = `
+    SELECT
+      filename,
+      original_filename,
+      file_path
+    FROM govt_plot_documents
+    WHERE filename = ?
+    LIMIT 1
+  `;
+
+    const [rows] = await db.query(sql, [filename]);
+    return rows[0];
   },
 
   async bulkInsertFromExcel(rows, project_id, type) {

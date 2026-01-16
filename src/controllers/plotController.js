@@ -96,6 +96,15 @@ const uploadPlots = async (req, res) => {
 
     await Khata.insertKhatasFromExcel(data, project_id, type);
 
+    await Plot.insertDocument({
+      project_id,
+      type,
+      filename: req.file.filename,
+      original_filename: req.file.originalname,
+      file_path: `uploads/excels/${req.file.filename}`,
+      uploaded_by: userId,
+    });
+
     await logAction(
       userId,
       "plot excel upload",
@@ -168,62 +177,95 @@ const plotList = async (req, res) => {
   }
 };
 
+// const plotDocumentList = async (req, res) => {
+//   try {
+//     const uploadsDir = path.join(process.cwd(), "uploads/excels");
+//     if (!fs.existsSync(uploadsDir)) {
+//       return res.status(200).json({
+//         success: true,
+//         message: "Uploads/excels directory not found",
+//         files: [],
+//       });
+//     }
+
+//     const files = fs.readdirSync(uploadsDir);
+//     const excelFiles = files.filter((f) => f.match(/\.(xls|xlsx)$/i));
+
+//     if (excelFiles.length === 0) {
+//       return res.status(200).json({
+//         success: true,
+//         message: "No Excel files found",
+//         files: [],
+//       });
+//     }
+
+//     const fileList = excelFiles.map((file) => {
+//       const filePath = path.join(uploadsDir, file);
+//       const stats = fs.statSync(filePath);
+//       return {
+//         name: file,
+//         size: `${(stats.size / 1024).toFixed(2)} KB`,
+//         uploadedAt: stats.mtime,
+//         // documentUrl: `${req.protocol}://${req.get(
+//         //   "host"
+//         // )}/uploads/excels/${file}`,
+//         documentUrl: `${req.protocol}://${req.get("host")}${
+//           req.get("host").includes("localhost") ? "" : "/api"
+//         }/uploads/excels/${file}`,
+
+//         // documentUrl: `${req.protocol}://${req.get("host")}${
+//         //   req.get("host").includes("localhost") ? "" : "/api"
+//         // }/plotDocumentDownload/${file}`,
+//       };
+//     });
+
+//     return res.status(200).json({
+//       success: true,
+//       total: fileList.length,
+//       files: fileList,
+//     });
+//   } catch (err) {
+//     console.error("Error reading uploads:", err);
+//     return res.status(500).json({
+//       success: false,
+//       message: "Server error while fetching plot Excel files",
+//     });
+//   }
+// };
+
 const plotDocumentList = async (req, res) => {
   try {
-    const uploadsDir = path.join(process.cwd(), "uploads/excels");
-    if (!fs.existsSync(uploadsDir)) {
-      return res.status(200).json({
-        success: true,
-        message: "Uploads/excels directory not found",
-        files: [],
-      });
-    }
+    const { project_id, type } = req.query;
 
-    const files = fs.readdirSync(uploadsDir);
-    const excelFiles = files.filter((f) => f.match(/\.(xls|xlsx)$/i));
-
-    if (excelFiles.length === 0) {
-      return res.status(200).json({
-        success: true,
-        message: "No Excel files found",
-        files: [],
-      });
-    }
-
-    const fileList = excelFiles.map((file) => {
-      const filePath = path.join(uploadsDir, file);
-      const stats = fs.statSync(filePath);
-      return {
-        name: file,
-        size: `${(stats.size / 1024).toFixed(2)} KB`,
-        uploadedAt: stats.mtime,
-        // documentUrl: `${req.protocol}://${req.get(
-        //   "host"
-        // )}/uploads/excels/${file}`,
-        documentUrl: `${req.protocol}://${req.get("host")}${
-          req.get("host").includes("localhost") ? "" : "/api"
-        }/uploads/excels/${file}`,
-
-        // documentUrl: `${req.protocol}://${req.get("host")}${
-        //   req.get("host").includes("localhost") ? "" : "/api"
-        // }/plotDocumentDownload/${file}`,
-      };
+    const rows = await Plot.findAllDocuments({
+      project_id,
+      type,
     });
 
-    return res.status(200).json({
+    const files = rows.map((r) => ({
+      id: r.id,
+      project_id: r.project_id,
+      type: r.type,
+      name: r.original_filename,
+      uploadedAt: r.created_at,
+      documentUrl: `${req.protocol}://${req.get("host")}${
+        req.get("host").includes("localhost") ? "" : "/api"
+      }/uploads/excels/${r.filename}`,
+    }));
+
+    return res.json({
       success: true,
-      total: fileList.length,
-      files: fileList,
+      total: files.length,
+      files,
     });
   } catch (err) {
-    console.error("Error reading uploads:", err);
+    console.error("PVR Plot Document List Error:", err);
     return res.status(500).json({
       success: false,
-      message: "Server error while fetching plot Excel files",
+      message: "Failed to fetch PVR plot documents",
     });
   }
 };
-
 const plotDocumentDelete = async (req, res) => {
   const userId = req.user.id;
   try {
@@ -277,14 +319,53 @@ const plotDocumentDelete = async (req, res) => {
   }
 };
 
+// const downloadPlotDocument = async (req, res) => {
+//   try {
+//     const { filename } = req.params;
+
+//     const uploadsDir = path.join(process.cwd(), "uploads/excels");
+//     const filePath = path.join(uploadsDir, filename);
+
+//     // Security check
+//     if (!filename || filename.includes("..")) {
+//       return res.status(400).json({
+//         success: false,
+//         message: "Invalid file name",
+//       });
+//     }
+
+//     // File exists?
+//     if (!fs.existsSync(filePath)) {
+//       return res.status(404).json({
+//         success: false,
+//         message: "File not found",
+//       });
+//     }
+
+//     // Set headers (VERY IMPORTANT for Chrome)
+//     res.setHeader(
+//       "Content-Type",
+//       "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+//     );
+//     res.setHeader("Content-Disposition", `attachment; filename="${filename}"`);
+
+//     // Stream file
+//     const fileStream = fs.createReadStream(filePath);
+//     fileStream.pipe(res);
+//   } catch (error) {
+//     console.error("Download error:", error);
+//     return res.status(500).json({
+//       success: false,
+//       message: "Error while downloading file",
+//     });
+//   }
+// };
+
 const downloadPlotDocument = async (req, res) => {
   try {
     const { filename } = req.params;
 
-    const uploadsDir = path.join(process.cwd(), "uploads/excels");
-    const filePath = path.join(uploadsDir, filename);
-
-    // Security check
+    // Basic security check
     if (!filename || filename.includes("..")) {
       return res.status(400).json({
         success: false,
@@ -292,24 +373,40 @@ const downloadPlotDocument = async (req, res) => {
       });
     }
 
-    // File exists?
-    if (!fs.existsSync(filePath)) {
+    // Fetch document from DB
+    const doc = await Plot.findDocumentByFilename(filename);
+    // OR GovtPlot.findDocumentByFilename depending on module
+
+    if (!doc) {
       return res.status(404).json({
         success: false,
-        message: "File not found",
+        message: "Document not found",
       });
     }
 
-    // Set headers (VERY IMPORTANT for Chrome)
+    // Resolve file path from DB
+    const filePath = path.join(process.cwd(), doc.file_path);
+
+    if (!fs.existsSync(filePath)) {
+      return res.status(404).json({
+        success: false,
+        message: "File missing on server",
+      });
+    }
+
+    // Set headers (IMPORTANT for Chrome)
     res.setHeader(
       "Content-Type",
       "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
     );
-    res.setHeader("Content-Disposition", `attachment; filename="${filename}"`);
+
+    res.setHeader(
+      "Content-Disposition",
+      `attachment; filename="${doc.original_filename || doc.filename}"`
+    );
 
     // Stream file
-    const fileStream = fs.createReadStream(filePath);
-    fileStream.pipe(res);
+    fs.createReadStream(filePath).pipe(res);
   } catch (error) {
     console.error("Download error:", error);
     return res.status(500).json({
