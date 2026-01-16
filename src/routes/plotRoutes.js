@@ -21,6 +21,7 @@ const {
   landCostPaymentUpload,
   updatePlotPayment,
   markPaymentCompleted,
+  downloadPlotDocument,
 } = require("../controllers/plotController");
 // const { addGovtPlot } = require("../controllers/govtPlotController");
 
@@ -36,6 +37,7 @@ router.post("/paymentReady", paymentReady);
 router.get("/getCompensationDetails", getAllPaymentReady);
 router.get("/exportPlot", exportPlot);
 router.delete("/plotDocumentDelete/:fileName", plotDocumentDelete);
+router.get("/plotDocumentDownload/:filename", downloadPlotDocument);
 router.post(
   "/landCostPaymentUpload",
   uploadLandCostPayment.single("payment_proof"),
