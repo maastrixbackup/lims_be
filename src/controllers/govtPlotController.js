@@ -141,6 +141,15 @@ const uploadGovtPlot = async (req, res) => {
     await GovtPlot.bulkInsertFromExcel(rows, project_id, type);
     // await GovtKhata.upsertFromExcel(rows);
 
+    await GovtPlot.insertDocument({
+      project_id,
+      type,
+      filename: req.file.filename,
+      original_filename: req.file.originalname,
+      file_path: `uploads/govt_plot_excels/${req.file.filename}`,
+      uploaded_by: userId,
+    });
+
     await logAction(
       userId,
       "Govt plot excel upload",
@@ -465,91 +474,181 @@ const deleteGovtPlot = async (req, res) => {
   }
 };
 
+// const govtPlotDocumentList = async (req, res) => {
+//   try {
+//     const uploadsDir = path.join(process.cwd(), "uploads/govt_plot_excels");
+
+//     if (!fs.existsSync(uploadsDir)) {
+//       return res.status(200).json({
+//         success: true,
+//         message: "Govt plot documents directory not found",
+//         files: [],
+//       });
+//     }
+
+//     const files = fs.readdirSync(uploadsDir);
+
+//     const excelFiles = files.filter((f) => f.match(/\.(xls|xlsx)$/i));
+
+//     if (excelFiles.length === 0) {
+//       return res.status(200).json({
+//         success: true,
+//         message: "No Excel files found",
+//         files: [],
+//       });
+//     }
+
+//     const fileList = excelFiles.map((file) => {
+//       const filePath = path.join(uploadsDir, file);
+//       const stats = fs.statSync(filePath);
+
+//       return {
+//         name: file,
+//         // size: `${(stats.size / 1024).toFixed(2)} KB`,
+//         uploadedAt: stats.mtime,
+//         documentUrl: `${req.protocol}://${req.get("host")}${
+//           req.get("host").includes("localhost") ? "" : "/api"
+//         }/uploads/govt_plot_excels/${file}`,
+//       };
+//     });
+
+//     return res.status(200).json({
+//       success: true,
+//       total: fileList.length,
+//       files: fileList,
+//     });
+//   } catch (err) {
+//     console.error("Govt Plot Document List Error:", err);
+//     return res.status(500).json({
+//       success: false,
+//       message: "Server error while fetching govt plot documents",
+//     });
+//   }
+// };
+
 const govtPlotDocumentList = async (req, res) => {
   try {
-    const uploadsDir = path.join(process.cwd(), "uploads/govt_plot_excels");
+    const { project_id, type } = req.query;
 
-    if (!fs.existsSync(uploadsDir)) {
-      return res.status(200).json({
-        success: true,
-        message: "Govt plot documents directory not found",
-        files: [],
-      });
-    }
-
-    const files = fs.readdirSync(uploadsDir);
-
-    const excelFiles = files.filter((f) => f.match(/\.(xls|xlsx)$/i));
-
-    if (excelFiles.length === 0) {
-      return res.status(200).json({
-        success: true,
-        message: "No Excel files found",
-        files: [],
-      });
-    }
-
-    const fileList = excelFiles.map((file) => {
-      const filePath = path.join(uploadsDir, file);
-      const stats = fs.statSync(filePath);
-
-      return {
-        name: file,
-        // size: `${(stats.size / 1024).toFixed(2)} KB`,
-        uploadedAt: stats.mtime,
-        documentUrl: `${req.protocol}://${req.get("host")}${
-          req.get("host").includes("localhost") ? "" : "/api"
-        }/uploads/govt_plot_excels/${file}`,
-      };
+    const rows = await GovtPlot.findAllDocuments({
+      project_id,
+      type,
     });
 
-    return res.status(200).json({
+    const files = rows.map((r) => ({
+      id: r.id,
+      project_id: r.project_id,
+      type: r.type,
+      name: r.original_filename,
+      uploadedAt: r.created_at,
+      // documentUrl: `${req.protocol}://${req.get("host")}${
+      //   req.get("host").includes("localhost") ? "" : "/api"
+      // }/plot-documents/download/${r.filename}`,
+
+      documentUrl: `${req.protocol}://${req.get("host")}${
+        req.get("host").includes("localhost") ? "" : "/api"
+      }/uploads/govt_plot_excels/${r.filename}`,
+    }));
+
+    return res.json({
       success: true,
-      total: fileList.length,
-      files: fileList,
+      total: files.length,
+      files,
     });
   } catch (err) {
-    console.error("Govt Plot Document List Error:", err);
+    console.error(err);
     return res.status(500).json({
       success: false,
-      message: "Server error while fetching govt plot documents",
+      message: "Failed to fetch plot documents",
     });
   }
 };
+
+// const downloadPlotDocument = async (req, res) => {
+//   try {
+//     const { filename } = req.params;
+
+//     const uploadsDir = path.join(process.cwd(), "uploads/govt_plot_excels");
+//     const filePath = path.join(uploadsDir, filename);
+
+//     // Security check
+//     if (!filename || filename.includes("..")) {
+//       return res.status(400).json({
+//         success: false,
+//         message: "Invalid file name",
+//       });
+//     }
+
+//     // File exists?
+//     if (!fs.existsSync(filePath)) {
+//       return res.status(404).json({
+//         success: false,
+//         message: "File not found",
+//       });
+//     }
+
+//     // Set headers (VERY IMPORTANT for Chrome)
+//     res.setHeader(
+//       "Content-Type",
+//       "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+//     );
+//     res.setHeader("Content-Disposition", `attachment; filename="${filename}"`);
+
+//     // Stream file
+//     const fileStream = fs.createReadStream(filePath);
+//     fileStream.pipe(res);
+//   } catch (error) {
+//     console.error("Download error:", error);
+//     return res.status(500).json({
+//       success: false,
+//       message: "Error while downloading file",
+//     });
+//   }
+// };
 
 const downloadPlotDocument = async (req, res) => {
   try {
     const { filename } = req.params;
 
-    const uploadsDir = path.join(process.cwd(), "uploads/govt_plot_excels");
-    const filePath = path.join(uploadsDir, filename);
-
-    // Security check
     if (!filename || filename.includes("..")) {
       return res.status(400).json({
         success: false,
-        message: "Invalid file name",
+        message: "Invalid file request",
       });
     }
 
-    // File exists?
+    // Get document from DB
+    const doc = await GovtPlot.findDocumentByFilename(filename);
+
+    if (!doc) {
+      return res.status(404).json({
+        success: false,
+        message: "Document not found",
+      });
+    }
+
+    // Build safe path from DB
+    const filePath = path.join(process.cwd(), doc.file_path);
+
     if (!fs.existsSync(filePath)) {
       return res.status(404).json({
         success: false,
-        message: "File not found",
+        message: "File missing on server",
       });
     }
 
-    // Set headers (VERY IMPORTANT for Chrome)
+    // Set headers
     res.setHeader(
       "Content-Type",
       "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
     );
-    res.setHeader("Content-Disposition", `attachment; filename="${filename}"`);
+    res.setHeader(
+      "Content-Disposition",
+      `attachment; filename="${doc.original_filename || doc.filename}"`
+    );
 
     // Stream file
-    const fileStream = fs.createReadStream(filePath);
-    fileStream.pipe(res);
+    fs.createReadStream(filePath).pipe(res);
   } catch (error) {
     console.error("Download error:", error);
     return res.status(500).json({
