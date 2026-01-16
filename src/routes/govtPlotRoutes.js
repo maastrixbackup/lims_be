@@ -14,6 +14,7 @@ const {
   govtPlotDocumentList,
   govtPlotDocumentDelete,
   updateGovtPlot,
+  downloadPlotDocument,
 } = require("../controllers/govtPlotController");
 
 //Routes
@@ -37,6 +38,7 @@ router.post(
 router.delete("/deleteGovtPlot/:id", deleteGovtPlot);
 router.get("/govtPlotDocumentList", govtPlotDocumentList);
 router.delete("/govtPlotDocumentDelete/:fileName", govtPlotDocumentDelete);
+router.get("/govtPlotDocumentDownload/:filename", downloadPlotDocument);
 // router.put("/updateGovtPlot/:id", updateGovtPlot);
 router.put(
   "/updateGovtPlot/:id",

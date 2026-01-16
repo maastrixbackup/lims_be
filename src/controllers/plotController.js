@@ -203,6 +203,10 @@ const plotDocumentList = async (req, res) => {
         documentUrl: `${req.protocol}://${req.get("host")}${
           req.get("host").includes("localhost") ? "" : "/api"
         }/uploads/excels/${file}`,
+
+        // documentUrl: `${req.protocol}://${req.get("host")}${
+        //   req.get("host").includes("localhost") ? "" : "/api"
+        // }/plotDocumentDownload/${file}`,
       };
     });
 
@@ -269,6 +273,48 @@ const plotDocumentDelete = async (req, res) => {
     return res.status(500).json({
       success: false,
       message: "Server error while deleting file",
+    });
+  }
+};
+
+const downloadPlotDocument = async (req, res) => {
+  try {
+    const { filename } = req.params;
+
+    const uploadsDir = path.join(process.cwd(), "uploads/excels");
+    const filePath = path.join(uploadsDir, filename);
+
+    // Security check
+    if (!filename || filename.includes("..")) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid file name",
+      });
+    }
+
+    // File exists?
+    if (!fs.existsSync(filePath)) {
+      return res.status(404).json({
+        success: false,
+        message: "File not found",
+      });
+    }
+
+    // Set headers (VERY IMPORTANT for Chrome)
+    res.setHeader(
+      "Content-Type",
+      "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+    );
+    res.setHeader("Content-Disposition", `attachment; filename="${filename}"`);
+
+    // Stream file
+    const fileStream = fs.createReadStream(filePath);
+    fileStream.pipe(res);
+  } catch (error) {
+    console.error("Download error:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Error while downloading file",
     });
   }
 };
@@ -1284,4 +1330,5 @@ module.exports = {
   landCostPaymentUpload,
   updatePlotPayment,
   markPaymentCompleted,
+  downloadPlotDocument,
 };
