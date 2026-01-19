@@ -540,6 +540,7 @@ const govtPlotDocumentList = async (req, res) => {
       project_id: r.project_id,
       type: r.type,
       name: r.original_filename,
+      download_name: r.filename,
       uploadedAt: r.created_at,
       // documentUrl: `${req.protocol}://${req.get("host")}${
       //   req.get("host").includes("localhost") ? "" : "/api"
