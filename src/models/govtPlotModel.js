@@ -52,10 +52,31 @@ const GovtPlot = {
         lease_to_ua,
         lease_to_ua_attachment,
 
+        land_area_total_acres,
+        land_area_total_hectares,
+        land_area_acquired_acres,
+        land_area_acquired_hectares,
+        market_value_per_acre,
+        bench_market_value,
+        premium,
+        ground_rent,
+        cess,
+        admin_charges,
+        total_cost,
+
+        legal_heir_case_no,
+        land_case_no,
+        land_case_date,
+        land_case_type,
+        land_case_status,
+        land_case_details,
+        
         remarks,
         is_deleted
       )
       VALUES (?,?,?,?,?,?,?,?,?,?,
+              ?,?,?,?,?,?,?,?,?,?,?,
+              ?,?,?,?,?,?,
               ?,?,?,?,
               ?,?,?,
               ?,?,
@@ -118,6 +139,25 @@ const GovtPlot = {
 
       data.lease_to_ua ?? null,
       data.lease_to_ua_attachment || null,
+
+      data.land_area_total_acres ?? null,
+      data.land_area_total_hectares ?? null,
+      data.land_area_acquired_acres ?? null,
+      data.land_area_acquired_hectares ?? null,
+      data.market_value_per_acre ?? null,
+      data.bench_market_value ?? null,
+      data.premium ?? null,
+      data.ground_rent ?? null,
+      data.cess ?? null,
+      data.admin_charges ?? null,
+      data.total_cost ?? null,
+
+      data.legal_heir_case_no ?? null,
+      data.land_case_no ?? null,
+      data.land_case_date ?? null,
+      data.land_case_type ?? null,
+      data.land_case_status ?? null,
+      data.land_case_details ?? null,
 
       data.remarks || null,
     ];
