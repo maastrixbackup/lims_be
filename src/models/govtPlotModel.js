@@ -543,6 +543,13 @@ const GovtPlot = {
     return rows[0];
   },
 
+  async deleteDocumentByFilename(filename) {
+    await db.query(`DELETE FROM govt_plot_documents WHERE filename = ?`, [
+      filename,
+    ]);
+    return true;
+  },
+
   async bulkInsertFromExcel(rows, project_id, type) {
     const yesNoToBool = (val) => {
       if (!val) return 0;
@@ -680,7 +687,7 @@ const GovtPlot = {
       remarks = VALUES(remarks),
       updated_at = NOW()
     `,
-      [values]
+      [values],
     );
 
     return values.length;
@@ -689,7 +696,7 @@ const GovtPlot = {
   async govtPlotDelete(id) {
     const [result] = await db.query(
       `UPDATE govt_plots SET is_deleted = 1 WHERE id = ? AND is_deleted = 0`,
-      [id]
+      [id],
     );
     return result.affectedRows;
   },
@@ -697,7 +704,7 @@ const GovtPlot = {
   async findByPk(id) {
     const [rows] = await db.query(
       `SELECT * FROM govt_plots WHERE id = ? AND is_deleted = 0`,
-      [id]
+      [id],
     );
 
     return rows.length ? rows[0] : null;

@@ -111,7 +111,7 @@ const uploadGovtPlot = async (req, res) => {
     const excelHeaders = Object.keys(rows[0]);
 
     const missingHeaders = REQUIRED_HEADERS.filter(
-      (h) => !excelHeaders.includes(h)
+      (h) => !excelHeaders.includes(h),
     );
 
     if (missingHeaders.length) {
@@ -119,7 +119,7 @@ const uploadGovtPlot = async (req, res) => {
       return res.status(400).json({
         success: false,
         message: `Invalid Excel format. Missing columns: ${missingHeaders.join(
-          ", "
+          ", ",
         )}`,
       });
     }
@@ -127,15 +127,15 @@ const uploadGovtPlot = async (req, res) => {
     const villageMap = await GovtVillage.upsertFromExcel(
       rows,
       project_id,
-      type
+      type,
     );
 
-    // 2️⃣ govt_khata
+    // govt_khata
     const khataMap = await GovtKhata.upsertFromExcel(
       rows,
       villageMap,
       project_id,
-      type
+      type,
     );
 
     await GovtPlot.bulkInsertFromExcel(rows, project_id, type);
@@ -156,7 +156,7 @@ const uploadGovtPlot = async (req, res) => {
       "success",
       "Govt plots inserted successfully",
       { project_id },
-      null
+      null,
     );
 
     return res.status(201).json({
@@ -170,7 +170,7 @@ const uploadGovtPlot = async (req, res) => {
       "failure",
       err.message,
       null,
-      null
+      null,
     );
     console.error("Govt Plot Excel Upload Error:", err);
     return res.status(500).json({
@@ -262,7 +262,7 @@ const addGovtPlot = async (req, res) => {
     const villageMap = await GovtVillage.upsertFromExcel(
       rows,
       data.project_id,
-      data.type
+      data.type,
     );
 
     const villageKey = `${data.mouza}_${data.tahasil}`;
@@ -280,7 +280,7 @@ const addGovtPlot = async (req, res) => {
       rows,
       villageMap,
       data.project_id,
-      data.type
+      data.type,
     );
 
     const khataKey = `${villageId}_${data.khata_no}`;
@@ -296,7 +296,7 @@ const addGovtPlot = async (req, res) => {
       "success",
       "Govt plot created successfully",
       req.body,
-      govtPlot
+      govtPlot,
     );
 
     return res.status(201).json({
@@ -311,7 +311,7 @@ const addGovtPlot = async (req, res) => {
       "failure",
       err.message,
       req.body,
-      null
+      null,
     );
     console.error("Add Govt Plot Error:", err);
     return res.status(500).json({
@@ -401,7 +401,7 @@ const govtPlotList = async (req, res) => {
             url: buildFileUrl(
               req,
               "govt_plots",
-              plot.tree_enumeration_attachment
+              plot.tree_enumeration_attachment,
             ),
           }
         : null,
@@ -455,7 +455,7 @@ const deleteGovtPlot = async (req, res) => {
       "success",
       "Govt plot soft deleted",
       { plotId },
-      null
+      null,
     );
 
     return res
@@ -468,7 +468,7 @@ const deleteGovtPlot = async (req, res) => {
       "failure",
       err.message,
       { plotId },
-      null
+      null,
     );
     res.status(500).json({ success: false, message: err.message });
   }
@@ -641,11 +641,11 @@ const downloadPlotDocument = async (req, res) => {
     // Set headers
     res.setHeader(
       "Content-Type",
-      "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+      "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
     );
     res.setHeader(
       "Content-Disposition",
-      `attachment; filename="${doc.original_filename || doc.filename}"`
+      `attachment; filename="${doc.original_filename || doc.filename}"`,
     );
 
     // Stream file
@@ -680,20 +680,24 @@ const govtPlotDocumentDelete = async (req, res) => {
     //   });
     // }
 
-    const filePath = path.join(
-      process.cwd(),
-      "uploads/govt_plot_excels",
-      fileName
-    );
+    const doc = await GovtPlot.findDocumentByFilename(fileName);
 
-    if (!fs.existsSync(filePath)) {
+    if (!doc) {
       return res.status(404).json({
         success: false,
-        message: "File not found",
+        message: "Document record not found",
       });
     }
 
-    fs.unlinkSync(filePath);
+    const filePath = path.join(process.cwd(), doc.file_path);
+
+    // delete file if exists
+    if (fs.existsSync(filePath)) {
+      fs.unlinkSync(filePath);
+    }
+
+    // delete DB record
+    await GovtPlot.deleteDocumentByFilename(fileName);
 
     await logAction(
       userId,
@@ -701,7 +705,7 @@ const govtPlotDocumentDelete = async (req, res) => {
       "success",
       "Govt plot Excel file deleted successfully",
       { fileName },
-      null
+      null,
     );
 
     return res.status(200).json({
@@ -718,7 +722,7 @@ const govtPlotDocumentDelete = async (req, res) => {
       "failed",
       "Failed to delete govt plot Excel file",
       null,
-      err.message
+      err.message,
     );
 
     return res.status(500).json({
@@ -839,7 +843,7 @@ const updateGovtPlot = async (req, res) => {
       "success",
       "Govt plot updated successfully",
       req.body,
-      updatedPlot
+      updatedPlot,
     );
 
     return res.status(200).json({
@@ -854,7 +858,7 @@ const updateGovtPlot = async (req, res) => {
       "failure",
       err.message,
       req.body,
-      null
+      null,
     );
 
     console.error("Edit Govt Plot Error:", err);
