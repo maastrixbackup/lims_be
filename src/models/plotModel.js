@@ -1160,7 +1160,7 @@ const Plot = {
     // fetch project name
     const [projectRows] = await db.query(
       "SELECT project_name FROM projects WHERE id = ?",
-      [project_id]
+      [project_id],
     );
 
     const projectName = projectRows[0].project_name;
@@ -1174,7 +1174,7 @@ const Plot = {
         if (typeof dateValue === "number") {
           const excelEpoch = new Date(Date.UTC(1900, 0, 1));
           formattedDate = new Date(
-            excelEpoch.getTime() + (dateValue - 2) * 86400000
+            excelEpoch.getTime() + (dateValue - 2) * 86400000,
           )
             .toISOString()
             .split("T")[0];
@@ -1187,7 +1187,7 @@ const Plot = {
             if (!isNaN(day) && !isNaN(month) && !isNaN(year)) {
               formattedDate = `${year}-${month.padStart(2, "0")}-${day.padStart(
                 2,
-                "0"
+                "0",
               )}`;
             }
           }
@@ -1458,7 +1458,7 @@ const Plot = {
       type = VALUES(type),
       updated_at = CURRENT_TIMESTAMP
     `,
-      [values]
+      [values],
     );
 
     return result.affectedRows || 0;
@@ -1579,6 +1579,13 @@ const Plot = {
 
     const [rows] = await db.query(sql, [filename]);
     return rows[0];
+  },
+
+  async deleteDocumentByFilename(filename) {
+    await db.query(`DELETE FROM pvt_plot_documents WHERE filename = ?`, [
+      filename,
+    ]);
+    return true;
   },
 
   async countAll(project_id, type) {
@@ -1879,7 +1886,7 @@ const Plot = {
         abatement,
         type,
         full_part,
-      ]
+      ],
     );
     return { id: result.insertId, ...plotData };
   },
@@ -1887,7 +1894,7 @@ const Plot = {
   async findById(id) {
     const [rows] = await db.query(
       `SELECT * FROM plots WHERE id = ? AND is_deleted = 0`,
-      [id]
+      [id],
     );
     return rows[0];
   },
@@ -1895,7 +1902,7 @@ const Plot = {
   async findByCaseFileNo(la_case_file_no) {
     const [rows] = await db.query(
       "SELECT * FROM plots WHERE la_case_file_no = ? AND is_deleted = 0 LIMIT 1",
-      [la_case_file_no]
+      [la_case_file_no],
     );
     return rows.length ? rows[0] : null;
   },
@@ -2189,7 +2196,7 @@ const Plot = {
         abatement,
         full_part,
         la_case_file_no, // condition
-      ]
+      ],
     );
 
     return result.affectedRows > 0;
@@ -2486,7 +2493,7 @@ const Plot = {
         abatement,
         full_part,
         id,
-      ]
+      ],
     );
     return this.findById(id);
   },
@@ -2494,14 +2501,14 @@ const Plot = {
   async plotDelete(id) {
     const [result] = await db.query(
       `UPDATE plots SET is_deleted = 1 WHERE id = ? AND is_deleted = 0`,
-      [id]
+      [id],
     );
     return result.affectedRows;
   },
 
   async getDeletedPlots() {
     const [rows] = await db.query(
-      "SELECT * FROM plots WHERE is_deleted = 1 ORDER BY updated_at DESC"
+      "SELECT * FROM plots WHERE is_deleted = 1 ORDER BY updated_at DESC",
     );
     return rows;
   },
@@ -2509,7 +2516,7 @@ const Plot = {
   async restorePlot(id) {
     const [result] = await db.query(
       "UPDATE plots SET is_deleted = 0 WHERE id = ? AND is_deleted = 1",
-      [id]
+      [id],
     );
     return result.affectedRows > 0;
   },
@@ -2517,7 +2524,7 @@ const Plot = {
   async findByKhataNo(khata_no, type, project_id) {
     const [rows] = await db.query(
       "SELECT * FROM plots WHERE khata_no = ? AND type = ? AND project_id = ?",
-      [khata_no, type, project_id]
+      [khata_no, type, project_id],
     );
     return rows;
   },
@@ -2526,7 +2533,7 @@ const Plot = {
     await db.query(
       `UPDATE plots SET payment_status = ?
       WHERE id = ? AND is_deleted = 0`,
-      [status, plot_id]
+      [status, plot_id],
     );
     return true;
   },
@@ -2600,7 +2607,7 @@ const Plot = {
       AND status = 'processing'
     LIMIT 1
     `,
-      [plot_id]
+      [plot_id],
     );
 
     return rows.length > 0;
@@ -2620,7 +2627,7 @@ const Plot = {
     const [rows] = await db.query(
       `SELECT * FROM plot_payments 
      WHERE plot_id = ?`,
-      [plot_id]
+      [plot_id],
     );
     return rows;
   },
@@ -2660,7 +2667,7 @@ const Plot = {
   async addPaymentProof(land_cost_id, filePath) {
     const [result] = await db.query(
       `UPDATE plot_payments SET payment_proof = ? WHERE id = ?`,
-      [filePath, land_cost_id]
+      [filePath, land_cost_id],
     );
     return result;
   },
@@ -2699,7 +2706,7 @@ const Plot = {
         ifsc,
         transaction_no,
         land_cost_id,
-      ]
+      ],
     );
     return true;
   },
@@ -2713,7 +2720,7 @@ const Plot = {
       AND project_id = ?
       AND type = ?
     `,
-      [unique_id, project_id, type]
+      [unique_id, project_id, type],
     );
     return rows;
   },
@@ -2728,7 +2735,7 @@ const Plot = {
       AND project_id = ?
       AND type = ?
     `,
-      [unique_id, project_id, type]
+      [unique_id, project_id, type],
     );
 
     if (!rows.length) return false;
@@ -2743,7 +2750,7 @@ const Plot = {
         updated_at = NOW()
     WHERE id = ?
     `,
-      [plotId]
+      [plotId],
     );
 
     // update plot_payments table
@@ -2756,7 +2763,7 @@ const Plot = {
       AND project_id = ?
       AND type = ?
     `,
-      [unique_id, project_id, type]
+      [unique_id, project_id, type],
     );
 
     return true;

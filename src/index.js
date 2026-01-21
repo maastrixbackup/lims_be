@@ -12,6 +12,9 @@ const khataRoutes = require("./routes/khataRoutes");
 const govtkhataRoutes = require("./routes/govtKhataRoutes");
 const dashboardRoutes = require("./routes/dashboardRoutes");
 const reportRoutes = require("./routes/reportRoutes");
+
+const forestLandRoutes = require("./routes/forestLandRoutes");
+
 const authMiddleware = require("./middleware/authMiddleware");
 const cors = require("cors");
 
@@ -25,7 +28,7 @@ app.use(
     origin: "*",
     methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     credentials: true,
-  })
+  }),
 );
 
 // Serve static files from uploads folder
@@ -44,6 +47,8 @@ app.use("/api/khata", authMiddleware, khataRoutes);
 app.use("/api/govtkhata", authMiddleware, govtkhataRoutes);
 app.use("/api", authMiddleware, dashboardRoutes);
 app.use("/api/report", authMiddleware, reportRoutes);
+
+app.use("/api/forestland", authMiddleware, forestLandRoutes);
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
