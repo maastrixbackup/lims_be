@@ -75,7 +75,7 @@ const addGovtKhata = async (req, res) => {
       "success",
       "Govt khata created successfully",
       safeRequestPayload,
-      khata
+      khata,
     );
 
     return res.status(201).json({
@@ -97,7 +97,7 @@ const addGovtKhata = async (req, res) => {
       "failure",
       err.message,
       safeRequestPayload,
-      null
+      null,
     );
     console.error("Create Khata Error:", err);
     return res.status(500).json({ success: false, message: "Server error" });
@@ -135,12 +135,15 @@ const govtKhataList = async (req, res) => {
       offset,
     });
 
+    const totalPages = Math.ceil(result.total / limit);
+
     return res.status(200).json({
       success: true,
       message: "Govt khata list fetched successfully",
       page,
       limit,
       total: result.total,
+      totalPages,
       data: result.data,
     });
   } catch (err) {
@@ -217,7 +220,7 @@ const updateGovtKhata = async (req, res) => {
       "success",
       "Govt khata updated successfully",
       req.body,
-      updatedKhata
+      updatedKhata,
     );
 
     return res.status(200).json({
@@ -232,7 +235,7 @@ const updateGovtKhata = async (req, res) => {
       "failure",
       err.message,
       req.body,
-      null
+      null,
     );
 
     console.error("Edit Govt Khata Error:", err);
@@ -272,7 +275,7 @@ const deleteGovtKhata = async (req, res) => {
       "success",
       "Govt khata permanently deleted",
       { id },
-      existingKhata
+      existingKhata,
     );
 
     return res.status(200).json({
@@ -286,7 +289,7 @@ const deleteGovtKhata = async (req, res) => {
       "failure",
       err.message,
       { id },
-      null
+      null,
     );
 
     console.error("Delete Govt Khata Error:", err);

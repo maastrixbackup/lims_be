@@ -421,12 +421,15 @@ const govtPlotList = async (req, res) => {
         : null,
     }));
 
+    const totalPages = Math.ceil(result.total / limit);
+
     return res.status(200).json({
       success: true,
       message: "Govt plots fetched successfully",
       page,
       limit,
       total: result.total,
+      totalPages,
       data: dataWithUrls,
     });
   } catch (err) {
