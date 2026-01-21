@@ -63,14 +63,14 @@ const uploadPlots = async (req, res) => {
     }; //These are required fields but These columns are set to null in the table because there are some blank values in the Excel file.
 
     const excelColumns = Object.keys(data[0]).map((col) =>
-      col.trim().toLowerCase()
+      col.trim().toLowerCase(),
     );
 
     // Detect missing required columns (considering aliases)
     const missingColumns = Object.keys(requiredColumns).filter((mainCol) => {
       const mainLower = mainCol.trim().toLowerCase();
       const aliases = (requiredColumns[mainCol] || []).map((a) =>
-        a.trim().toLowerCase()
+        a.trim().toLowerCase(),
       );
       const allOptions = [mainLower, ...aliases];
       return !allOptions.some((option) => excelColumns.includes(option));
@@ -81,7 +81,7 @@ const uploadPlots = async (req, res) => {
       return res.status(400).json({
         success: false,
         message: `Invalid Excel format. Missing columns: ${missingColumns.join(
-          ", "
+          ", ",
         )}`,
       });
     }
@@ -89,7 +89,7 @@ const uploadPlots = async (req, res) => {
     const insertedVillages = await Village.insertVillagesFromExcel(
       data,
       project_id,
-      type
+      type,
     );
 
     const insertedPlots = await Plot.bulkInsert(data, project_id, type);
@@ -111,7 +111,7 @@ const uploadPlots = async (req, res) => {
       "success",
       "Plots inserted successfully",
       { project_id },
-      null
+      null,
     );
     return res.status(201).json({
       success: true,
@@ -127,7 +127,7 @@ const uploadPlots = async (req, res) => {
       "failure",
       err.message,
       null,
-      null
+      null,
     );
     console.error("Upload Plots Error:", err);
     return res.status(500).json({ success: false, message: "Server error" });
@@ -247,6 +247,7 @@ const plotDocumentList = async (req, res) => {
       project_id: r.project_id,
       type: r.type,
       name: r.original_filename,
+      download_name: r.filename,
       uploadedAt: r.created_at,
       documentUrl: `${req.protocol}://${req.get("host")}${
         req.get("host").includes("localhost") ? "" : "/api"
@@ -276,23 +277,33 @@ const plotDocumentDelete = async (req, res) => {
         message: "File name is required",
       });
     }
-    const filePath = path.join(process.cwd(), "uploads/excels", fileName);
 
-    if (!fs.existsSync(filePath)) {
+    const doc = await Plot.findDocumentByFilename(fileName);
+
+    if (!doc) {
       return res.status(404).json({
         success: false,
-        message: "File not found",
+        message: "Document record not found",
       });
     }
 
-    fs.unlinkSync(filePath);
+    const filePath = path.join(process.cwd(), doc.file_path);
+
+    // delete file if exists
+    if (fs.existsSync(filePath)) {
+      fs.unlinkSync(filePath);
+    }
+
+    // delete DB record
+    await Plot.deleteDocumentByFilename(fileName);
+
     await logAction(
       userId,
       "plot excel delete",
       "success",
       "Plot Excel file deleted successfully",
       { fileName },
-      null
+      null,
     );
 
     return res.status(200).json({
@@ -309,7 +320,7 @@ const plotDocumentDelete = async (req, res) => {
       "failed",
       "Failed to delete plot Excel file",
       null,
-      err.message
+      err.message,
     );
 
     return res.status(500).json({
@@ -397,12 +408,12 @@ const downloadPlotDocument = async (req, res) => {
     // Set headers (IMPORTANT for Chrome)
     res.setHeader(
       "Content-Type",
-      "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+      "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
     );
 
     res.setHeader(
       "Content-Disposition",
-      `attachment; filename="${doc.original_filename || doc.filename}"`
+      `attachment; filename="${doc.original_filename || doc.filename}"`,
     );
 
     // Stream file
@@ -522,13 +533,13 @@ const createPlot = async (req, res) => {
     });
 
     const existingPlot = await Plot.findByCaseFileNo(
-      safeRequestPayload.la_case_file_no
+      safeRequestPayload.la_case_file_no,
     );
     let plot, message;
     if (existingPlot) {
       plot = await Plot.updateByCaseFileNo(
         safeRequestPayload.la_case_file_no,
-        safeRequestPayload
+        safeRequestPayload,
       );
       message = "Plot updated successfully (existing LA Case File No.)";
       await logAction(
@@ -537,7 +548,7 @@ const createPlot = async (req, res) => {
         "success",
         message,
         safeRequestPayload,
-        plot
+        plot,
       );
     } else {
       plot = await Plot.create(safeRequestPayload);
@@ -549,14 +560,14 @@ const createPlot = async (req, res) => {
         "success",
         message,
         safeRequestPayload,
-        plot
+        plot,
       );
     }
 
     await Village.insertVillageForManualPlot(
       safeRequestPayload,
       safeRequestPayload.project_id,
-      safeRequestPayload.type
+      safeRequestPayload.type,
     );
 
     if (safeRequestPayload.khata_no) {
@@ -578,7 +589,7 @@ const createPlot = async (req, res) => {
       "failure",
       err.message,
       safeRequestPayload,
-      null
+      null,
     );
     console.error(err);
     res.status(500).json({ success: false, message: err.message });
@@ -599,7 +610,7 @@ const updatePlot = async (req, res) => {
     }
     if (safeRequestPayload.la_case_file_no) {
       const duplicate = await Plot.findByCaseFileNo(
-        safeRequestPayload.la_case_file_no
+        safeRequestPayload.la_case_file_no,
       );
       if (duplicate && duplicate.id !== Number(id)) {
         return res.status(400).json({
@@ -615,7 +626,7 @@ const updatePlot = async (req, res) => {
       "success",
       "Plot updated",
       safeRequestPayload,
-      updated
+      updated,
     );
     res.status(200).json({
       success: true,
@@ -629,7 +640,7 @@ const updatePlot = async (req, res) => {
       "failure",
       err.message,
       safeRequestPayload,
-      null
+      null,
     );
     res.status(500).json({ success: false, message: err.message });
   }
@@ -652,7 +663,7 @@ const deletePlot = async (req, res) => {
       "success",
       "Plot soft deleted",
       { plotId },
-      null
+      null,
     );
 
     return res
@@ -665,7 +676,7 @@ const deletePlot = async (req, res) => {
       "failure",
       err.message,
       { plotId },
-      null
+      null,
     );
     res.status(500).json({ success: false, message: err.message });
   }
@@ -712,7 +723,7 @@ const restorePlot = async (req, res) => {
       "success",
       "Plot restored successfully",
       { id },
-      null
+      null,
     );
 
     return res.status(200).json({
@@ -726,7 +737,7 @@ const restorePlot = async (req, res) => {
       "failure",
       err.message,
       { id },
-      null
+      null,
     );
     res.status(500).json({ success: false, message: err.message });
   }
@@ -856,7 +867,7 @@ const paymentReady = async (req, res) => {
         "success",
         "Payment marked as ready",
         { plot_id, payment_status },
-        []
+        [],
       );
 
       return res.status(200).json({
@@ -911,7 +922,7 @@ const paymentReady = async (req, res) => {
       "success",
       "Payment processing started",
       { plot_id },
-      records
+      records,
     );
 
     return res.status(200).json({
@@ -1140,7 +1151,7 @@ const landCostPaymentUpload = async (req, res) => {
       "success",
       "Payment proof uploaded successfully",
       { land_cost_id },
-      null
+      null,
     );
 
     res.status(200).json({
@@ -1156,7 +1167,7 @@ const landCostPaymentUpload = async (req, res) => {
       "failure",
       err.message,
       null,
-      null
+      null,
     );
 
     res.status(500).json({
@@ -1239,12 +1250,12 @@ const exportPlot = async (req, res) => {
 
     res.setHeader(
       "Content-Type",
-      "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+      "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
     );
 
     res.setHeader(
       "Content-Disposition",
-      "attachment; filename=plot_report.xlsx"
+      "attachment; filename=plot_report.xlsx",
     );
 
     await workbook.xlsx.write(res);
@@ -1256,7 +1267,7 @@ const exportPlot = async (req, res) => {
       "success",
       "Plot exported successfully",
       { project_id, type },
-      null
+      null,
     );
   } catch (err) {
     console.error("Export Plot Error:", err);
@@ -1313,7 +1324,7 @@ const updatePlotPayment = async (req, res) => {
       "success",
       "Payment details updated",
       safeRequestPayload,
-      updateData
+      updateData,
     );
 
     res.status(200).json({
@@ -1329,7 +1340,7 @@ const updatePlotPayment = async (req, res) => {
       "failure",
       err.message,
       safeRequestPayload,
-      null
+      null,
     );
 
     res.status(500).json({
@@ -1385,7 +1396,7 @@ const markPaymentCompleted = async (req, res) => {
       "success",
       "Payment Completed",
       { unique_id, project_id, type },
-      null
+      null,
     );
 
     res.status(200).json({
@@ -1401,7 +1412,7 @@ const markPaymentCompleted = async (req, res) => {
       "failure",
       err.message,
       req.body,
-      null
+      null,
     );
 
     res.status(500).json({
