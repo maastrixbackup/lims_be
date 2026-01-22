@@ -80,6 +80,62 @@ const addForestLand = async (req, res) => {
   }
 };
 
+const updateForestLand = async (req, res) => {
+  const userId = req.user.id;
+  const { id } = req.params;
+
+  try {
+    const { schedule_type } = req.body;
+
+    if (!schedule_type) {
+      return res.status(400).json({
+        success: false,
+        message: "Schedule type is required",
+      });
+    }
+
+    const updatedData = await ForestLand.update(id, req.body);
+
+    if (!updatedData) {
+      return res.status(404).json({
+        success: false,
+        message: "Forest land record not found",
+      });
+    }
+
+    await logAction(
+      userId,
+      "update forest land",
+      "success",
+      "Forest land updated successfully",
+      req.body,
+      updatedData
+    );
+
+    res.status(200).json({
+      success: true,
+      message: "Forest Land Schedule updated successfully",
+      updatedData,
+    });
+  } catch (err) {
+    await logAction(
+      userId,
+      "update forest land",
+      "failure",
+      err.message,
+      req.body,
+      null
+    );
+
+    console.error(err);
+    res.status(500).json({
+      success: false,
+      message: "Server error",
+    });
+  }
+};
+
 module.exports = {
   addForestLand,
+  updateForestLand
 };
