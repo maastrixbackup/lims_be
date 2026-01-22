@@ -80,6 +80,53 @@ const addForestLand = async (req, res) => {
   }
 };
 
+const forestLandList = async (req, res) => {
+  try {
+    let {
+      project_master_id,
+      schedule_type,
+      page = 1,
+      limit = 10,
+    } = req.query;
+
+    if (!project_master_id || !schedule_type) {
+      return res.status(400).json({
+        success: false,
+        message: "Project master id and schedule type is required",
+      });
+    }
+
+    page = parseInt(page);
+    limit = parseInt(limit);
+    const offset = (page - 1) * limit;
+
+    const result = await ForestLand.list({
+      project_master_id,
+      schedule_type,
+      limit,
+      offset,
+    });
+
+    const totalPages = Math.ceil(result.total / limit);
+
+    res.status(200).json({
+      success: true,
+      message: "Forest Land Schedule list fetched successfully",
+      page,
+      limit,
+      total: result.total,
+      totalPages,
+      data: result.data,
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({
+      success: false,
+      message: "Server error",
+    });
+  }
+};
+
 const updateForestLand = async (req, res) => {
   const userId = req.user.id;
   const { id } = req.params;
@@ -137,5 +184,6 @@ const updateForestLand = async (req, res) => {
 
 module.exports = {
   addForestLand,
-  updateForestLand
+  updateForestLand,
+  forestLandList
 };
