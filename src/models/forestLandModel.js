@@ -73,6 +73,38 @@ const ForestLand = {
   //   return rows[0];
   // },
 
+  async list({ project_master_id, schedule_type, limit, offset }) {
+    let whereClause = `WHERE project_master_id = ?`;
+    const params = [project_master_id];
+
+    if (schedule_type) {
+      whereClause += ` AND schedule_type = ?`;
+      params.push(schedule_type);
+    }
+
+    const listSql = `
+      SELECT *
+      FROM forest_land_schedule
+      ${whereClause}
+      ORDER BY id DESC
+      LIMIT ? OFFSET ?
+    `;
+
+    const countSql = `
+      SELECT COUNT(*) AS total
+      FROM forest_land_schedule
+      ${whereClause}
+    `;
+
+    const [rows] = await db.query(listSql, [...params, limit, offset]);
+    const [[count]] = await db.query(countSql, params);
+
+    return {
+      data: rows,
+      total: count.total,
+    };
+  },
+
   async update(id, data) {
     const sql = `
     UPDATE forest_land_schedule
