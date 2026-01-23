@@ -74,7 +74,7 @@ const ForestLand = {
   // },
 
   async list({ project_master_id, schedule_type, limit, offset }) {
-    let whereClause = `WHERE project_master_id = ?`;
+    let whereClause = `WHERE project_master_id = ? AND is_deleted = 0`;
     const params = [project_master_id];
 
     if (schedule_type) {
@@ -129,7 +129,7 @@ const ForestLand = {
       ca_area_ha = ?,
       patch_name = ?,
       remarks = ?
-    WHERE id = ?
+    WHERE id = ? AND is_deleted = 0
   `;
 
     const values = [
@@ -174,13 +174,28 @@ const ForestLand = {
 
   async softDelete(id) {
     const sql = `
-    UPDATE forest_land_schedule
-    SET is_active = 0
-    WHERE id = ?
+      UPDATE forest_land_schedule
+      SET is_deleted = 1
+      WHERE id = ? AND is_deleted = 0
     `;
+
     const [result] = await db.query(sql, [id]);
-    return result.affectedRows;
+
+    if (result.affectedRows === 0) {
+      return null;
+    }
+
+    return { id };
   },
+  // async softDelete(id) {
+  //   const sql = `
+  //   UPDATE forest_land_schedule
+  //   SET is_active = 0
+  //   WHERE id = ?
+  //   `;
+  //   const [result] = await db.query(sql, [id]);
+  //   return result.affectedRows;
+  // },
 };
 
 module.exports = ForestLand;

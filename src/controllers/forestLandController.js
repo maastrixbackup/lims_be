@@ -182,8 +182,54 @@ const updateForestLand = async (req, res) => {
   }
 };
 
+const deleteForestLand = async (req, res) => {
+  const userId = req.user.id;
+  const { id } = req.params;
+
+  try {
+    const deleted = await ForestLand.softDelete(id);
+
+    if (!deleted) {
+      return res.status(404).json({
+        success: false,
+        message: "Forest land record not found",
+      });
+    }
+
+    await logAction(
+      userId,
+      "delete forest land",
+      "success",
+      "Forest land deleted successfully",
+      { id },
+      null
+    );
+
+    res.status(200).json({
+      success: true,
+      message: "Forest land deleted successfully",
+    });
+  } catch (err) {
+    await logAction(
+      userId,
+      "delete forest land",
+      "failure",
+      err.message,
+      { id },
+      null
+    );
+
+    console.error(err);
+    res.status(500).json({
+      success: false,
+      message: "Server error",
+    });
+  }
+};
+
 module.exports = {
   addForestLand,
   updateForestLand,
-  forestLandList
+  forestLandList,
+  deleteForestLand
 };
