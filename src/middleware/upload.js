@@ -16,7 +16,7 @@ const excelStorage = multer.diskStorage({
 const excelFileFilter = (req, file, cb) => {
   if (
     file.mimetype ===
-      "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" ||
+    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" ||
     file.mimetype === "application/vnd.ms-excel"
   ) {
     cb(null, true);
@@ -224,6 +224,42 @@ const uploadGovtPlotExcel = multer({
   limits: { fileSize: 10 * 1024 * 1024 }, // 10 MB
 });
 
+const EDSStorage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    cb(null, "uploads/eds");
+  },
+  filename: (req, file, cb) => {
+    const safeName = file.originalname.replace(/\s+/g, "_");
+    const uniqueName = Date.now() + "_" + safeName;
+    cb(null, uniqueName);
+  },
+});
+
+const edsFileFilter = (req, file, cb) => {
+  const allowedMimeTypes = [
+    "application/pdf",
+    "application/vnd.ms-excel",
+    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+  ];
+
+  if (allowedMimeTypes.includes(file.mimetype)) {
+    cb(null, true);
+  } else {
+    cb(
+      new Error("Only PDF or Excel files are allowed for EDS document"),
+      false
+    );
+  }
+};
+
+const uploadEDS = multer({
+  storage: EDSStorage,
+  fileFilter: edsFileFilter,
+  limits: {
+    fileSize: 10 * 1024 * 1024, // 10 MB
+  },
+});
+
 module.exports = {
   uploadPlotExcel,
   uploadProfilePic,
@@ -232,4 +268,5 @@ module.exports = {
   uploadLandCostPayment,
   uploadGovtPlotAttachments,
   uploadGovtPlotExcel,
+  uploadEDS
 };

@@ -227,9 +227,125 @@ const deleteForestLand = async (req, res) => {
   }
 };
 
+// const addForestProject = async (req, res) => {
+//   const userId = req.user?.id;
+
+//   try {
+//     const { project_id, project_name } = req.body;
+
+//     // Minimum required fields
+//     if (!project_id || !project_name) {
+//       return res.status(400).json({
+//         success: false,
+//         message: "project_id and project_name are required",
+//       });
+//     }
+
+//     const project = await ForestLand.createForestProject(req.body);
+
+//     await logAction(
+//       userId,
+//       "create forest project",
+//       "success",
+//       "Forest project created successfully",
+//       req.body,
+//       project
+//     );
+
+//     return res.status(201).json({
+//       success: true,
+//       message: "Forest Project created successfully",
+//       data: project,
+//     });
+//   } catch (err) {
+//     console.error(err);
+
+//     // Duplicate project_id handling
+//     if (err.code === "ER_DUP_ENTRY") {
+//       return res.status(409).json({
+//         success: false,
+//         message: "Project Code already exists",
+//       });
+//     }
+
+//     await logAction(
+//       userId,
+//       "create forest project",
+//       "failure",
+//       err.message,
+//       req.body,
+//       null
+//     );
+
+//     return res.status(500).json({
+//       success: false,
+//       message: "Server error",
+//     });
+//   }
+// };
+
+const addForestProject = async (req, res) => {
+  try {
+    const {
+      project_id,
+      project_name,
+      eds_flag
+    } = req.body;
+
+    // Basic required fields
+    if (!project_id || !project_name) {
+      return res.status(400).json({
+        success: false,
+        message: "project_id and project_name are required",
+      });
+    }
+
+    // Convert eds_flag to number
+    const edsFlag = Number(eds_flag);
+
+    // RULE 1: eds_flag = 1 → document mandatory
+    if (edsFlag === 1 && !req.file) {
+      return res.status(400).json({
+        success: false,
+        message: "EDS document is required when EDS flag is Yes",
+      });
+    }
+
+    // RULE 2: eds_flag = 0 → document should not be uploaded
+    if (edsFlag === 0 && req.file) {
+      return res.status(400).json({
+        success: false,
+        message: "EDS document should not be uploaded when EDS flag is No",
+      });
+    }
+
+    const payload = {
+      ...req.body,
+      eds_flag: edsFlag,
+      eds_document_path: req.file ? req.file.path : null,
+    };
+
+    const project = await ForestLand.createForestProject(payload);
+
+    return res.status(201).json({
+      success: true,
+      message: "Forest Project created successfully",
+      data: project,
+    });
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({
+      success: false,
+      message: err.message || "Server error",
+    });
+  }
+};
+
+
 module.exports = {
   addForestLand,
   updateForestLand,
   forestLandList,
-  deleteForestLand
+  deleteForestLand,
+  addForestProject
 };
