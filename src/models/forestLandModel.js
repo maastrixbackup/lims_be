@@ -187,15 +187,62 @@ const ForestLand = {
 
     return { id };
   },
-  // async softDelete(id) {
-  //   const sql = `
-  //   UPDATE forest_land_schedule
-  //   SET is_active = 0
-  //   WHERE id = ?
-  //   `;
-  //   const [result] = await db.query(sql, [id]);
-  //   return result.affectedRows;
-  // },
+
+  async createForestProject(data) {
+    const sql = `
+      INSERT INTO forest_project_master (
+        project_id,
+        proposal_no,
+        project_name,
+        user_agency,
+        sector,
+        state,
+        district,
+        tahasil,
+        mouza,
+        range_division,
+        forest_type,
+        total_project_area_ha,
+        forest_area_ha,
+        non_forest_area_ha,
+        project_status,
+        current_stage,
+        eds_flag,
+        eds_document_path
+      )
+      VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+    `;
+
+    const values = [
+      data.project_id,
+      emptyToNull(data.proposal_no),
+      data.project_name,
+      emptyToNull(data.user_agency),
+      emptyToNull(data.sector),
+      emptyToNull(data.state),
+      emptyToNull(data.district),
+      emptyToNull(data.tahasil),
+      emptyToNull(data.mouza),
+      emptyToNull(data.range_division),
+      emptyToNull(data.forest_type),
+      emptyToNull(data.total_project_area_ha),
+      emptyToNull(data.forest_area_ha),
+      emptyToNull(data.non_forest_area_ha),
+      emptyToNull(data.project_status),
+      emptyToNull(data.current_stage),
+      emptyToNull(data.eds_flag),
+      emptyToNull(data.eds_document_path),
+    ];
+
+    const [result] = await db.query(sql, values);
+
+    const [rows] = await db.query(
+      `SELECT * FROM forest_project_master WHERE id = ?`,
+      [result.insertId]
+    );
+
+    return rows[0];
+  },
 };
 
 module.exports = ForestLand;
