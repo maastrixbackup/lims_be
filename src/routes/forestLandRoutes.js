@@ -1,7 +1,7 @@
 const express = require("express");
 const router = express.Router();
 const multer = require("multer");
-const { addForestLand, updateForestLand, forestLandList, deleteForestLand, addForestProject } = require("../controllers/forestLandController");
+const { addForestLand, updateForestLand, forestLandList, deleteForestLand, addForestProject, forestLandAbstract } = require("../controllers/forestLandController");
 
 const {
     uploadEDS
@@ -11,6 +11,8 @@ router.post("/addForestLand", addForestLand);
 router.put("/updateForestLand/:id", updateForestLand);
 router.get("/forestLandList", forestLandList);
 router.delete("/deleteForestLand/:id", deleteForestLand);
+router.get("/forestLandAbstract", forestLandAbstract);
+
 
 // router.post("/addForestProject", addForestProject);
 router.post(

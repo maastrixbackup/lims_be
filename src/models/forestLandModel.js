@@ -188,6 +188,30 @@ const ForestLand = {
     return { id };
   },
 
+  async getAbstract(project_master_id = null) {
+    let whereClause = `WHERE is_deleted = 0`;
+    const params = [];
+
+    if (project_master_id) {
+      whereClause += ` AND project_master_id = ?`;
+      params.push(project_master_id);
+    }
+
+    const sql = `
+    SELECT
+      schedule_type,
+      COALESCE(SUM(total_area_ha), 0) AS total_area,
+      COALESCE(SUM(proposed_acquired_area_ha), 0) AS proposed_area,
+      COALESCE(SUM(digital_area_ha), 0) AS digital_area
+    FROM forest_land_schedule
+    ${whereClause}
+    GROUP BY schedule_type
+  `;
+
+    const [rows] = await db.query(sql, params);
+    return rows;
+  },
+
   async createForestProject(data) {
     const sql = `
       INSERT INTO forest_project_master (
