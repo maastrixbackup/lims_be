@@ -227,101 +227,101 @@ const deleteForestLand = async (req, res) => {
   }
 };
 
-const forestLandAbstract = async (req, res) => {
-  try {
-    const { project_master_id } = req.query;
+// const forestLandAbstract = async (req, res) => {
+//   try {
+//     const { project_master_id } = req.query;
 
-    const rows = await ForestLand.getAbstract(
-      project_master_id || null
-    );
+//     const rows = await ForestLand.getAbstract(
+//       project_master_id || null
+//     );
 
-    // Default buckets
-    const buckets = {
-      FOREST_AREA: { total: 0, proposed: 0, digital: 0 },
-      NON_FOREST_AREA: { total: 0, proposed: 0, digital: 0 },
-      CA_LAND: { total: 0, proposed: 0, digital: 0 },
-      ACA_LAND: { total: 0, proposed: 0, digital: 0 },
-      OTHER: { total: 0, proposed: 0, digital: 0 },
-    };
+//     // Default buckets
+//     const buckets = {
+//       FOREST_AREA: { total: 0, proposed: 0, digital: 0 },
+//       NON_FOREST_AREA: { total: 0, proposed: 0, digital: 0 },
+//       CA_LAND: { total: 0, proposed: 0, digital: 0 },
+//       ACA_LAND: { total: 0, proposed: 0, digital: 0 },
+//       OTHER: { total: 0, proposed: 0, digital: 0 },
+//     };
 
-    rows.forEach(r => {
-      buckets[r.schedule_type] = {
-        total: r.total_area,
-        proposed: r.proposed_area,
-        digital: r.digital_area,
-      };
-    });
+//     rows.forEach(r => {
+//       buckets[r.schedule_type] = {
+//         total: r.total_area,
+//         proposed: r.proposed_area,
+//         digital: r.digital_area,
+//       };
+//     });
 
-    const totalProjectArea = {
-      total:
-        buckets.FOREST_AREA.total +
-        buckets.NON_FOREST_AREA.total,
-      proposed:
-        buckets.FOREST_AREA.proposed +
-        buckets.NON_FOREST_AREA.proposed,
-      digital:
-        buckets.FOREST_AREA.digital +
-        buckets.NON_FOREST_AREA.digital,
-    };
+//     const totalProjectArea = {
+//       total:
+//         buckets.FOREST_AREA.total +
+//         buckets.NON_FOREST_AREA.total,
+//       proposed:
+//         buckets.FOREST_AREA.proposed +
+//         buckets.NON_FOREST_AREA.proposed,
+//       digital:
+//         buckets.FOREST_AREA.digital +
+//         buckets.NON_FOREST_AREA.digital,
+//     };
 
-    const totalLandUnderFD = {
-      total:
-        totalProjectArea.total +
-        buckets.CA_LAND.total +
-        buckets.ACA_LAND.total,
-      proposed:
-        totalProjectArea.proposed +
-        buckets.CA_LAND.proposed +
-        buckets.ACA_LAND.proposed,
-      digital:
-        totalProjectArea.digital +
-        buckets.CA_LAND.digital +
-        buckets.ACA_LAND.digital,
-    };
+//     const totalLandUnderFD = {
+//       total:
+//         totalProjectArea.total +
+//         buckets.CA_LAND.total +
+//         buckets.ACA_LAND.total,
+//       proposed:
+//         totalProjectArea.proposed +
+//         buckets.CA_LAND.proposed +
+//         buckets.ACA_LAND.proposed,
+//       digital:
+//         totalProjectArea.digital +
+//         buckets.CA_LAND.digital +
+//         buckets.ACA_LAND.digital,
+//     };
 
-    res.status(200).json({
-      success: true,
-      scope: project_master_id ? "PROJECT" : "ALL_PROJECTS",
-      project_master_id: project_master_id || null,
-      data: [
-        {
-          label: "Total Forest Land",
-          ...buckets.FOREST_AREA,
-        },
-        {
-          label: "Total Non-Forest Land",
-          ...buckets.NON_FOREST_AREA,
-        },
-        {
-          label: "Total Project Area",
-          ...totalProjectArea,
-        },
-        {
-          label: "Total CA Land",
-          ...buckets.CA_LAND,
-        },
-        {
-          label: "Total ACA Land",
-          ...buckets.ACA_LAND,
-        },
-        {
-          label: "Total Land (Others, If any)",
-          ...buckets.OTHER,
-        },
-        {
-          label: "Total Land Under FD Framework",
-          ...totalLandUnderFD,
-        },
-      ],
-    });
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({
-      success: false,
-      message: "Server error",
-    });
-  }
-};
+//     res.status(200).json({
+//       success: true,
+//       scope: project_master_id ? "PROJECT" : "ALL_PROJECTS",
+//       project_master_id: project_master_id || null,
+//       data: [
+//         {
+//           label: "Total Forest Land",
+//           ...buckets.FOREST_AREA,
+//         },
+//         {
+//           label: "Total Non-Forest Land",
+//           ...buckets.NON_FOREST_AREA,
+//         },
+//         {
+//           label: "Total Project Area",
+//           ...totalProjectArea,
+//         },
+//         {
+//           label: "Total CA Land",
+//           ...buckets.CA_LAND,
+//         },
+//         {
+//           label: "Total ACA Land",
+//           ...buckets.ACA_LAND,
+//         },
+//         {
+//           label: "Total Land (Others, If any)",
+//           ...buckets.OTHER,
+//         },
+//         {
+//           label: "Total Land Under FD Framework",
+//           ...totalLandUnderFD,
+//         },
+//       ],
+//     });
+//   } catch (err) {
+//     console.error(err);
+//     res.status(500).json({
+//       success: false,
+//       message: "Server error",
+//     });
+//   }
+// };
 
 
 // const addForestProject = async (req, res) => {
@@ -380,6 +380,119 @@ const forestLandAbstract = async (req, res) => {
 //     });
 //   }
 // };
+
+
+const forestLandAbstract = async (req, res) => {
+  try {
+    const { project_master_id } = req.query;
+
+    const rows = await ForestLand.getAbstract(project_master_id || null);
+
+    // helper: force number
+    const toNum = (v) => Number(v || 0);
+
+    // helper: format to 2 decimals (final output)
+    const fmt = (v) => Number(v).toFixed(2);
+
+    // Default buckets (NUMBERS only)
+    const buckets = {
+      FOREST_AREA: { total: 0, proposed: 0, digital: 0 },
+      NON_FOREST_AREA: { total: 0, proposed: 0, digital: 0 },
+      CA_LAND: { total: 0, proposed: 0, digital: 0 },
+      ACA_LAND: { total: 0, proposed: 0, digital: 0 },
+      OTHER: { total: 0, proposed: 0, digital: 0 },
+    };
+
+    // Fill buckets (convert to numbers immediately)
+    rows.forEach((r) => {
+      if (buckets[r.schedule_type]) {
+        buckets[r.schedule_type] = {
+          total: toNum(r.total_area),
+          proposed: toNum(r.proposed_area),
+          digital: toNum(r.digital_area),
+        };
+      }
+    });
+
+    // Calculations (PURE NUMBERS)
+    const totalProjectArea = {
+      total:
+        buckets.FOREST_AREA.total +
+        buckets.NON_FOREST_AREA.total,
+      proposed:
+        buckets.FOREST_AREA.proposed +
+        buckets.NON_FOREST_AREA.proposed,
+      digital:
+        buckets.FOREST_AREA.digital +
+        buckets.NON_FOREST_AREA.digital,
+    };
+
+    const totalLandUnderFD = {
+      total:
+        totalProjectArea.total +
+        buckets.CA_LAND.total +
+        buckets.ACA_LAND.total,
+      proposed:
+        totalProjectArea.proposed +
+        buckets.CA_LAND.proposed +
+        buckets.ACA_LAND.proposed,
+      digital:
+        totalProjectArea.digital +
+        buckets.CA_LAND.digital +
+        buckets.ACA_LAND.digital,
+    };
+
+    // helper to format rows
+    const formatRow = (row) => ({
+      total: fmt(row.total),
+      proposed: fmt(row.proposed),
+      digital: fmt(row.digital),
+    });
+
+    res.status(200).json({
+      success: true,
+      scope: project_master_id ? "PROJECT" : "ALL_PROJECTS",
+      project_master_id: project_master_id || null,
+      data: [
+        {
+          label: "Total Forest Land",
+          ...formatRow(buckets.FOREST_AREA),
+        },
+        {
+          label: "Total Non-Forest Land",
+          ...formatRow(buckets.NON_FOREST_AREA),
+        },
+        {
+          label: "Total Project Area",
+          ...formatRow(totalProjectArea),
+        },
+        {
+          label: "Total CA Land",
+          ...formatRow(buckets.CA_LAND),
+        },
+        {
+          label: "Total ACA Land",
+          ...formatRow(buckets.ACA_LAND),
+        },
+        {
+          label: "Total Land (Others, If any)",
+          ...formatRow(buckets.OTHER),
+        },
+        {
+          label: "Total Land Under FD Framework",
+          ...formatRow(totalLandUnderFD),
+        },
+      ],
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({
+      success: false,
+      message: "Server error",
+    });
+  }
+};
+
 
 const addForestProject = async (req, res) => {
   try {
