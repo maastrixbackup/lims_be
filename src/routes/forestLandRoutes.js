@@ -1,7 +1,7 @@
 const express = require("express");
 const router = express.Router();
 const multer = require("multer");
-const { addForestLand, updateForestLand, forestLandList, deleteForestLand, addForestProject, forestLandAbstract } = require("../controllers/forestLandController");
+const { addForestLand, updateForestLand, forestLandList, deleteForestLand, addForestProject, forestLandAbstract, forestProjectList } = require("../controllers/forestLandController");
 
 const {
     uploadEDS
@@ -20,5 +20,6 @@ router.post(
     uploadEDS.single("eds_document"),
     addForestProject
 );
+router.get("/forestProjectList", forestProjectList);
 
 module.exports = router;
