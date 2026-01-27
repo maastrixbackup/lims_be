@@ -7,6 +7,7 @@ const {
   updateVillage,
   deleteVillage,
   exportVillage,
+  getTahasilList
 } = require("../controllers/villageController");
 
 router.post("/addVillage", addVillage);
@@ -14,5 +15,5 @@ router.get("/villageList", villageList);
 router.put("/updateVillage/:id", updateVillage);
 router.delete("/deleteVillage/:id", deleteVillage);
 router.get("/exportVillage", exportVillage);
-
+router.get("/getTahasilList", getTahasilList);
 module.exports = router;
