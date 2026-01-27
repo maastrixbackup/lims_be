@@ -331,6 +331,20 @@ const Village = {
 
     return result.insertId;
   },
+
+  async getTahasilList(district, type) {
+    let query = `SELECT DISTINCT tahasil FROM villages WHERE tahasil IS NOT NULL AND type = ?
+    `;
+    const params = [type];
+    if (district) {
+      query += ` AND district = ?`;
+      params.push(district);
+    }
+
+    query += ` ORDER BY tahasil ASC`;
+    const [rows] = await db.query(query, params);
+    return rows;
+  },
 };
 
 module.exports = Village;
