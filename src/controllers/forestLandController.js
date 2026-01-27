@@ -551,6 +551,43 @@ const addForestProject = async (req, res) => {
   }
 };
 
+const forestProjectList = async (req, res) => {
+  try {
+    let {
+      page = 1,
+      limit = 10,
+      project_id
+    } = req.query;
+
+    page = parseInt(page);
+    limit = parseInt(limit);
+    const offset = (page - 1) * limit;
+
+    const result = await ForestLand.listForestProjects({
+      page,
+      limit,
+      offset,
+      project_id
+    });
+
+    res.status(200).json({
+      success: true,
+      message: "Forest projects fetched successfully",
+      page,
+      limit,
+      total: result.total,
+      totalPages: Math.ceil(result.total / limit),
+      data: result.data,
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({
+      success: false,
+      message: "Server error",
+    });
+  }
+};
+
 
 module.exports = {
   addForestLand,
@@ -558,5 +595,6 @@ module.exports = {
   forestLandList,
   deleteForestLand,
   forestLandAbstract,
-  addForestProject
+  addForestProject,
+  forestProjectList
 };

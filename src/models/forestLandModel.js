@@ -267,6 +267,59 @@ const ForestLand = {
 
     return rows[0];
   },
+
+  async listForestProjects({ limit, offset, project_id }) {
+    let whereClause = `WHERE 1=1`;
+    const params = [];
+
+    if (project_id) {
+      whereClause += ` AND project_id = ?`;
+      params.push(project_id);
+    }
+
+    const listSql = `
+    SELECT
+      id,
+      project_id,
+      proposal_no,
+      project_name,
+      user_agency,
+      sector,
+      state,
+      district,
+      tahasil,
+      mouza,
+      range_division,
+      forest_type,
+      total_project_area_ha,
+      forest_area_ha,
+      non_forest_area_ha,
+      project_status,
+      current_stage,
+      eds_flag,
+      eds_document_path,
+      created_date,
+      updated_date
+    FROM forest_project_master
+    ${whereClause}
+    ORDER BY id DESC
+    LIMIT ? OFFSET ?
+  `;
+
+    const countSql = `
+    SELECT COUNT(*) AS total
+    FROM forest_project_master
+    ${whereClause}
+  `;
+
+    const [rows] = await db.query(listSql, [...params, limit, offset]);
+    const [[count]] = await db.query(countSql, params);
+
+    return {
+      data: rows,
+      total: count.total,
+    };
+  },
 };
 
 module.exports = ForestLand;
