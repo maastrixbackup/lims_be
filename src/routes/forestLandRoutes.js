@@ -9,7 +9,8 @@ const {
     addForestProject,
     forestLandAbstract,
     forestProjectList,
-    updateForestProject
+    updateForestProject,
+    deleteForestProject
 } = require("../controllers/forestLandController");
 
 const {
@@ -36,5 +37,7 @@ router.put(
     uploadEDS.single("eds_document"),
     updateForestProject
 );
+
+router.delete("/deleteForestProject/:id", deleteForestProject);
 
 module.exports = router;

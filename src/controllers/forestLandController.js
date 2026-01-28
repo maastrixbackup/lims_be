@@ -601,11 +601,11 @@ const forestProjectList = async (req, res) => {
 const updateForestProject = async (req, res) => {
   const userId = req.user.id;
   try {
-    const projectId = req.params.id;
+    const masterProjectId = req.params.id;
     const edsFlag = Number(req.body.eds_flag);
 
     // Fetch existing project
-    const existing = await ForestLand.getForestProjectById(projectId);
+    const existing = await ForestLand.getForestProjectById(masterProjectId);
     if (!existing) {
       return res.status(404).json({
         success: false,
@@ -674,7 +674,7 @@ const updateForestProject = async (req, res) => {
     };
 
     const updatedProject = await ForestLand.updateForestProject(
-      projectId,
+      masterProjectId,
       payload
     );
 
@@ -711,6 +711,54 @@ const updateForestProject = async (req, res) => {
   }
 };
 
+const deleteForestProject = async (req, res) => {
+  const userId = req.user.id;
+  try {
+    const masterProjectId = req.params.id;
+
+    // Check if project exists & not deleted
+    const existing = await ForestLand.getForestProjectById(masterProjectId);
+    if (!existing || existing.is_deleted === 1) {
+      return res.status(404).json({
+        success: false,
+        message: "Forest project not found",
+      });
+    }
+
+    // Soft delete
+    await ForestLand.deleteForestProject(masterProjectId);
+
+    await logAction(
+      userId,
+      "delete forest project",
+      "success",
+      "Forest project deleted",
+      { masterProjectId },
+      null
+    );
+
+    res.status(200).json({
+      success: true,
+      message: "Forest project deleted successfully",
+    });
+  } catch (err) {
+    console.error(err);
+
+    await logAction(
+      userId,
+      "delete forest project",
+      "failed",
+      "Forest project deleted",
+      { masterProjectId },
+      null
+    );
+
+    res.status(500).json({
+      success: false,
+      message: err.message || "Server error",
+    });
+  }
+};
 
 module.exports = {
   addForestLand,
@@ -720,5 +768,6 @@ module.exports = {
   forestLandAbstract,
   addForestProject,
   forestProjectList,
-  updateForestProject
+  updateForestProject,
+  deleteForestProject
 };
