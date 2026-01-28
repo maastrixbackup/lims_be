@@ -1,5 +1,7 @@
 const ForestLand = require("../models/forestLandModel");
 const logAction = require("../utils/logger");
+const fs = require("fs");
+const path = require("path");
 
 // validation helpers
 // const validateForestArea = (d) =>
@@ -570,6 +572,14 @@ const forestProjectList = async (req, res) => {
       project_id
     });
 
+    const data = result.data.map((r) => ({
+      ...r,
+      eds_document_url: r.eds_document_path
+        ? `${req.protocol}://${req.get("host")}${req.get("host").includes("localhost") ? "" : "/api"
+        }/${r.eds_document_path}`
+        : null,
+    }));
+
     res.status(200).json({
       success: true,
       message: "Forest projects fetched successfully",
@@ -577,13 +587,126 @@ const forestProjectList = async (req, res) => {
       limit,
       total: result.total,
       totalPages: Math.ceil(result.total / limit),
-      data: result.data,
+      data: data,
     });
   } catch (err) {
     console.error(err);
     res.status(500).json({
       success: false,
       message: "Server error",
+    });
+  }
+};
+
+const updateForestProject = async (req, res) => {
+  const userId = req.user.id;
+  try {
+    const projectId = req.params.id;
+    const edsFlag = Number(req.body.eds_flag);
+
+    // Fetch existing project
+    const existing = await ForestLand.getForestProjectById(projectId);
+    if (!existing) {
+      return res.status(404).json({
+        success: false,
+        message: "Forest project not found",
+      });
+    }
+
+    // If eds_flag = 1 then document required (existing or new)
+    if (edsFlag === 1 && !req.file && !existing.eds_document_path) {
+      return res.status(400).json({
+        success: false,
+        message: "EDS document is required when EDS flag is Yes",
+      });
+    }
+
+    // If new document uploaded & old document exists then delete old
+    if (existing.eds_document_path && (edsFlag === 0 || (edsFlag === 1 && req.file))
+    ) {
+      const oldPath = path.join(
+        process.cwd(), //project root
+        existing.eds_document_path
+      );
+
+      // console.log("Deleting file:", oldPath);
+
+      if (fs.existsSync(oldPath)) {
+        fs.unlinkSync(oldPath);
+      } else {
+        console.log("File not found:", oldPath);
+      }
+    }
+
+    // If eds_flag = 0 then document not allowed
+    if (edsFlag === 0 && req.file) {
+      return res.status(400).json({
+        success: false,
+        message: "EDS document should not be uploaded when EDS flag is No",
+      });
+    }
+
+    const payload = {
+      proposal_no: req.body.proposal_no,
+      project_name: req.body.project_name,
+      user_agency: req.body.user_agency,
+      sector: req.body.sector,
+      state: req.body.state,
+      district: req.body.district,
+      tahasil: req.body.tahasil,
+      mouza: req.body.mouza,
+      range_division: req.body.range_division,
+      forest_type: req.body.forest_type,
+      total_project_area_ha: req.body.total_project_area_ha,
+      forest_area_ha: req.body.forest_area_ha,
+      non_forest_area_ha: req.body.non_forest_area_ha,
+      project_status: req.body.project_status,
+      current_stage: req.body.current_stage,
+      eds_flag: edsFlag,
+
+      // document logic
+      eds_document_path:
+        edsFlag === 1
+          ? req.file
+            ? req.file.path
+            : existing.eds_document_path
+          : null,
+    };
+
+    const updatedProject = await ForestLand.updateForestProject(
+      projectId,
+      payload
+    );
+
+    await logAction(
+      userId,
+      "update forest project",
+      "success",
+      "Forest project updated",
+      payload,
+      updatedProject
+    );
+
+    res.status(200).json({
+      success: true,
+      message: "Forest project updated successfully",
+      data: updatedProject,
+    });
+  } catch (err) {
+    console.error(err);
+
+    await logAction(
+      userId,
+      "update forest project",
+      "failure",
+      err.message,
+      req.body,
+      null
+    );
+
+    res.status(500).json({
+      success: false,
+      message: err.message || "Server error",
     });
   }
 };
@@ -596,5 +719,6 @@ module.exports = {
   deleteForestLand,
   forestLandAbstract,
   addForestProject,
-  forestProjectList
+  forestProjectList,
+  updateForestProject
 };

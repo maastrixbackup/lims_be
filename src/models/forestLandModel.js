@@ -320,6 +320,74 @@ const ForestLand = {
       total: count.total,
     };
   },
+
+  async getForestProjectById(id) {
+    const [rows] = await db.query(
+      `
+      SELECT *
+      FROM forest_project_master
+      WHERE id = ?
+      `,
+      [id]
+    );
+
+    return rows.length ? rows[0] : null;
+  },
+
+  async updateForestProject(id, data) {
+    const sql = `
+    UPDATE forest_project_master
+    SET
+      proposal_no = ?,
+      project_name = ?,
+      user_agency = ?,
+      sector = ?,
+      state = ?,
+      district = ?,
+      tahasil = ?,
+      mouza = ?,
+      range_division = ?,
+      forest_type = ?,
+      total_project_area_ha = ?,
+      forest_area_ha = ?,
+      non_forest_area_ha = ?,
+      project_status = ?,
+      current_stage = ?,
+      eds_flag = ?,
+      eds_document_path = ?
+    WHERE id = ?
+  `;
+
+    const values = [
+      data.proposal_no,
+      data.project_name,
+      data.user_agency,
+      data.sector,
+      data.state,
+      data.district,
+      data.tahasil,
+      data.mouza,
+      data.range_division,
+      data.forest_type,
+      data.total_project_area_ha,
+      data.forest_area_ha,
+      data.non_forest_area_ha,
+      data.project_status,
+      data.current_stage,
+      data.eds_flag,
+      data.eds_document_path,
+      id,
+    ];
+
+    await db.query(sql, values);
+
+    const [rows] = await db.query(
+      `SELECT * FROM forest_project_master WHERE id = ?`,
+      [id]
+    );
+
+    return rows[0];
+  },
 };
 
 module.exports = ForestLand;
