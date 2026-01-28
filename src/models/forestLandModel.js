@@ -269,7 +269,8 @@ const ForestLand = {
   },
 
   async listForestProjects({ limit, offset, project_id }) {
-    let whereClause = `WHERE 1=1`;
+    // let whereClause = `WHERE 1=1`;
+    let whereClause = `WHERE is_deleted = 0`;
     const params = [];
 
     if (project_id) {
@@ -298,6 +299,7 @@ const ForestLand = {
       current_stage,
       eds_flag,
       eds_document_path,
+      is_deleted,
       created_date,
       updated_date
     FROM forest_project_master
@@ -326,7 +328,7 @@ const ForestLand = {
       `
       SELECT *
       FROM forest_project_master
-      WHERE id = ?
+      WHERE id = ? AND is_deleted = 0
       `,
       [id]
     );
@@ -355,7 +357,7 @@ const ForestLand = {
       current_stage = ?,
       eds_flag = ?,
       eds_document_path = ?
-    WHERE id = ?
+    WHERE id = ? AND is_deleted = 0
   `;
 
     const values = [
@@ -388,6 +390,19 @@ const ForestLand = {
 
     return rows[0];
   },
+
+  async deleteForestProject(projectId) {
+    const sql = `
+    UPDATE forest_project_master
+    SET is_deleted = 1,
+        updated_date = NOW()
+    WHERE id = ?
+  `;
+
+    const [result] = await db.query(sql, [projectId]);
+    return result;
+  },
+
 };
 
 module.exports = ForestLand;
