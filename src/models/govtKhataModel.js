@@ -153,6 +153,7 @@ const GovtKhata = {
     } = data;
     const [result] = await db.query(
       `INSERT INTO govt_khata(
+        unique_id,
         project_id,
         type,
         khata_no,
@@ -162,8 +163,15 @@ const GovtKhata = {
         lease_case_no,
         present_status,
         case_details
-      ) VALUES (?,?,?,?,?,?,?,?,?)`,
+      ) SELECT
+          CONCAT(p.client_code, '/', v.village_code, '/', ?) AS unique_id,
+          ?, ?, ?, ?, ?, ?, ?, ?
+        FROM projects p
+        JOIN villages v ON v.id = ?
+        WHERE p.id = ?
+        `,
       [
+        khata_no,
         project_id,
         type,
         khata_no,
@@ -173,6 +181,8 @@ const GovtKhata = {
         lease_case_no,
         present_status,
         case_details,
+        village_id,
+        project_id,
       ]
     );
     return {

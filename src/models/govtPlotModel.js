@@ -803,6 +803,31 @@ const GovtPlot = {
 
     return rows[0];
   },
+
+  async getAll(project_id = null, type = null, plot_id = null) {
+    let query = `SELECT * FROM plot_payments
+    WHERE status <> 'complete' AND type = 2
+    `;
+    const params = [];
+
+    if (project_id) {
+      query += ` AND project_id = ?`;
+      params.push(project_id);
+    }
+
+    if (type !== undefined && type !== null) {
+      query += ` AND type = ?`;
+      params.push(type);
+    }
+
+    if (plot_id) {
+      query += " AND plot_id = ?";
+      params.push(plot_id);
+    }
+
+    const [rows] = await db.query(query, params);
+    return rows;
+  },
 };
 
 module.exports = GovtPlot;

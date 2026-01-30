@@ -249,9 +249,8 @@ const plotDocumentList = async (req, res) => {
       name: r.original_filename,
       download_name: r.filename,
       uploadedAt: r.created_at,
-      documentUrl: `${req.protocol}://${req.get("host")}${
-        req.get("host").includes("localhost") ? "" : "/api"
-      }/uploads/excels/${r.filename}`,
+      documentUrl: `${req.protocol}://${req.get("host")}${req.get("host").includes("localhost") ? "" : "/api"
+        }/uploads/excels/${r.filename}`,
     }));
 
     return res.json({
@@ -1091,12 +1090,16 @@ const getAllPaymentReady = async (req, res) => {
         bank_ac: row.bank_ac,
         bank_name: row.bank_name,
         ifsc: row.ifsc,
+
         transaction_no: row.transaction_no,
         status: row.status,
         filename: row.payment_proof,
-        file_url: `${req.protocol}://${req.get("host")}${
-          req.get("host").includes("localhost") ? "" : "/api"
-        }/uploads/land_cost_payments/${row.payment_proof}`,
+        // file_url: `${req.protocol}://${req.get("host")}${req.get("host").includes("localhost") ? "" : "/api"
+        //   }/uploads/land_cost_payments/${row.payment_proof}`,
+        file_url: row.payment_proof
+          ? `${req.protocol}://${req.get("host")}${req.get("host").includes("localhost") ? "" : "/api"
+          }/uploads/land_cost_payments/${row.payment_proof}`
+          : null,
       });
     }
 
