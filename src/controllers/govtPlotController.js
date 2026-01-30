@@ -1003,6 +1003,90 @@ const paymentReady = async (req, res) => {
   }
 };
 
+const getAllPaymentReady = async (req, res) => {
+  try {
+    const { project_id, type, plot_id } = req.query;
+    if (!project_id) {
+      return res.status(400).json({
+        success: false,
+        message: "project_id is required",
+      });
+    }
+
+    if (!type) {
+      return res.status(400).json({
+        success: false,
+        message: "type is required",
+      });
+    }
+    // Get all records
+    let all = [];
+
+    if (plot_id) {
+      all = await GovtPlot.getAll(project_id, type, plot_id);
+    } else {
+      all = await GovtPlot.getAll(project_id, type);
+    }
+
+    if (!all.length) {
+      return res.status(404).json({
+        success: false,
+        message: "No payment records found",
+      });
+    }
+
+    // Group by unique_id
+    const groups = {};
+
+    for (const row of all) {
+      if (!groups[row.unique_id]) {
+        // Initialize group using first row values (all rows have same totals)
+        groups[row.unique_id] = {
+          unique_id: row.unique_id,
+          plot_id: row.plot_id,
+          project_id: row.project_id,
+          khata_no: row.khata_no,
+          type: row.type,
+          total_area: row.payment_area || 0, // or row.total_area if exists
+          total_compensation: row.total_compensation || 0,
+          tenants: [],
+        };
+      }
+
+      // Add each tenant row
+      groups[row.unique_id].tenants.push({
+        id: row.id,
+        plot_no: row.plot_no,
+        present_tenant: row.present_tenant_names,
+        payment_area: 0,
+        compensation_payment: 0,
+        apportionment_percent: 0,
+        bank_ac: row.bank_ac,
+        bank_name: row.bank_name,
+        ifsc: row.ifsc,
+        transaction_no: row.transaction_no,
+        status: row.status,
+        filename: row.payment_proof,
+        file_url: row.payment_proof
+          ? `${req.protocol}://${req.get("host")}${req.get("host").includes("localhost") ? "" : "/api"
+          }/uploads/land_cost_payments/${row.payment_proof}`
+          : null
+      });
+    }
+
+    return res.status(200).json({
+      success: true,
+      data: Object.values(groups),
+    });
+  } catch (err) {
+    console.error("Get All Payment Ready Error:", err);
+    return res.status(500).json({
+      success: false,
+      message: "Server error",
+    });
+  }
+};
+
 module.exports = {
   uploadGovtPlot,
   addGovtPlot,
@@ -1012,5 +1096,6 @@ module.exports = {
   govtPlotDocumentDelete,
   updateGovtPlot,
   downloadPlotDocument,
-  paymentReady
+  paymentReady,
+  getAllPaymentReady
 };

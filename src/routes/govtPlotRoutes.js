@@ -15,7 +15,8 @@ const {
   govtPlotDocumentDelete,
   updateGovtPlot,
   downloadPlotDocument,
-  paymentReady
+  paymentReady,
+  getAllPaymentReady
 } = require("../controllers/govtPlotController");
 
 //Routes
@@ -53,5 +54,6 @@ router.put(
 );
 
 router.post("/paymentReady", paymentReady);
+router.get("/getCompensationDetails", getAllPaymentReady);
 
 module.exports = router;
