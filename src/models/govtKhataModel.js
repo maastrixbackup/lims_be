@@ -66,11 +66,29 @@ const GovtKhata = {
       k.case_details,
     ]);
 
+    // await db.query(
+    //   `
+    //   INSERT INTO govt_khata
+    //     (project_id, type, khata_no, village_id, kissam_of_land, plot_no,
+    //      lease_case_no, present_status, case_details)
+    //   VALUES ?
+    //   ON DUPLICATE KEY UPDATE
+    //     kissam_of_land = VALUES(kissam_of_land),
+    //     plot_no = VALUES(plot_no),
+    //     lease_case_no = VALUES(lease_case_no),
+    //     present_status = VALUES(present_status),
+    //     case_details = VALUES(case_details),
+    //     updated_at = NOW()
+    //   `,
+    //   [values]
+    // );
+
     await db.query(
       `
       INSERT INTO govt_khata
-        (project_id, type, khata_no, village_id, kissam_of_land, plot_no,
-         lease_case_no, present_status, case_details)
+        (project_id, type, khata_no, village_id,
+        kissam_of_land, plot_no, lease_case_no,
+        present_status, case_details)
       VALUES ?
       ON DUPLICATE KEY UPDATE
         kissam_of_land = VALUES(kissam_of_land),
@@ -83,19 +101,39 @@ const GovtKhata = {
       [values]
     );
 
-    const [rowsInserted] = await db.query(
+    //Update unique_id (derived field)
+    await db.query(
       `
-      SELECT id, khata_no, village_id
-      FROM govt_khata
-      WHERE (project_id, type, khata_no, village_id) IN (?)
+      UPDATE govt_khata g
+      JOIN projects p ON p.id = g.project_id
+      JOIN villages v ON v.id = g.village_id
+      SET g.unique_id = CONCAT(p.client_code, '/', v.village_code, '/', g.khata_no)
+      WHERE g.project_id = ?
+        AND g.type = ?
       `,
-      [values.map((v) => [v[0], v[1], v[2], v[3]])]
+      [project_id, type]
     );
 
+    //Fetch inserted / updated IDs
     const resultMap = {};
-    rowsInserted.forEach((r) => {
-      resultMap[`${r.village_id}_${r.khata_no}`] = r.id;
-    });
+
+    for (const v of values) {
+      const [rows] = await db.query(
+        `
+        SELECT id
+        FROM govt_khata
+        WHERE project_id = ?
+          AND type = ?
+          AND khata_no = ?
+          AND village_id = ?
+        `,
+        [v[0], v[1], v[2], v[3]]
+      );
+
+      if (rows.length) {
+        resultMap[`${v[3]}_${v[2]}`] = rows[0].id;
+      }
+    }
 
     return resultMap;
   },
@@ -247,6 +285,14 @@ const GovtKhata = {
 
   async deleteKhataById(id) {
     await db.query(`DELETE FROM govt_khata WHERE id = ?`, [id]);
+  },
+
+  async getKhataByNumber(khata_no) {
+    const [rows] = await db.query(
+      `SELECT * FROM govt_khata WHERE khata_no = ? LIMIT 1`,
+      [khata_no]
+    );
+    return rows[0];
   },
 };
 
