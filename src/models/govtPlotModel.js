@@ -736,6 +736,73 @@ const GovtPlot = {
 
     return this.findByPk(id);
   },
+
+  async findById(id) {
+    const [rows] = await db.query(
+      `SELECT * FROM govt_plots WHERE id = ? AND is_deleted = 0`,
+      [id],
+    );
+    return rows[0];
+  },
+
+  async hasProcessingPayments(plot_id) {
+    const [rows] = await db.query(
+      `
+    SELECT 1
+    FROM plot_payments
+    WHERE plot_id = ?
+      AND status = 'processing'
+      AND type = 2
+    LIMIT 1
+    `,
+      [plot_id],
+    );
+
+    return rows.length > 0;
+  },
+
+  async updatePaymentStatus(plot_id, status) {
+    await db.query(
+      `UPDATE govt_plots SET payment_status = ?
+      WHERE id = ? AND is_deleted = 0`,
+      [status, plot_id],
+    );
+    return true;
+  },
+
+  async addPaymentRecord(data) {
+    const sql = `
+      INSERT INTO plot_payments 
+      (unique_id, plot_id, plot_no, khata_no, project_id, present_tenant_names, payment_area, total_compensation, 
+       bank_ac, bank_name, ifsc, type, status)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,?,?)
+    `;
+
+    const params = [
+      data.unique_id,
+      data.plot_id,
+      data.plot_no,
+      data.khata_no,
+      data.project_id,
+      data.present_tenant_names,
+      data.payment_area,
+      data.total_compensation,
+      data.bank_ac,
+      data.bank_name,
+      data.ifsc,
+      data.type,
+      data.status,
+    ];
+
+    const [result] = await db.query(sql, params);
+
+    // fetch inserted record
+    const [rows] = await db.query(`SELECT * FROM plot_payments WHERE id = ?`, [
+      result.insertId,
+    ]);
+
+    return rows[0];
+  },
 };
 
 module.exports = GovtPlot;

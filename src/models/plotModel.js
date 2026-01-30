@@ -1239,8 +1239,8 @@ const Plot = {
         laCaseFileNo,
         formattedDate || null,
         plot["LO1-Name of Recorded Tenant (RT)"] ||
-          plot["Name of Tenant"] ||
-          null,
+        plot["Name of Tenant"] ||
+        null,
         plot["LO2-Name of Present Tenant(s)"] || plot["Name of Tenant"] || null,
         plot["Present Address"] || null,
         plot["Displaced/Affected Person"] || null,
@@ -1260,10 +1260,10 @@ const Plot = {
         acquiredAcres || null,
         acquiredHectares || null,
         plot["Market Value fixed U/S.26 of RFCTLARR Act 2013 (Per Acre)"] ||
-          null,
+        null,
         plot["Basic Land value"] || null,
         plot["Land value  with multiplication factor (Values from 1 to 2)"] ||
-          null,
+        null,
         plot["No. of Trees"] || null,
         plot["Total Value of Trees "] || null,
         plot["No. of House"] || null,
@@ -1271,13 +1271,13 @@ const Plot = {
         plot["Detail of Structures other than House"] || null,
         plot["Value of structures other than house"] || null,
         plot["Total Value  (Land-22 + Tree-24 + House-26 + Structures-28)"] ||
-          null,
+        null,
         plot["Solatium @ of (100%)"] || null,
         plot["12% additional compensation on market value of land area"] ||
-          null,
+        null,
         plot["Total Compensation Amount"] || null,
         plot[
-          "LA18-Apportionment Amount of the Award for the Individual Family Member"
+        "LA18-Apportionment Amount of the Award for the Individual Family Member"
         ] || null,
         plot["LA19-Priority/Urgency"] || null,
         plot["LA20-Land Use Plan"] || null,
@@ -2605,6 +2605,7 @@ const Plot = {
     FROM plot_payments
     WHERE plot_id = ?
       AND status = 'processing'
+      AND type = 1
     LIMIT 1
     `,
       [plot_id],

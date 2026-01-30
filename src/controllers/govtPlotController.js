@@ -390,34 +390,34 @@ const govtPlotList = async (req, res) => {
 
       ri_report_attachment: plot.ri_report_attachment
         ? {
-            file_name: plot.ri_report_attachment,
-            url: buildFileUrl(req, "govt_plots", plot.ri_report_attachment),
-          }
+          file_name: plot.ri_report_attachment,
+          url: buildFileUrl(req, "govt_plots", plot.ri_report_attachment),
+        }
         : null,
 
       tree_enumeration_attachment: plot.tree_enumeration_attachment
         ? {
-            file_name: plot.tree_enumeration_attachment,
-            url: buildFileUrl(
-              req,
-              "govt_plots",
-              plot.tree_enumeration_attachment,
-            ),
-          }
+          file_name: plot.tree_enumeration_attachment,
+          url: buildFileUrl(
+            req,
+            "govt_plots",
+            plot.tree_enumeration_attachment,
+          ),
+        }
         : null,
 
       lease_to_idco_attachment: plot.lease_to_idco_attachment
         ? {
-            file_name: plot.lease_to_idco_attachment,
-            url: buildFileUrl(req, "govt_plots", plot.lease_to_idco_attachment),
-          }
+          file_name: plot.lease_to_idco_attachment,
+          url: buildFileUrl(req, "govt_plots", plot.lease_to_idco_attachment),
+        }
         : null,
 
       lease_to_ua_attachment: plot.lease_to_ua_attachment
         ? {
-            file_name: plot.lease_to_ua_attachment,
-            url: buildFileUrl(req, "govt_plots", plot.lease_to_ua_attachment),
-          }
+          file_name: plot.lease_to_ua_attachment,
+          url: buildFileUrl(req, "govt_plots", plot.lease_to_ua_attachment),
+        }
         : null,
     }));
 
@@ -549,9 +549,8 @@ const govtPlotDocumentList = async (req, res) => {
       //   req.get("host").includes("localhost") ? "" : "/api"
       // }/plot-documents/download/${r.filename}`,
 
-      documentUrl: `${req.protocol}://${req.get("host")}${
-        req.get("host").includes("localhost") ? "" : "/api"
-      }/uploads/govt_plot_excels/${r.filename}`,
+      documentUrl: `${req.protocol}://${req.get("host")}${req.get("host").includes("localhost") ? "" : "/api"
+        }/uploads/govt_plot_excels/${r.filename}`,
     }));
 
     return res.json({
@@ -872,6 +871,138 @@ const updateGovtPlot = async (req, res) => {
   }
 };
 
+const paymentReady = async (req, res) => {
+  const { plot_id, payment_status } = req.body;
+  const userId = req.user.id;
+
+  try {
+    if (!plot_id) {
+      return res.status(400).json({
+        success: false,
+        message: "Plot Id is required",
+      });
+    }
+
+    if (!payment_status) {
+      return res.status(400).json({
+        success: false,
+        message: "Payment status is required",
+      });
+    }
+
+    const allowedStatuses = ["ready", "processing"];
+    if (!allowedStatuses.includes(payment_status)) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid payment_status for this action",
+      });
+    }
+
+    const plot = await GovtPlot.findById(plot_id);
+    // console.log("plotData", plot);
+    if (!plot) {
+      return res.status(404).json({
+        success: false,
+        message: "Plot not found",
+      });
+    }
+
+    if (payment_status === "processing") {
+      const existing = await GovtPlot.hasProcessingPayments(plot_id);
+      if (existing) {
+        return res.status(400).json({
+          success: false,
+          message: "Payment already in processing state",
+        });
+      }
+    }
+
+    const khata = await GovtKhata.getKhataByNumber(plot.khata_no);
+    const unique_id = khata ? khata.unique_id : null;
+    // Update plot status
+    await GovtPlot.updatePaymentStatus(plot_id, payment_status);
+
+    if (payment_status === "ready") {
+      await logAction(
+        userId,
+        "Payment marked ready",
+        "success",
+        "Payment marked as ready",
+        { plot_id, payment_status },
+        [],
+      );
+
+      return res.status(200).json({
+        success: true,
+        message: "Payment marked as ready",
+      });
+    }
+
+    // Split tenant names into an array
+    const tenants = plot.name_of_ror  //name_of_present_tenant is not available so i used name_of_ror
+      ? plot.name_of_ror.split(",").map((t) => t.trim())
+      : [];
+
+    const records = [];
+
+    for (const tenant of tenants) {
+      const data = {
+        unique_id,
+        plot_id: plot.id,
+        plot_no: plot.plot_no,
+        khata_no: plot.khata_no,
+        project_id: plot.project_id,
+        present_tenant_names: tenant,
+        payment_area: plot.total_area_acres,
+        total_compensation: plot.total_compensation,
+        bank_ac: plot.bank_account_no ?? null,
+        bank_name: plot.bank_name ?? null,
+        ifsc: plot.branch_ifsc ?? null,
+        type: plot.type,
+        status: payment_status,
+      };
+
+      const rec = await GovtPlot.addPaymentRecord(data);
+      records.push(rec);
+    }
+    // } else {
+    //   await Plot.updatePaymentRecordStatus(plot_id, payment_status);
+    // }
+
+    // let message = "Payment updated successfully";
+
+    // if (payment_status === "ready") {
+    //   message = "Payment marked as ready";
+    // } else if (payment_status === "processing") {
+    //   message = "Payment processing started";
+    // } else if (payment_status === "complete") {
+    //   message = "Payment completed successfully";
+    // }
+
+    await logAction(
+      userId,
+      "Payment processed",
+      "success",
+      "Payment processing started",
+      { plot_id },
+      records,
+    );
+
+    return res.status(200).json({
+      success: true,
+      message: "Payment processing started",
+      data: records,
+    });
+  } catch (err) {
+    console.error("Payment Ready Error:", err);
+
+    return res.status(500).json({
+      success: false,
+      message: "Server error",
+    });
+  }
+};
+
 module.exports = {
   uploadGovtPlot,
   addGovtPlot,
@@ -881,4 +1012,5 @@ module.exports = {
   govtPlotDocumentDelete,
   updateGovtPlot,
   downloadPlotDocument,
+  paymentReady
 };
