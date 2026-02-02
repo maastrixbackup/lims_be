@@ -138,39 +138,100 @@ const GovtKhata = {
     return resultMap;
   },
 
-  async create(data) {
+  // async create(data) {
+  //   const {
+  //     project_id,
+  //     type,
+  //     khata_no,
+  //     village_id,
+
+  //     kissam_of_land,
+  //     plot_no,
+  //     lease_case_no,
+  //     present_status,
+  //     case_details,
+  //   } = data;
+  //   const [result] = await db.query(
+  //     `INSERT INTO govt_khata(
+  //       unique_id,
+  //       project_id,
+  //       type,
+  //       khata_no,
+  //       village_id,
+  //       kissam_of_land,
+  //       plot_no,
+  //       lease_case_no,
+  //       present_status,
+  //       case_details
+  //     ) SELECT
+  //         CONCAT(p.client_code, '/', v.village_code, '/', ?) AS unique_id,
+  //         ?, ?, ?, ?, ?, ?, ?, ?, ?
+  //       FROM projects p
+  //       JOIN villages v ON v.id = ?
+  //       WHERE p.id = ?
+  //       `,
+  //     [
+  //       khata_no,
+  //       project_id,
+  //       type,
+  //       khata_no,
+  //       village_id,
+  //       kissam_of_land,
+  //       plot_no,
+  //       lease_case_no,
+  //       present_status,
+  //       case_details,
+  //       village_id,
+  //       project_id,
+  //     ]
+  //   );
+  //   return {
+  //     id: result.insertId,
+  //     ...data,
+  //   };
+  // },
+
+  async create(data) { //This is for khata_no and village_id null handles
     const {
       project_id,
       type,
       khata_no,
       village_id,
-
       kissam_of_land,
       plot_no,
       lease_case_no,
       present_status,
       case_details,
     } = data;
+
     const [result] = await db.query(
-      `INSERT INTO govt_khata(
-        unique_id,
-        project_id,
-        type,
-        khata_no,
-        village_id,
-        kissam_of_land,
-        plot_no,
-        lease_case_no,
-        present_status,
-        case_details
-      ) SELECT
-          CONCAT(p.client_code, '/', v.village_code, '/', ?) AS unique_id,
-          ?, ?, ?, ?, ?, ?, ?, ?
-        FROM projects p
-        JOIN villages v ON v.id = ?
-        WHERE p.id = ?
-        `,
+      `
+    INSERT INTO govt_khata (
+      unique_id,
+      project_id,
+      type,
+      khata_no,
+      village_id,
+      kissam_of_land,
+      plot_no,
+      lease_case_no,
+      present_status,
+      case_details
+    )
+    SELECT
+      CASE
+        WHEN ? IS NOT NULL
+          THEN CONCAT(p.client_code, '/', v.village_code, '/', ?)
+        ELSE CONCAT(p.client_code, '/', 'NA', '/', ?)
+      END AS unique_id,
+      ?, ?, ?, ?, ?, ?, ?, ?, ?
+    FROM projects p
+    LEFT JOIN villages v ON v.id = ?
+    WHERE p.id = ?
+    `,
       [
+        village_id,
+        khata_no,
         khata_no,
         project_id,
         type,
@@ -185,6 +246,11 @@ const GovtKhata = {
         project_id,
       ]
     );
+
+    if (result.affectedRows === 0) {
+      throw new Error("Insert failed");
+    }
+
     return {
       id: result.insertId,
       ...data,
