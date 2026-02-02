@@ -35,7 +35,7 @@ const addGovtKhata = async (req, res) => {
   } = safeRequestPayload;
 
   try {
-    if (!project_id || !village_id || !khata_no || !type) {
+    if (!project_id || !type) { //village_id,khata_no changed to null in table
       return res.status(400).json({
         success: false,
         message: "All fields are required",
@@ -50,13 +50,13 @@ const addGovtKhata = async (req, res) => {
       });
     }
 
-    const village = await Village.findById(village_id);
-    if (!village) {
-      return res.status(404).json({
-        success: false,
-        message: "Village not found",
-      });
-    }
+    // const village = await Village.findById(village_id);
+    // if (!village) {
+    //   return res.status(404).json({
+    //     success: false,
+    //     message: "Village not found",
+    //   });
+    // }
 
     const khata = await GovtKhata.create({
       project_id,
