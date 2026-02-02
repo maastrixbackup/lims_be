@@ -73,18 +73,22 @@ const KhataStorage = multer.diskStorage({
   },
 });
 
-const khataFileFilter = (req, file, cb) => {
-  const allowedMimeTypes = [
-    "application/pdf",
-    "application/vnd.ms-excel",
-    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-  ];
+// const khataFileFilter = (req, file, cb) => {
+//   const allowedMimeTypes = [
+//     "application/pdf",
+//     "application/vnd.ms-excel",
+//     "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+//   ];
 
-  if (allowedMimeTypes.includes(file.mimetype)) {
-    cb(null, true);
-  } else {
-    cb(new Error("Only Excel or PDF files are allowed for Khata"), false);
-  }
+//   if (allowedMimeTypes.includes(file.mimetype)) {
+//     cb(null, true);
+//   } else {
+//     cb(new Error("Only Excel or PDF files are allowed for Khata"), false);
+//   }
+// };
+
+const khataFileFilter = (req, file, cb) => {
+  cb(null, true);
 };
 
 const uploadKhata = multer({
