@@ -1220,6 +1220,78 @@ const updatePlotPayment = async (req, res) => {
   }
 };
 
+const markPaymentCompleted = async (req, res) => {
+  const userId = req.user.id;
+  const { unique_id, project_id, type } = req.body;
+
+  try {
+    if (!unique_id || !project_id || !type) {
+      return res.status(400).json({
+        success: false,
+        message: "unique_id,project_id and type are required",
+      });
+    }
+
+    const records = await GovtPlot.getByUniqueId(unique_id, project_id, type);
+
+    if (!records.length) {
+      return res.status(404).json({
+        success: false,
+        message: "No payment records found",
+      });
+    }
+
+    const notProcessing = records.find((r) => r.status !== "processing");
+    if (notProcessing) {
+      return res.status(400).json({
+        success: false,
+        message: "Only processing payments can be completed",
+      });
+    }
+
+    const invalid = records.find((r) => !r.payment_proof || !r.transaction_no);
+
+    if (invalid) {
+      return res.status(400).json({
+        success: false,
+        message: "Payment proof and transaction number are required",
+      });
+    }
+
+    await GovtPlot.markPaymentComplete(unique_id, project_id, type);
+
+    await logAction(
+      userId,
+      "mark payment completed",
+      "success",
+      "Payment Completed",
+      { unique_id, project_id, type },
+      null,
+    );
+
+    res.status(200).json({
+      success: true,
+      message: "Payment completed successfully",
+    });
+  } catch (err) {
+    console.error("Payment complete error:", err);
+
+    await logAction(
+      userId,
+      "mark payment completed",
+      "failure",
+      err.message,
+      req.body,
+      null,
+    );
+
+    res.status(500).json({
+      success: false,
+      message: "Failed to mark payment completed",
+    });
+  }
+};
+
 module.exports = {
   uploadGovtPlot,
   addGovtPlot,
@@ -1232,5 +1304,6 @@ module.exports = {
   paymentReady,
   getAllPaymentReady,
   landCostPaymentUpload,
-  updatePlotPayment
+  updatePlotPayment,
+  markPaymentCompleted
 };
