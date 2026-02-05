@@ -164,6 +164,41 @@ const uploadLandCostPayment = multer({
   limits: { fileSize: 5 * 1024 * 1024 }, // 5MB
 });
 
+// Upload govt payment proof
+const govtPaymentStorage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    cb(null, "uploads/govt_land_cost_payments");
+  },
+  filename: (req, file, cb) => {
+    const originalname = file.originalname.replace(/\s+/g, "_");
+    cb(null, originalname);
+  },
+});
+
+const govtPaymentFileFilter = (req, file, cb) => {
+  const allowedMimeTypes = [
+    "application/pdf",
+    "image/jpeg",
+    "image/jpg",
+    "image/png",
+  ];
+
+  if (allowedMimeTypes.includes(file.mimetype)) {
+    cb(null, true);
+  } else {
+    cb(
+      new Error("Only PDF or image files (jpg, jpeg, png) are allowed"),
+      false
+    );
+  }
+};
+
+const uploadGovtLandCostPayment = multer({
+  storage: govtPaymentStorage,
+  fileFilter: govtPaymentFileFilter,
+  limits: { fileSize: 5 * 1024 * 1024 }, // 5MB
+});
+
 const govtPlotStorage = multer.diskStorage({
   destination: (req, file, cb) => {
     cb(null, "uploads/govt_plots");
@@ -270,6 +305,7 @@ module.exports = {
   uploadKhata,
   uploadMapDocument,
   uploadLandCostPayment,
+  uploadGovtLandCostPayment,
   uploadGovtPlotAttachments,
   uploadGovtPlotExcel,
   uploadEDS

@@ -1087,6 +1087,70 @@ const getAllPaymentReady = async (req, res) => {
   }
 };
 
+const landCostPaymentUpload = async (req, res) => {
+  const userId = req.user.id;
+
+  try {
+    const { land_cost_id } = req.body;
+
+    if (!land_cost_id) {
+      return res.status(400).json({
+        success: false,
+        message: "Land cost ID is required",
+      });
+    }
+
+    if (!req.file) {
+      return res.status(400).json({
+        success: false,
+        message: "Payment proof file is required",
+      });
+    }
+
+    const landCostData = await GovtPlot.fetchLandCostById(land_cost_id);
+    if (!landCostData) {
+      return res.status(404).json({
+        success: false,
+        message: "Land cost record not found",
+      });
+    }
+
+    // const filePath = `uploads/land_cost_payments/${req.file.filename}`;
+
+    await GovtPlot.addPaymentProof(land_cost_id, req.file.filename);
+
+    await logAction(
+      userId,
+      "upload land cost payment proof",
+      "success",
+      "Payment proof uploaded successfully",
+      { land_cost_id },
+      null,
+    );
+
+    res.status(200).json({
+      success: true,
+      message: "Payment proof uploaded successfully",
+    });
+  } catch (err) {
+    console.error("UPLOAD ERROR:", err);
+
+    await logAction(
+      userId,
+      "upload land cost payment proof",
+      "failure",
+      err.message,
+      null,
+      null,
+    );
+
+    res.status(500).json({
+      success: false,
+      message: "Failed to upload payment proof",
+    });
+  }
+};
+
 module.exports = {
   uploadGovtPlot,
   addGovtPlot,
@@ -1097,5 +1161,6 @@ module.exports = {
   updateGovtPlot,
   downloadPlotDocument,
   paymentReady,
-  getAllPaymentReady
+  getAllPaymentReady,
+  landCostPaymentUpload
 };

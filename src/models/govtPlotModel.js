@@ -828,6 +828,21 @@ const GovtPlot = {
     const [rows] = await db.query(query, params);
     return rows;
   },
+
+  async fetchLandCostById(land_cost_id) {
+    const [rows] = await db.query(`SELECT * FROM plot_payments WHERE id = ? AND type = 2`, [
+      land_cost_id,
+    ]);
+    return rows[0];
+  },
+
+  async addPaymentProof(land_cost_id, filePath) {
+    const [result] = await db.query(
+      `UPDATE plot_payments SET payment_proof = ? WHERE id = ? AND type = 2`,
+      [filePath, land_cost_id],
+    );
+    return result;
+  },
 };
 
 module.exports = GovtPlot;

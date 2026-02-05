@@ -4,6 +4,7 @@ const router = express.Router();
 const {
   uploadGovtPlotAttachments,
   uploadGovtPlotExcel,
+  uploadGovtLandCostPayment,
 } = require("../middleware/upload");
 
 const {
@@ -16,7 +17,8 @@ const {
   updateGovtPlot,
   downloadPlotDocument,
   paymentReady,
-  getAllPaymentReady
+  getAllPaymentReady,
+  landCostPaymentUpload
 } = require("../controllers/govtPlotController");
 
 //Routes
@@ -55,5 +57,10 @@ router.put(
 
 router.post("/paymentReady", paymentReady);
 router.get("/getCompensationDetails", getAllPaymentReady);
+router.post(
+  "/landCostPaymentUpload",
+  uploadGovtLandCostPayment.single("payment_proof"),
+  landCostPaymentUpload
+);
 
 module.exports = router;

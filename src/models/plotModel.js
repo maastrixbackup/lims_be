@@ -2659,7 +2659,7 @@ const Plot = {
   },
 
   async fetchLandCostById(land_cost_id) {
-    const [rows] = await db.query(`SELECT * FROM plot_payments WHERE id = ?`, [
+    const [rows] = await db.query(`SELECT * FROM plot_payments WHERE id = ? AND type = 1`, [
       land_cost_id,
     ]);
     return rows[0];
@@ -2667,7 +2667,7 @@ const Plot = {
 
   async addPaymentProof(land_cost_id, filePath) {
     const [result] = await db.query(
-      `UPDATE plot_payments SET payment_proof = ? WHERE id = ?`,
+      `UPDATE plot_payments SET payment_proof = ? WHERE id = ? AND type = 1`,
       [filePath, land_cost_id],
     );
     return result;
