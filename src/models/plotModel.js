@@ -2749,7 +2749,7 @@ const Plot = {
     UPDATE plots
     SET payment_status = 'complete',
         updated_at = NOW()
-    WHERE id = ?
+    WHERE id = ? AND type = 1
     `,
       [plotId],
     );

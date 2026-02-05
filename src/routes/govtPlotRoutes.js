@@ -19,7 +19,8 @@ const {
   paymentReady,
   getAllPaymentReady,
   landCostPaymentUpload,
-  updatePlotPayment
+  updatePlotPayment,
+  markPaymentCompleted
 } = require("../controllers/govtPlotController");
 
 //Routes
@@ -64,5 +65,6 @@ router.post(
   landCostPaymentUpload
 );
 router.put("/updatePlotPayment/:id", updatePlotPayment);
+router.put("/paymentCompleted", markPaymentCompleted);
 
 module.exports = router;
