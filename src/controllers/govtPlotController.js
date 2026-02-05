@@ -1151,6 +1151,75 @@ const landCostPaymentUpload = async (req, res) => {
   }
 };
 
+const updatePlotPayment = async (req, res) => {
+  const userId = req.user.id;
+  const land_cost_id = req.params.id;
+  const safeRequestPayload = req.body;
+  const {
+    payment_area,
+    total_compensation,
+    compensation_payment,
+    apportionment_percent,
+    bank_ac,
+    bank_name,
+    ifsc,
+    transaction_no,
+  } = safeRequestPayload;
+
+  try {
+    const landCost = await GovtPlot.fetchLandCostById(land_cost_id);
+
+    if (!landCost) {
+      return res.status(404).json({
+        success: false,
+        message: "Land cost record not found",
+      });
+    }
+
+    const updateData = await GovtPlot.updatePaymentDetails({
+      land_cost_id,
+      payment_area,
+      total_compensation,
+      compensation_payment,
+      apportionment_percent,
+      bank_ac,
+      bank_name,
+      ifsc,
+      transaction_no,
+    });
+
+    await logAction(
+      userId,
+      "update plot payment",
+      "success",
+      "Payment details updated",
+      safeRequestPayload,
+      updateData,
+    );
+
+    res.status(200).json({
+      success: true,
+      message: "Payment details updated successfully",
+    });
+  } catch (err) {
+    console.error("Update payment error:", err);
+
+    await logAction(
+      userId,
+      "update plot payment",
+      "failure",
+      err.message,
+      safeRequestPayload,
+      null,
+    );
+
+    res.status(500).json({
+      success: false,
+      message: "Failed to update payment details",
+    });
+  }
+};
+
 module.exports = {
   uploadGovtPlot,
   addGovtPlot,
@@ -1162,5 +1231,6 @@ module.exports = {
   downloadPlotDocument,
   paymentReady,
   getAllPaymentReady,
-  landCostPaymentUpload
+  landCostPaymentUpload,
+  updatePlotPayment
 };

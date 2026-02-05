@@ -843,6 +843,45 @@ const GovtPlot = {
     );
     return result;
   },
+
+  async updatePaymentDetails(data) {
+    const {
+      land_cost_id,
+      payment_area,
+      total_compensation,
+      compensation_payment,
+      apportionment_percent,
+      bank_ac,
+      bank_name,
+      ifsc,
+      transaction_no,
+    } = data;
+    await db.query(
+      `UPDATE plot_payments SET 
+        payment_area = ?,
+        total_compensation = ?,
+        compensation_payment = ?,
+        apportionment_percent = ?,
+        bank_ac = ?,
+        bank_name = ?,
+        ifsc = ?,
+        transaction_no = ?,
+        updated_at = NOW()
+        WHERE id = ? AND type = 2`,
+      [
+        payment_area,
+        total_compensation,
+        compensation_payment,
+        apportionment_percent,
+        bank_ac,
+        bank_name,
+        ifsc,
+        transaction_no,
+        land_cost_id,
+      ],
+    );
+    return true;
+  },
 };
 
 module.exports = GovtPlot;
