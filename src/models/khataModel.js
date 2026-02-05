@@ -1094,7 +1094,7 @@ const Khata = {
       addIfValid(
         r.rr_multiple_displacement_allowance,
         row[
-          "RR Assistance (Other) - Special Allowance for Multiple Displacement"
+        "RR Assistance (Other) - Special Allowance for Multiple Displacement"
         ]
       );
 
@@ -1184,7 +1184,8 @@ const Khata = {
       name_of_recorded_tenant,
       name_of_present_tenant,
       present_address,
-      displaced_affected_person
+      displaced_affected_person,
+      full_part
     )
     SELECT
       CONCAT(
@@ -1215,7 +1216,8 @@ const Khata = {
       GROUP_CONCAT(DISTINCT pl.name_of_recorded_tenant SEPARATOR ', '),
       GROUP_CONCAT(DISTINCT pl.name_of_present_tenant SEPARATOR ', '),
       GROUP_CONCAT(DISTINCT pl.present_address SEPARATOR ', '),
-      GROUP_CONCAT(DISTINCT pl.displaced_affected_person SEPARATOR ', ')
+      GROUP_CONCAT(DISTINCT pl.displaced_affected_person SEPARATOR ', '),
+      pl.full_part
     FROM plots pl
     JOIN villages v
       ON v.village_name = pl.village_name
