@@ -18,7 +18,8 @@ const {
   downloadPlotDocument,
   paymentReady,
   getAllPaymentReady,
-  landCostPaymentUpload
+  landCostPaymentUpload,
+  updatePlotPayment
 } = require("../controllers/govtPlotController");
 
 //Routes
@@ -62,5 +63,6 @@ router.post(
   uploadGovtLandCostPayment.single("payment_proof"),
   landCostPaymentUpload
 );
+router.put("/updatePlotPayment/:id", updatePlotPayment);
 
 module.exports = router;

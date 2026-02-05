@@ -2696,7 +2696,7 @@ const Plot = {
         ifsc = ?,
         transaction_no = ?,
         updated_at = NOW()
-        WHERE id = ?`,
+        WHERE id = ? AND type = 1`,
       [
         payment_area,
         total_compensation,
