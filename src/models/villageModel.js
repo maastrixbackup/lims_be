@@ -7,11 +7,12 @@ const Village = {
     district,
     project_id,
     village_code,
-    type
+    type,
+    thana_name_no
   ) {
     const [result] = await db.query(
-      "INSERT INTO villages (village_name, tahasil, district, project_id, village_code, type) VALUES (?,?,?,?,?,?)",
-      [village_name, tahasil, district, project_id, village_code, type]
+      "INSERT INTO villages (village_name, tahasil, district, project_id, village_code, type, thana_name_no) VALUES (?,?,?,?,?,?,?)",
+      [village_name, tahasil, district, project_id, village_code, type, thana_name_no]
     );
     return {
       id: result.insertId,
@@ -21,6 +22,7 @@ const Village = {
       project_id,
       village_code,
       type,
+      thana_name_no
     };
   },
 
@@ -35,7 +37,7 @@ const Village = {
     let query = `
         SELECT v.*,p.project_name
         FROM villages v
-        JOIN projects p ON v.project_id = p.id
+        LEFT JOIN projects p ON v.project_id = p.id
         WHERE 1=1
         `;
 
@@ -120,10 +122,11 @@ const Village = {
     project_id,
     village_code,
     type,
-    multiplying_factor
+    multiplying_factor,
+    thana_name_no
   ) {
     await db.query(
-      "UPDATE villages SET village_name = ?, tahasil = ?, district = ?, project_id = ?, village_code = ?, type = ?, multiplying_factor = ?, updated_at = NOW() WHERE id = ?",
+      "UPDATE villages SET village_name = ?, tahasil = ?, district = ?, project_id = ?, village_code = ?, type = ?, multiplying_factor = ?, thana_name_no = ?, updated_at = NOW() WHERE id = ?",
       [
         village_name,
         tahasil,
@@ -132,6 +135,7 @@ const Village = {
         village_code,
         type,
         multiplying_factor,
+        thana_name_no,
         id,
       ]
     );
@@ -144,6 +148,7 @@ const Village = {
       village_code,
       type,
       multiplying_factor,
+      thana_name_no
     };
   },
 
