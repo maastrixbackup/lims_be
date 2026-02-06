@@ -290,9 +290,22 @@ const GovtKhata = {
     const dataSql = `
       SELECT
         k.*,
-        v.village_name
+        v.village_name,
+        IFNULL(pc.plot_count, 0) AS plot_count
         FROM govt_khata k
         LEFT JOIN villages v ON v.id = k.village_id
+        LEFT JOIN (
+          SELECT
+            project_id,
+            type,
+            khata_no,
+            COUNT(*) AS plot_count
+          FROM govt_plots
+          GROUP BY project_id, type, khata_no
+        ) pc
+          ON pc.project_id = k.project_id
+        AND pc.type = k.type
+        AND pc.khata_no = k.khata_no
         ${whereSql}
         ORDER BY k.id DESC
         LIMIT ? OFFSET ?
