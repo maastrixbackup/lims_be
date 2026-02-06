@@ -32,6 +32,8 @@ const addGovtKhata = async (req, res) => {
     lease_case_no,
     present_status,
     case_details,
+    ror_name,
+    land_category
   } = safeRequestPayload;
 
   try {
@@ -68,6 +70,8 @@ const addGovtKhata = async (req, res) => {
       lease_case_no,
       present_status,
       case_details,
+      ror_name,
+      land_category
     });
     await logAction(
       userId,
