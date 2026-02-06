@@ -619,6 +619,15 @@ const updatePlot = async (req, res) => {
       }
     }
     const updated = await Plot.update(id, safeRequestPayload);
+
+    if (updated.khata_no && updated.project_id && updated.type) {
+      await Khata.insertKhataFromManualPlot({
+        project_id: updated.project_id,
+        type: updated.type,
+        khata_no: updated.khata_no,
+      });
+    }
+
     await logAction(
       userId,
       "update plot",
