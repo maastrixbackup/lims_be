@@ -202,6 +202,8 @@ const GovtKhata = {
       lease_case_no,
       present_status,
       case_details,
+      ror_name,
+      land_category
     } = data;
 
     const [result] = await db.query(
@@ -216,7 +218,9 @@ const GovtKhata = {
       plot_no,
       lease_case_no,
       present_status,
-      case_details
+      case_details,
+      ror_name,
+      land_category
     )
     SELECT
       CASE
@@ -224,7 +228,7 @@ const GovtKhata = {
           THEN CONCAT(p.client_code, '/', v.village_code, '/', ?)
         ELSE CONCAT(p.client_code, '/', 'NA', '/', ?)
       END AS unique_id,
-      ?, ?, ?, ?, ?, ?, ?, ?, ?
+      ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
     FROM projects p
     LEFT JOIN villages v ON v.id = ?
     WHERE p.id = ?
@@ -242,6 +246,8 @@ const GovtKhata = {
         lease_case_no,
         present_status,
         case_details,
+        ror_name,
+        land_category,
         village_id,
         project_id,
       ]
