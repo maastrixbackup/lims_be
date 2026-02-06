@@ -1217,7 +1217,12 @@ const Khata = {
       GROUP_CONCAT(DISTINCT pl.name_of_present_tenant SEPARATOR ', '),
       GROUP_CONCAT(DISTINCT pl.present_address SEPARATOR ', '),
       GROUP_CONCAT(DISTINCT pl.displaced_affected_person SEPARATOR ', '),
-      pl.full_part
+      CASE
+      WHEN COUNT(DISTINCT pl.full_part) = 1
+          AND MIN(pl.full_part) = 'FULL'
+      THEN 'FULL'
+      ELSE 'PART'
+    END
     FROM plots pl
     JOIN villages v
       ON v.village_name = pl.village_name
@@ -1245,6 +1250,7 @@ const Khata = {
       name_of_present_tenant = VALUES(name_of_present_tenant),
       present_address = VALUES(present_address),
       displaced_affected_person = VALUES(displaced_affected_person),
+      full_part = VALUES(full_part),
       updated_at = NOW()
     `,
       [project_id, type, khata_no]
