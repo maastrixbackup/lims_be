@@ -940,6 +940,14 @@ const GovtPlot = {
 
     return true;
   },
+
+  async findByKhataNo(khata_no, type, project_id) {
+    const [rows] = await db.query(
+      "SELECT * FROM govt_plots WHERE khata_no = ? AND type = ? AND project_id = ?",
+      [khata_no, type, project_id],
+    );
+    return rows;
+  },
 };
 
 module.exports = GovtPlot;
