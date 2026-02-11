@@ -590,6 +590,38 @@ const GovtPlot = {
 
     if (!validRows.length) return 0;
 
+    const totalAcres =
+      parseFloat(r["total area (in acres)"]) || null;
+
+    const totalHectares =
+      parseFloat(r["total area (in hectares)"]) || null;
+
+    const proposedAcres =
+      parseFloat(r["proposed area (in acres)"]) || null;
+
+    const proposedHectares =
+      parseFloat(r["proposed area (in hectares)"]) || null;
+
+    // Conversion logic
+    let finalTotalAcres = totalAcres;
+    let finalTotalHectares = totalHectares;
+    let finalProposedAcres = proposedAcres;
+    let finalProposedHectares = proposedHectares;
+
+    // Total area conversion
+    if (finalTotalAcres && !finalTotalHectares)
+      finalTotalHectares = parseFloat((finalTotalAcres / 2.47105).toFixed(4));
+
+    if (finalTotalHectares && !finalTotalAcres)
+      finalTotalAcres = parseFloat((finalTotalHectares * 2.47105).toFixed(4));
+
+    // Proposed area conversion
+    if (finalProposedAcres && !finalProposedHectares)
+      finalProposedHectares = parseFloat((finalProposedAcres / 2.47105).toFixed(4));
+
+    if (finalProposedHectares && !finalProposedAcres)
+      finalProposedAcres = parseFloat((finalProposedHectares * 2.47105).toFixed(4));
+
     const values = validRows.map((r) => [
       project_id,
       type,
@@ -602,10 +634,14 @@ const GovtPlot = {
       r["name of ror"] || null,
       r["plot no"] || null,
 
-      r["total area (in acres)"] || null,
-      r["proposed area (in acres)"] || null,
-      r["total area (in hectares)"] || null,
-      r["proposed area (in hectares)"] || null,
+      finalTotalAcres || null,
+      finalProposedAcres || null,
+      finalTotalHectares || null,
+      finalProposedHectares || null,
+      // r["total area (in acres)"] || null,
+      // r["proposed area (in acres)"] || null,
+      // r["total area (in hectares)"] || null,
+      // r["proposed area (in hectares)"] || null,
 
       r["lease case no"] || null,
       presentStatusMap(r["present status"]),
@@ -948,6 +984,47 @@ const GovtPlot = {
     );
     return rows;
   },
+
+  async govtPlotCount(projectIds = null) {
+    let query = `
+    SELECT COUNT(*) AS total 
+    FROM govt_plots 
+    WHERE is_deleted = 0 AND type = 2
+  `;
+    let params = [];
+
+    if (Array.isArray(projectIds) && projectIds.length > 0) {
+      const placeholders = projectIds.map(() => "?").join(",");
+      query += ` AND project_id IN (${placeholders})`;
+      params.push(...projectIds);
+    }
+
+    const [rows] = await db.query(query, params);
+    return rows[0].total;
+  },
+
+  async landDistribution(projectIds = null) {
+    let query = `
+    SELECT
+      SUM(CASE WHEN type = 1 THEN 1 ELSE 0 END) AS private,
+      SUM(CASE WHEN type = 2 THEN 1 ELSE 0 END) AS govt,
+      SUM(CASE WHEN type = 3 THEN 1 ELSE 0 END) AS forest
+    FROM govt_plots
+    WHERE is_deleted = 0
+  `;
+
+    let params = [];
+
+    if (Array.isArray(projectIds) && projectIds.length > 0) {
+      const placeholders = projectIds.map(() => "?").join(",");
+      query += ` AND project_id IN (${placeholders})`;
+      params.push(...projectIds);
+    }
+
+    const [rows] = await db.query(query, params);
+    return rows[0];
+  },
+
 };
 
 module.exports = GovtPlot;

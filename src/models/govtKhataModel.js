@@ -389,6 +389,20 @@ const GovtKhata = {
     );
     return rows[0];
   },
+
+  async countAll(projectIds = null) {
+    let query = "SELECT COUNT(*) AS total FROM govt_khata";
+    let params = [];
+
+    if (Array.isArray(projectIds) && projectIds.length > 0) {
+      const placeholders = projectIds.map(() => "?").join(",");
+      query += ` WHERE project_id IN (${placeholders})`;
+      params.push(...projectIds);
+    }
+
+    const [rows] = await db.query(query, params);
+    return rows[0].total;
+  },
 };
 
 module.exports = GovtKhata;

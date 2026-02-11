@@ -177,13 +177,55 @@ const Village = {
   //   return rows[0].total;
   // },
 
-  async countAll(projectIds = null) {
-    let query = "SELECT COUNT(*) AS total FROM villages";
+  // async countAll(projectIds = null) {
+  //   let query = "SELECT COUNT(*) AS total FROM villages";
+  //   let params = [];
+
+  //   if (Array.isArray(projectIds) && projectIds.length > 0) {
+  //     const placeholders = projectIds.map(() => "?").join(",");
+  //     query += ` WHERE project_id IN (${placeholders})`;
+  //     params.push(...projectIds);
+  //   }
+
+  //   const [rows] = await db.query(query, params);
+  //   return rows[0].total;
+  // },
+
+  async pvtCountAll(projectIds = null) {
+    let query = "SELECT COUNT(*) AS total FROM villages WHERE type = 1";
     let params = [];
 
     if (Array.isArray(projectIds) && projectIds.length > 0) {
       const placeholders = projectIds.map(() => "?").join(",");
-      query += ` WHERE project_id IN (${placeholders})`;
+      query += ` AND project_id IN (${placeholders})`;
+      params.push(...projectIds);
+    }
+
+    const [rows] = await db.query(query, params);
+    return rows[0].total;
+  },
+
+  async govtCountAll(projectIds = null) {
+    let query = "SELECT COUNT(*) AS total FROM villages WHERE type = 2";
+    let params = [];
+
+    if (Array.isArray(projectIds) && projectIds.length > 0) {
+      const placeholders = projectIds.map(() => "?").join(",");
+      query += ` AND project_id IN (${placeholders})`;
+      params.push(...projectIds);
+    }
+
+    const [rows] = await db.query(query, params);
+    return rows[0].total;
+  },
+
+  async forestCountAll(projectIds = null) {
+    let query = "SELECT COUNT(*) AS total FROM villages WHERE type = 3";
+    let params = [];
+
+    if (Array.isArray(projectIds) && projectIds.length > 0) {
+      const placeholders = projectIds.map(() => "?").join(",");
+      query += ` AND project_id IN (${placeholders})`;
       params.push(...projectIds);
     }
 
