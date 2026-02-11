@@ -415,11 +415,76 @@ const uploadGovtKhataDoc = async (req, res) => {
   }
 };
 
+const uploadGovtMapDoc = async (req, res) => {
+  const userId = req.user.id;
+  try {
+    const { khata_id } = req.body;
+
+    if (!khata_id) {
+      return res.status(400).json({
+        success: false,
+        message: "khata ID is required",
+      });
+    }
+
+    if (!req.file) {
+      return res.status(400).json({
+        success: false,
+        message: "File is required",
+      });
+    }
+
+    const khataData = await govtKhata.findById(khata_id);
+    if (!khataData) {
+      return res.status(404).json({
+        success: false,
+        message: "Khata not found",
+      });
+    }
+    const { type } = khataData;
+
+    const uploadedDocument = await Khata.addMapDocument(
+      khata_id,
+      type,
+      req.file.filename
+    );
+
+    await logAction(
+      userId,
+      "upload govt khata map document",
+      "success",
+      "Govt Map file uploaded successfully",
+      { khata_id },
+      uploadedDocument
+    );
+
+    res.status(200).json({
+      success: true,
+      message: "Govt Map file uploaded successfully",
+    });
+  } catch (err) {
+    console.error("UPLOAD ERROR:", err);
+    await logAction(
+      userId,
+      "Govt upload khata map document",
+      "failure",
+      err.message,
+      null,
+      null
+    );
+    res.status(500).json({
+      success: false,
+      message: "Failed to upload map document",
+    });
+  }
+};
+
 module.exports = {
   addGovtKhata,
   govtKhataList,
   updateGovtKhata,
   deleteGovtKhata,
   viewPlotsByKhata,
-  uploadGovtKhataDoc
+  uploadGovtKhataDoc,
+  uploadGovtMapDoc
 };

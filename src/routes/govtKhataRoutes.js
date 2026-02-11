@@ -8,7 +8,8 @@ const {
   updateGovtKhata,
   deleteGovtKhata,
   viewPlotsByKhata,
-  uploadGovtKhataDoc
+  uploadGovtKhataDoc,
+  uploadGovtMapDoc
 } = require("../controllers/govtKhataController");
 
 const { uploadGovtKhata, uploadGovtMapDocument } = require("../middleware/upload");
@@ -40,10 +41,10 @@ router.post(
   uploadGovtKhataDoc
 );
 
-// router.post(
-//   "/uploadMapDocument",
-//   uploadMapDocument.single("file"),
-//   uploadMapDoc
-// );
+router.post(
+  "/uploadMapDocument",
+  uploadGovtMapDocument.single("file"),
+  uploadGovtMapDoc
+);
 
 module.exports = router;
