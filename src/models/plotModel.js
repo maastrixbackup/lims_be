@@ -1218,14 +1218,14 @@ const Plot = {
       }
 
       if (totalAcres && !totalHectares)
-        totalHectares = parseFloat((totalAcres * 2.471).toFixed(4));
+        totalHectares = parseFloat((totalAcres / 2.47105).toFixed(4));
       if (totalHectares && !totalAcres)
-        totalAcres = parseFloat((totalHectares / 2.471).toFixed(4));
+        totalAcres = parseFloat((totalHectares * 2.47105).toFixed(4));
 
       if (acquiredAcres && !acquiredHectares)
-        acquiredHectares = parseFloat((acquiredAcres * 2.471).toFixed(4));
+        acquiredHectares = parseFloat((acquiredAcres / 2.47105).toFixed(4));
       if (acquiredHectares && !acquiredAcres)
-        acquiredAcres = parseFloat((acquiredHectares / 2.471).toFixed(4));
+        acquiredAcres = parseFloat((acquiredHectares * 2.47105).toFixed(4));
 
       const villageCode = plot["Village Code"] || plot["village code"] || "NA";
 
