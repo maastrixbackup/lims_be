@@ -60,7 +60,7 @@ const uploadProfilePic = multer({
   limits: { fileSize: 5 * 1024 * 1024 }, // 5MB limit
 });
 
-//Upload khata
+//Upload pvt khata
 const KhataStorage = multer.diskStorage({
   destination: (req, file, cb) => {
     cb(null, "uploads/khata");
@@ -263,6 +263,61 @@ const uploadGovtPlotExcel = multer({
   limits: { fileSize: 10 * 1024 * 1024 }, // 10 MB
 });
 
+//Upload Govt khata
+const GovtKhataStorage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    cb(null, "uploads/govt_khata");
+  },
+  filename: (req, file, cb) => {
+    const originalname = file.originalname.replace(/\s+/g, "_");
+    cb(null, originalname);
+    // const uniqueName = Date.now() + "_" + Math.round(Math.random() * 1e9);
+    // cb(null, uniqueName + path.extname(file.originalname));
+  },
+});
+
+const GovtkhataFileFilter = (req, file, cb) => {
+  cb(null, true);
+};
+
+const uploadGovtKhata = multer({
+  storage: GovtKhataStorage,
+  fileFilter: GovtkhataFileFilter,
+});
+
+//upload govt map document (KMZ files)
+const govtMapStorage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    cb(null, "uploads/govt_maps");
+  },
+  filename: (req, file, cb) => {
+    const originalname = file.originalname.replace(/\s+/g, "_");
+    cb(null, originalname);
+  },
+});
+
+const govtMapFileFilter = (req, file, cb) => {
+  const allowedMimeTypes = [
+    "application/vnd.google-earth.kmz",
+    "application/zip", // fallback MIME type for many KMZ uploads
+  ];
+
+  const ext = path.extname(file.originalname).toLowerCase();
+
+  // Additional check for extension (.kmz)
+  if (allowedMimeTypes.includes(file.mimetype) || ext === ".kmz") {
+    cb(null, true);
+  } else {
+    cb(new Error("Only KMZ map files are allowed"), false);
+  }
+};
+
+const uploadGovtMapDocument = multer({
+  storage: govtMapStorage,
+  fileFilter: govtMapFileFilter,
+  limits: { fileSize: 10 * 1024 * 1024 }, // 10MB limit
+});
+
 const EDSStorage = multer.diskStorage({
   destination: (req, file, cb) => {
     cb(null, "uploads/eds");
@@ -308,5 +363,7 @@ module.exports = {
   uploadGovtLandCostPayment,
   uploadGovtPlotAttachments,
   uploadGovtPlotExcel,
+  uploadGovtKhata,
+  uploadGovtMapDocument,
   uploadEDS
 };
