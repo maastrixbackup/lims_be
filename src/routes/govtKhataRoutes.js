@@ -9,6 +9,7 @@ const {
   deleteGovtKhata,
   viewPlotsByKhata,
   uploadGovtKhataDoc,
+  getKhataFilesByKhataId,
   uploadGovtMapDoc
 } = require("../controllers/govtKhataController");
 
@@ -40,6 +41,7 @@ router.post(
   },
   uploadGovtKhataDoc
 );
+router.get("/getGovtKhataFiles/:id", getKhataFilesByKhataId);
 
 router.post(
   "/uploadMapDocument",

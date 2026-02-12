@@ -403,6 +403,14 @@ const GovtKhata = {
     const [rows] = await db.query(query, params);
     return rows[0].total;
   },
+
+  async getFilesByKhataId(khata_id) {
+    const [rows] = await db.query(
+      "SELECT * FROM khata_documents WHERE khata_id = ? AND type = 2 ORDER BY created_at DESC",
+      [khata_id]
+    );
+    return rows;
+  },
 };
 
 module.exports = GovtKhata;

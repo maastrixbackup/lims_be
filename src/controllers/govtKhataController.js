@@ -415,6 +415,37 @@ const uploadGovtKhataDoc = async (req, res) => {
   }
 };
 
+const getKhataFilesByKhataId = async (req, res) => {
+  try {
+    const khata_id = req.params.id;
+    const documents = await govtKhata.getFilesByKhataId(khata_id);
+    // const baseUrl = `${req.protocol}://${req.get("host")}`;
+
+    // const documentsWithUrl = documents.map((doc) => ({
+    //   ...doc,
+    //   url: `${baseUrl}/uploads/khata/${doc.file_name}`,
+    // }));
+
+    const documentsWithUrl = documents.map((doc) => ({
+      ...doc,
+      // url: `${req.protocol}://${req.get("host")}${prefix}/uploads/khata/${
+      //   doc.file_name
+      // }`,
+      url: `${req.protocol}://${req.get("host")}${req.get("host").includes("localhost") ? "" : "/api"
+        }/uploads/govt_khata/${doc.file_name}`,
+    }));
+    res.status(200).json({
+      success: true,
+      message: "Khata documents fetched successfully.",
+      count: documentsWithUrl.length,
+      documentsWithUrl,
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ success: false, message: err.message });
+  }
+};
+
 const uploadGovtMapDoc = async (req, res) => {
   const userId = req.user.id;
   try {
@@ -486,5 +517,6 @@ module.exports = {
   deleteGovtKhata,
   viewPlotsByKhata,
   uploadGovtKhataDoc,
+  getKhataFilesByKhataId,
   uploadGovtMapDoc
 };

@@ -786,7 +786,7 @@ const Khata = {
 
   async getFilesByKhataId(khata_id) {
     const [rows] = await db.query(
-      "SELECT * FROM khata_documents WHERE khata_id = ? ORDER BY created_at DESC",
+      "SELECT * FROM khata_documents WHERE khata_id = ? AND type = 1 ORDER BY created_at DESC",
       [khata_id]
     );
     return rows;
