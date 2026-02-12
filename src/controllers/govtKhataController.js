@@ -444,6 +444,7 @@ const getKhataFilesByKhataId = async (req, res) => {
     console.error(err);
     res.status(500).json({ success: false, message: err.message });
   }
+
 };
 
 const uploadGovtMapDoc = async (req, res) => {
