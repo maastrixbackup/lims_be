@@ -511,6 +511,50 @@ const uploadGovtMapDoc = async (req, res) => {
   }
 };
 
+const getGovtMapFiles = async (req, res) => {
+  try {
+    const { khata_id } = req.params;
+
+    if (!khata_id) {
+      return res.status(400).json({
+        success: false,
+        message: "Khata ID is required",
+      });
+    }
+
+    const khataData = await govtKhata.findById(khata_id);
+    if (!khataData) {
+      return res.status(404).json({
+        success: false,
+        message: "Khata not found",
+      });
+    }
+
+    const documents = await govtKhata.getMapDocumentsByKhataId(khata_id);
+    const baseURL = `${req.protocol}://${req.get("host")}${req.get("host").includes("localhost") ? "" : "/api"
+      }`;
+    const formatted = documents.map((doc) => ({
+      id: doc.id,
+      khata_id: doc.khata_id,
+      land_type: doc.land_type,
+      file_name: doc.file_name,
+      url: `${baseURL}/uploads/govt_maps/${doc.file_name}`,
+      uploaded_at: doc.created_at,
+    }));
+    return res.status(200).json({
+      success: true,
+      message: "Map documents fetched successfully",
+      data: formatted,
+    });
+  } catch (err) {
+    console.error("Fetch map doc error:", err);
+    return res.status(500).json({
+      success: false,
+      message: "Server error while fetching map files",
+    });
+  }
+};
+
 module.exports = {
   addGovtKhata,
   govtKhataList,
@@ -519,5 +563,6 @@ module.exports = {
   viewPlotsByKhata,
   uploadGovtKhataDoc,
   getKhataFilesByKhataId,
-  uploadGovtMapDoc
+  uploadGovtMapDoc,
+  getGovtMapFiles
 };
