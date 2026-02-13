@@ -794,7 +794,7 @@ const Khata = {
 
   async findFileById(id) {
     const [rows] = await db.query(
-      "SELECT * FROM khata_documents WHERE id = ?",
+      "SELECT * FROM khata_documents WHERE id = ? AND type = 1",
       [id]
     );
     return rows[0];
@@ -802,7 +802,7 @@ const Khata = {
 
   async deleteFileById(file_id) {
     const [result] = await db.query(
-      "DELETE FROM khata_documents WHERE id = ?",
+      "DELETE FROM khata_documents WHERE id = ? AND type = 1",
       [file_id]
     );
     return result.affectedRows > 0;

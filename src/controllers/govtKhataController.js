@@ -447,6 +447,62 @@ const getKhataFilesByKhataId = async (req, res) => {
 
 };
 
+const deleteGovtKhataFileById = async (req, res) => {
+  const userId = req.user.id;
+  const file_id = req.params.id;
+  try {
+    const document = await govtKhata.findFileById(file_id);
+    if (!document) {
+      return res.status(404).json({
+        success: false,
+        message: "Document not found.",
+      });
+    }
+
+    const deleted = await govtKhata.deleteFileById(file_id);
+    if (!deleted) {
+      return res.status(400).json({
+        success: false,
+        message: "Failed to delete document from database.",
+      });
+    }
+    const filePath = path.join(
+      __dirname,
+      "../../uploads/govt_khata",
+      document.file_name
+    );
+    if (fs.existsSync(filePath)) {
+      fs.unlinkSync(filePath);
+    }
+    await logAction(
+      userId,
+      "delete khata document",
+      "success",
+      "Document deleted successfully",
+      { file_id },
+      deleted
+    );
+    return res.status(200).json({
+      success: true,
+      message: "Document deleted successfully.",
+    });
+  } catch (err) {
+    await logAction(
+      userId,
+      "delete khata document",
+      "failure",
+      err.message,
+      { file_id },
+      null
+    );
+    console.error(err);
+    res.status(500).json({
+      success: false,
+      message: err.message,
+    });
+  }
+};
+
 const uploadGovtMapDoc = async (req, res) => {
   const userId = req.user.id;
   try {
@@ -563,6 +619,7 @@ module.exports = {
   viewPlotsByKhata,
   uploadGovtKhataDoc,
   getKhataFilesByKhataId,
+  deleteGovtKhataFileById,
   uploadGovtMapDoc,
   getGovtMapFiles
 };

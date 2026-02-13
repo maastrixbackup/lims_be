@@ -412,6 +412,22 @@ const GovtKhata = {
     return rows;
   },
 
+  async findFileById(id) {
+    const [rows] = await db.query(
+      "SELECT * FROM khata_documents WHERE id = ? AND type = 2",
+      [id]
+    );
+    return rows[0];
+  },
+
+  async deleteFileById(file_id) {
+    const [result] = await db.query(
+      "DELETE FROM khata_documents WHERE id = ? AND type = 2",
+      [file_id]
+    );
+    return result.affectedRows > 0;
+  },
+
   async getMapDocumentsByKhataId(khata_id) {
     const [rows] = await db.query(
       `SELECT id, khata_id, land_type, file_name, created_at
