@@ -411,6 +411,17 @@ const GovtKhata = {
     );
     return rows;
   },
+
+  async getMapDocumentsByKhataId(khata_id) {
+    const [rows] = await db.query(
+      `SELECT id, khata_id, land_type, file_name, created_at
+      FROM khata_map_documents
+      WHERE khata_id = ? AND land_type = 2
+      ORDER BY id DESC`,
+      [khata_id]
+    );
+    return rows;
+  },
 };
 
 module.exports = GovtKhata;

@@ -1296,7 +1296,7 @@ const Khata = {
     const [rows] = await db.query(
       `SELECT id, khata_id, land_type, file_name, created_at
       FROM khata_map_documents
-      WHERE khata_id = ?
+      WHERE khata_id = ? AND land_type = 1
       ORDER BY id DESC`,
       [khata_id]
     );
