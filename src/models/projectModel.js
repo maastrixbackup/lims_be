@@ -2,16 +2,17 @@ const db = require("../config/db");
 const { countAll } = require("./logModel");
 
 const Project = {
-  async create(project_name, status = 0, client_code, project_location) {
+  async create(project_name, status = 0, client_code, type, project_location) {
     const [result] = await db.query(
-      "INSERT INTO projects (project_name, status, client_code, project_location) VALUES (?, ?, ?, ?)",
-      [project_name, status, client_code, project_location]
+      "INSERT INTO projects (project_name, status, client_code, type, project_location) VALUES (?, ?, ?, ?, ?)",
+      [project_name, status, client_code, type, project_location]
     );
     return {
       id: result.insertId,
       project_name,
       status,
       client_code,
+      type,
       project_location,
     };
   },
@@ -87,12 +88,12 @@ const Project = {
     return rows;
   },
 
-  async update(id, project_name, status, client_code, project_location) {
+  async update(id, project_name, status, client_code, type, project_location) {
     await db.query(
-      "UPDATE projects SET project_name = ?, status = ?, client_code = ?, project_location = ?, updated_at = NOW() WHERE id = ?",
-      [project_name, status, client_code, project_location, id]
+      "UPDATE projects SET project_name = ?, status = ?, client_code = ?, type = ?, project_location = ?, updated_at = NOW() WHERE id = ?",
+      [project_name, status, client_code, type, project_location, id]
     );
-    return { id, project_name, status, client_code, project_location };
+    return { id, project_name, status, client_code, type, project_location };
   },
 
   async updateClientCodeByProjectId(projectId, newClientCode) {

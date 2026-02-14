@@ -4,11 +4,11 @@ const logAction = require("../utils/logger");
 const createProject = async (req, res) => {
   const userId = req.user.id;
   const roleId = req.user.role_id;
-  const { project_name, status = 0, client_code, project_location } = req.body;
-  const safeRequestPayload = { project_name, status, client_code };
+  const { project_name, status = 0, client_code, type, project_location } = req.body;
+  const safeRequestPayload = { project_name, status, client_code, type };
 
   try {
-    if (!project_name || !client_code || !project_location) {
+    if (!project_name || !client_code || !type || !project_location) {
       return res.status(400).json({
         success: false,
         message: "All fields are required",
@@ -27,6 +27,7 @@ const createProject = async (req, res) => {
       project_name,
       status,
       client_code,
+      type,
       project_location
     );
 
@@ -132,13 +133,14 @@ const getActiveProjects = async (req, res) => {
 const updateProject = async (req, res) => {
   const userId = req.user.id;
   const { id } = req.params;
-  const { project_name, status, client_code, project_location } = req.body;
+  const { project_name, status, client_code, type, project_location } = req.body;
 
   const safeRequestPayload = {
     id,
     project_name,
     status,
     client_code,
+    type,
     project_location,
   };
 
@@ -153,6 +155,7 @@ const updateProject = async (req, res) => {
       project_name === undefined &&
       status === undefined &&
       client_code === undefined &&
+      type === undefined &&
       project_location === undefined
     ) {
       return res.status(400).json({
@@ -184,6 +187,7 @@ const updateProject = async (req, res) => {
       project_name,
       status,
       client_code,
+      type,
       project_location
     );
 
