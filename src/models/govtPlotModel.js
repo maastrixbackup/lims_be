@@ -589,40 +589,48 @@ const GovtPlot = {
     });
 
     if (!validRows.length) return 0;
+    const processedRows = validRows.map((r) => {
+      const totalAcres =
+        parseFloat(r["total area (in acres)"]) || null;
 
-    const totalAcres =
-      parseFloat(r["total area (in acres)"]) || null;
+      const totalHectares =
+        parseFloat(r["total area (in hectares)"]) || null;
 
-    const totalHectares =
-      parseFloat(r["total area (in hectares)"]) || null;
+      const proposedAcres =
+        parseFloat(r["proposed area (in acres)"]) || null;
 
-    const proposedAcres =
-      parseFloat(r["proposed area (in acres)"]) || null;
+      const proposedHectares =
+        parseFloat(r["proposed area (in hectares)"]) || null;
 
-    const proposedHectares =
-      parseFloat(r["proposed area (in hectares)"]) || null;
+      // Conversion logic
+      let finalTotalAcres = totalAcres;
+      let finalTotalHectares = totalHectares;
+      let finalProposedAcres = proposedAcres;
+      let finalProposedHectares = proposedHectares;
 
-    // Conversion logic
-    let finalTotalAcres = totalAcres;
-    let finalTotalHectares = totalHectares;
-    let finalProposedAcres = proposedAcres;
-    let finalProposedHectares = proposedHectares;
+      // Total area conversion
+      if (finalTotalAcres && !finalTotalHectares)
+        finalTotalHectares = parseFloat((finalTotalAcres / 2.47105).toFixed(4));
 
-    // Total area conversion
-    if (finalTotalAcres && !finalTotalHectares)
-      finalTotalHectares = parseFloat((finalTotalAcres / 2.47105).toFixed(4));
+      if (finalTotalHectares && !finalTotalAcres)
+        finalTotalAcres = parseFloat((finalTotalHectares * 2.47105).toFixed(4));
 
-    if (finalTotalHectares && !finalTotalAcres)
-      finalTotalAcres = parseFloat((finalTotalHectares * 2.47105).toFixed(4));
+      // Proposed area conversion
+      if (finalProposedAcres && !finalProposedHectares)
+        finalProposedHectares = parseFloat((finalProposedAcres / 2.47105).toFixed(4));
 
-    // Proposed area conversion
-    if (finalProposedAcres && !finalProposedHectares)
-      finalProposedHectares = parseFloat((finalProposedAcres / 2.47105).toFixed(4));
+      if (finalProposedHectares && !finalProposedAcres)
+        finalProposedAcres = parseFloat((finalProposedHectares * 2.47105).toFixed(4));
 
-    if (finalProposedHectares && !finalProposedAcres)
-      finalProposedAcres = parseFloat((finalProposedHectares * 2.47105).toFixed(4));
-
-    const values = validRows.map((r) => [
+      return {
+        ...r,
+        total_acres: finalTotalAcres,
+        total_hectares: finalTotalHectares,
+        proposed_acres: finalProposedAcres,
+        proposed_hectares: finalProposedHectares,
+      };
+    });
+    const values = processedRows.map((r) => [
       project_id,
       type,
       r["mouza"] || null,
@@ -634,10 +642,10 @@ const GovtPlot = {
       r["name of ror"] || null,
       r["plot no"] || null,
 
-      finalTotalAcres || null,
-      finalProposedAcres || null,
-      finalTotalHectares || null,
-      finalProposedHectares || null,
+      r.total_acres || null,
+      r.proposed_acres || null,
+      r.total_hectares || null,
+      r.proposed_hectares || null,
       // r["total area (in acres)"] || null,
       // r["proposed area (in acres)"] || null,
       // r["total area (in hectares)"] || null,
