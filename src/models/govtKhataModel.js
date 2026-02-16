@@ -107,7 +107,7 @@ const GovtKhata = {
       UPDATE govt_khata g
       JOIN projects p ON p.id = g.project_id
       JOIN villages v ON v.id = g.village_id
-      SET g.unique_id = CONCAT(p.client_code, '/', v.village_code, '/', g.khata_no)
+      SET g.unique_id = CONCAT(p.client_code, '/', v.village_name, '/', g.khata_no)
       WHERE g.project_id = ?
         AND g.type = ?
       `,
@@ -225,7 +225,7 @@ const GovtKhata = {
     SELECT
       CASE
         WHEN ? IS NOT NULL
-          THEN CONCAT(p.client_code, '/', v.village_code, '/', ?)
+          THEN CONCAT(p.client_code, '/', v.village_name, '/', ?)
         ELSE CONCAT(p.client_code, '/', 'NA', '/', ?)
       END AS unique_id,
       ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
