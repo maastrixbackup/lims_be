@@ -291,7 +291,9 @@ const GovtKhata = {
       SELECT
         k.*,
         v.village_name,
-        IFNULL(pc.plot_count, 0) AS plot_count
+        IFNULL(pc.plot_count, 0) AS plot_count,
+        IFNULL(kdc.khata_document_count, 0) AS khata_document_count,
+        IFNULL(kmdc.khata_map_document_count, 0) AS khata_map_document_count
         FROM govt_khata k
         LEFT JOIN villages v ON v.id = k.village_id
         LEFT JOIN (
@@ -306,6 +308,19 @@ const GovtKhata = {
           ON pc.project_id = k.project_id
         AND pc.type = k.type
         AND pc.khata_no = k.khata_no
+
+        LEFT JOIN (
+          SELECT khata_id, COUNT(*) AS khata_document_count
+          FROM khata_documents
+          GROUP BY khata_id
+        ) kdc ON kdc.khata_id = k.id
+
+        LEFT JOIN (
+          SELECT khata_id, COUNT(*) AS khata_map_document_count
+          FROM khata_map_documents
+          GROUP BY khata_id
+        ) kmdc ON kmdc.khata_id = k.id
+
         ${whereSql}
         ORDER BY k.id DESC
         LIMIT ? OFFSET ?

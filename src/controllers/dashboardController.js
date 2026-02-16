@@ -103,12 +103,13 @@ const getDashboardData = async (req, res) => {
     }
 
     // Continue with counts
-    const [projectsCount, villagesCount, plotsCount, khataCount] =
+    const [projectsCount, villagesCount, plotsCount, khataCount, completedPayments] =
       await Promise.all([
         Project.countAll(projectIds),
         Village.pvtCountAll(projectIds),
         Plot.allPlotcount(projectIds),
         Khata.countAll(projectIds),
+        Plot.countCompletedPayments(projectIds),
       ]);
 
     const recentProjects = await Project.getRecentProjects(3);
@@ -128,7 +129,7 @@ const getDashboardData = async (req, res) => {
       // sub_plots: 310,
       khata: khataCount,
       survey_status: 70,
-      payment_status: 110,
+      payment_status: completedPayments,
       la_status: 20,
       rr_status: 34,
       land_distribution: {
@@ -197,12 +198,13 @@ const getGovtDashboardData = async (req, res) => {
 
 
     // ---------- GOVT COUNTS ----------
-    const [projectsCount, villagesCount, govtPlotsCount, govtKhataCount] =
+    const [projectsCount, villagesCount, govtPlotsCount, govtKhataCount, completedPayments] =
       await Promise.all([
         Project.countAll(projectIds),
         Village.govtCountAll(projectIds), // or GovtVillage if separate
         GovtPlot.govtPlotCount(projectIds),
         GovtKhata.countAll(projectIds),
+        GovtPlot.countCompletedPayments(projectIds),
       ]);
 
     const recentProjects = await Project.getRecentProjects(3);
@@ -222,7 +224,7 @@ const getGovtDashboardData = async (req, res) => {
       // sub_plots: 310,
       khata: govtKhataCount,
       survey_status: 70,
-      payment_status: 110,
+      payment_status: completedPayments,
       la_status: 20,
       rr_status: govtKhataCount,
       land_distribution: {

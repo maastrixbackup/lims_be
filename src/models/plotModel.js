@@ -2769,6 +2769,24 @@ const Plot = {
 
     return true;
   },
+
+  async countCompletedPayments(projectIds = null) {
+    let query = `
+    SELECT COUNT(*) AS total
+    FROM plot_payments
+    WHERE status = 'complete' AND type = 1
+  `;
+    let params = [];
+
+    if (Array.isArray(projectIds) && projectIds.length > 0) {
+      const placeholders = projectIds.map(() => "?").join(",");
+      query += ` AND project_id IN (${placeholders})`;
+      params.push(...projectIds);
+    }
+
+    const [rows] = await db.query(query, params);
+    return rows[0].total;
+  },
 };
 
 module.exports = Plot;
