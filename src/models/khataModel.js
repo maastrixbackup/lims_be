@@ -934,7 +934,7 @@ const Khata = {
     SELECT
       CONCAT(
         MIN(p.client_code), '/',
-        MIN(v.village_code), '/',
+        MIN(v.village_name), '/',
         pl.khata_no
       ) AS unique_id,
       pl.project_id,
@@ -1190,7 +1190,7 @@ const Khata = {
     SELECT
       CONCAT(
         MIN(p.client_code), '/',
-        MIN(v.village_code), '/',
+        MIN(v.village_name), '/',
         pl.khata_no
       ) AS unique_id,
       pl.project_id,
