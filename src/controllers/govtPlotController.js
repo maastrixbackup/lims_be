@@ -939,20 +939,58 @@ const paymentReady = async (req, res) => {
     }
 
     // Split tenant names into an array
-    const tenants = plot.name_of_ror  //name_of_present_tenant is not available so i used name_of_ror
-      ? plot.name_of_ror.split(",").map((t) => t.trim())
-      : [];
+    // const tenants = plot.name_of_ror  //name_of_present_tenant is not available so i used name_of_ror
+    //   ? plot.name_of_ror.split(",").map((t) => t.trim())
+    //   : [];
+
+    // const records = [];
+
+    // for (const tenant of tenants) {
+    //   const data = {
+    //     unique_id,
+    //     plot_id: plot.id,
+    //     lease_case_no: plot.lease_case_no,
+    //     plot_no: plot.plot_no,
+    //     khata_no: plot.khata_no,
+    //     project_id: plot.project_id,
+    //     // present_tenant_names: tenant,
+    //     payment_area: plot.total_area_acres,
+    //     total_compensation: plot.total_compensation,
+    //     bank_ac: plot.bank_account_no ?? null,
+    //     bank_name: plot.bank_name ?? null,
+    //     ifsc: plot.branch_ifsc ?? null,
+    //     type: plot.type,
+    //     status: payment_status,
+    //   };
+
+    //   const rec = await GovtPlot.addPaymentRecord(data);
+    //   records.push(rec);
+    // }
+
+    //count lease cases from govt_khata
+    const leaseCount = await GovtKhata.countLeaseCases(
+      plot.project_id,
+      plot.type,
+      plot.khata_no
+    );
+
+    if (leaseCount === 0) {
+      return res.status(400).json({
+        success: false,
+        message: "No lease case found for this khata",
+      });
+    }
 
     const records = [];
 
-    for (const tenant of tenants) {
+    for (let i = 0; i < leaseCount; i++) {
       const data = {
         unique_id,
         plot_id: plot.id,
+        lease_case_no: plot.lease_case_no,
         plot_no: plot.plot_no,
         khata_no: plot.khata_no,
         project_id: plot.project_id,
-        present_tenant_names: tenant,
         payment_area: plot.total_area_acres,
         total_compensation: plot.total_compensation,
         bank_ac: plot.bank_account_no ?? null,
@@ -965,6 +1003,7 @@ const paymentReady = async (req, res) => {
       const rec = await GovtPlot.addPaymentRecord(data);
       records.push(rec);
     }
+
     // } else {
     //   await Plot.updatePaymentRecordStatus(plot_id, payment_status);
     // }
@@ -1057,6 +1096,7 @@ const getAllPaymentReady = async (req, res) => {
       groups[row.unique_id].tenants.push({
         id: row.id,
         plot_no: row.plot_no,
+        lease_case_no: row.lease_case_no,
         present_tenant: row.present_tenant_names,
         payment_area: 0,
         compensation_payment: 0,

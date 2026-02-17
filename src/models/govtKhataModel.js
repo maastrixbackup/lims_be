@@ -454,6 +454,23 @@ const GovtKhata = {
     return rows;
   },
 
+  async countLeaseCases(project_id, type, khata_no) {
+    const [rows] = await db.query(
+      `
+    SELECT COUNT(*) AS total
+    FROM govt_khata
+    WHERE project_id = ?
+      AND type = ?
+      AND khata_no = ?
+      AND lease_case_no IS NOT NULL
+      AND lease_case_no <> ''
+    `,
+      [project_id, type, khata_no]
+    );
+
+    return rows[0]?.total || 0;
+  },
+
   // async findDocumentByFilename(filename) {
   //   const sql = `
   //   SELECT

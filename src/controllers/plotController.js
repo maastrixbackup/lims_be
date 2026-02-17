@@ -371,11 +371,66 @@ const plotDocumentDelete = async (req, res) => {
 //   }
 // };
 
+// const downloadPlotDocument = async (req, res) => {
+//   try {
+//     const { filename } = req.params;
+
+//     // Basic security check
+//     if (!filename || filename.includes("..")) {
+//       return res.status(400).json({
+//         success: false,
+//         message: "Invalid file name",
+//       });
+//     }
+
+//     // Fetch document from DB
+//     const doc = await Plot.findDocumentByFilename(filename);
+//     // OR GovtPlot.findDocumentByFilename depending on module
+
+//     if (!doc) {
+//       return res.status(404).json({
+//         success: false,
+//         message: "Document not found",
+//       });
+//     }
+
+//     // Resolve file path from DB
+//     const filePath = path.join(process.cwd(), doc.file_path);
+
+//     if (!fs.existsSync(filePath)) {
+//       return res.status(404).json({
+//         success: false,
+//         message: "File missing on server",
+//       });
+//     }
+
+//     // Set headers (IMPORTANT for Chrome)
+//     res.setHeader(
+//       "Content-Type",
+//       "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+//     );
+
+//     res.setHeader(
+//       "Content-Disposition",
+//       `attachment; filename="${doc.original_filename || doc.filename}"`,
+//     );
+
+//     // Stream file
+//     fs.createReadStream(filePath).pipe(res);
+//   } catch (error) {
+//     console.error("Download error:", error);
+//     return res.status(500).json({
+//       success: false,
+//       message: "Error while downloading file",
+//     });
+//   }
+// };
+
 const downloadPlotDocument = async (req, res) => {
   try {
     const { filename } = req.params;
 
-    // Basic security check
+    //security
     if (!filename || filename.includes("..")) {
       return res.status(400).json({
         success: false,
@@ -383,9 +438,8 @@ const downloadPlotDocument = async (req, res) => {
       });
     }
 
-    // Fetch document from DB
+    //search in BOTH tables
     const doc = await Plot.findDocumentByFilename(filename);
-    // OR GovtPlot.findDocumentByFilename depending on module
 
     if (!doc) {
       return res.status(404).json({
@@ -394,7 +448,6 @@ const downloadPlotDocument = async (req, res) => {
       });
     }
 
-    // Resolve file path from DB
     const filePath = path.join(process.cwd(), doc.file_path);
 
     if (!fs.existsSync(filePath)) {
@@ -404,18 +457,30 @@ const downloadPlotDocument = async (req, res) => {
       });
     }
 
-    // Set headers (IMPORTANT for Chrome)
+    // better: dynamic mime
+    const ext = path.extname(doc.filename).toLowerCase();
+
+    const mimeTypes = {
+      ".pdf": "application/pdf",
+      ".xlsx":
+        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      ".xls": "application/vnd.ms-excel",
+      ".jpg": "image/jpeg",
+      ".jpeg": "image/jpeg",
+      ".png": "image/png",
+    };
+
     res.setHeader(
       "Content-Type",
-      "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      mimeTypes[ext] || "application/octet-stream"
     );
 
     res.setHeader(
       "Content-Disposition",
-      `attachment; filename="${doc.original_filename || doc.filename}"`,
+      `attachment; filename="${doc.original_filename || doc.filename
+      }"`
     );
 
-    // Stream file
     fs.createReadStream(filePath).pipe(res);
   } catch (error) {
     console.error("Download error:", error);
@@ -425,6 +490,7 @@ const downloadPlotDocument = async (req, res) => {
     });
   }
 };
+
 
 const createPlot = async (req, res) => {
   const userId = req.user.id;

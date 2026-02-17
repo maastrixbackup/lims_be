@@ -817,15 +817,16 @@ const GovtPlot = {
   async addPaymentRecord(data) {
     const sql = `
       INSERT INTO plot_payments 
-      (unique_id, plot_id, plot_no, khata_no, project_id, present_tenant_names, payment_area, total_compensation, 
+      (unique_id, plot_id, plot_no, lease_case_no, khata_no, project_id, present_tenant_names, payment_area, total_compensation, 
        bank_ac, bank_name, ifsc, type, status)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,?,?)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,?,?,?)
     `;
 
     const params = [
       data.unique_id,
       data.plot_id,
       data.plot_no,
+      data.lease_case_no,
       data.khata_no,
       data.project_id,
       data.present_tenant_names,
