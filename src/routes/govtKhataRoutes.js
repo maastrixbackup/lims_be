@@ -12,7 +12,8 @@ const {
   getKhataFilesByKhataId,
   deleteGovtKhataFileById,
   uploadGovtMapDoc,
-  getGovtMapFiles
+  getGovtMapFiles,
+  downloadKhataDocument
 } = require("../controllers/govtKhataController");
 
 const { uploadGovtKhata, uploadGovtMapDocument } = require("../middleware/upload");
@@ -52,5 +53,7 @@ router.post(
   uploadGovtMapDoc
 );
 router.get("/getGovtMapFiles/:khata_id", getGovtMapFiles);
+
+router.get("/downloadKhataDocument/:filename", downloadKhataDocument);
 
 module.exports = router;

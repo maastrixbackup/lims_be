@@ -381,6 +381,7 @@ const uploadGovtKhataDoc = async (req, res) => {
       khata_id,
       unique_id,
       req.file.filename,
+      `uploads/govt_khata/${req.file.filename}`,
       type,
       document_type
     );
@@ -611,6 +612,131 @@ const getGovtMapFiles = async (req, res) => {
   }
 };
 
+// const downloadKhataDocument = async (req, res) => {
+//   try {
+//     const { filename } = req.params;
+
+//     // Basic security check
+//     if (!filename || filename.includes("..")) {
+//       return res.status(400).json({
+//         success: false,
+//         message: "Invalid file name",
+//       });
+//     }
+
+//     // Fetch document from DB
+//     const doc = await GovtKhata.findDocumentByFilename(filename);
+//     // OR GovtPlot.findDocumentByFilename depending on module
+
+//     if (!doc) {
+//       return res.status(404).json({
+//         success: false,
+//         message: "Document not found",
+//       });
+//     }
+
+//     // Resolve file path from DB
+//     const filePath = path.join(process.cwd(), doc.file_path);
+
+//     if (!fs.existsSync(filePath)) {
+//       return res.status(404).json({
+//         success: false,
+//         message: "File missing on server",
+//       });
+//     }
+
+//     // Set headers (IMPORTANT for Chrome)
+//     res.setHeader(
+//       "Content-Type",
+//       "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+//     );
+
+//     res.setHeader(
+//       "Content-Disposition",
+//       `attachment; filename="${doc.file_name}"`,
+//     );
+
+//     // Stream file
+//     fs.createReadStream(filePath).pipe(res);
+//   } catch (error) {
+//     console.error("Download error:", error);
+//     return res.status(500).json({
+//       success: false,
+//       message: "Error while downloading file",
+//     });
+//   }
+// };
+
+const downloadKhataDocument = async (req, res) => {
+  try {
+    const { filename } = req.params;
+
+    //Basic security check
+    if (!filename || filename.includes("..")) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid file name",
+      });
+    }
+
+    //Fetch from DB (works for both pvt & govt)
+    const doc = await GovtKhata.findDocumentByFilename(filename);
+
+    if (!doc) {
+      return res.status(404).json({
+        success: false,
+        message: "Document not found",
+      });
+    }
+
+    //Resolve absolute path
+    const filePath = path.join(process.cwd(), doc.file_path);
+
+    //Check file exists physically
+    if (!fs.existsSync(filePath)) {
+      return res.status(404).json({
+        success: false,
+        message: "File missing on server",
+      });
+    }
+
+    //Detect content type dynamically
+    const ext = path.extname(doc.file_name).toLowerCase();
+
+    const mimeTypes = {
+      ".pdf": "application/pdf",
+      ".xlsx":
+        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      ".xls": "application/vnd.ms-excel",
+      ".jpg": "image/jpeg",
+      ".jpeg": "image/jpeg",
+      ".png": "image/png",
+      ".doc":
+        "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+      ".docx":
+        "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    };
+
+    const contentType = mimeTypes[ext] || "application/octet-stream";
+
+    //Set headers
+    res.setHeader("Content-Type", contentType);
+    res.setHeader(
+      "Content-Disposition",
+      `attachment; filename="${doc.file_name}"`
+    );
+
+    //Stream file
+    fs.createReadStream(filePath).pipe(res);
+  } catch (error) {
+    console.error("Download error:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Error while downloading file",
+    });
+  }
+};
+
 module.exports = {
   addGovtKhata,
   govtKhataList,
@@ -621,5 +747,6 @@ module.exports = {
   getKhataFilesByKhataId,
   deleteGovtKhataFileById,
   uploadGovtMapDoc,
-  getGovtMapFiles
+  getGovtMapFiles,
+  downloadKhataDocument
 };
