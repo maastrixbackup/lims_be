@@ -1566,20 +1566,48 @@ const Plot = {
     return rows;
   },
 
+  // async findDocumentByFilename(filename) {
+  //   const sql = `
+  //   SELECT
+  //     filename,
+  //     original_filename,
+  //     file_path
+  //   FROM pvt_plot_documents
+  //   WHERE filename = ?
+  //   LIMIT 1
+  // `;
+
+  //   const [rows] = await db.query(sql, [filename]);
+  //   return rows[0];
+  // },
+
   async findDocumentByFilename(filename) {
     const sql = `
     SELECT
       filename,
       original_filename,
-      file_path
+      file_path,
+      1 AS type
     FROM pvt_plot_documents
     WHERE filename = ?
+
+    UNION ALL
+
+    SELECT
+      filename,
+      original_filename,
+      file_path,
+      2 AS type
+    FROM govt_plot_documents
+    WHERE filename = ?
+
     LIMIT 1
   `;
 
-    const [rows] = await db.query(sql, [filename]);
+    const [rows] = await db.query(sql, [filename, filename]);
     return rows[0];
   },
+
 
   async deleteDocumentByFilename(filename) {
     await db.query(`DELETE FROM pvt_plot_documents WHERE filename = ?`, [
