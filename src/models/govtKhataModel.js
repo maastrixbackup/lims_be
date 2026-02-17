@@ -453,6 +453,32 @@ const GovtKhata = {
     );
     return rows;
   },
+
+  // async findDocumentByFilename(filename) {
+  //   const sql = `
+  //   SELECT
+  //     file_name,
+  //     file_path
+  //   FROM khata_documents
+  //   WHERE file_name = ?
+  //   LIMIT 1
+  // `;
+
+  //   const [rows] = await db.query(sql, [filename]);
+  //   return rows[0];
+  // },
+  async findDocumentByFilename(filename) {
+    const sql = `
+    SELECT file_name, file_path, type
+    FROM khata_documents
+    WHERE file_name = ?
+    LIMIT 1
+  `;
+
+    const [rows] = await db.query(sql, [filename]);
+    return rows[0];
+  }
+
 };
 
 module.exports = GovtKhata;

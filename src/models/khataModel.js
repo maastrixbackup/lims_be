@@ -774,12 +774,13 @@ const Khata = {
     khata_id,
     unique_id,
     file_name,
+    file_path,
     type,
     document_type
   ) {
     const [result] = await db.query(
-      "INSERT INTO khata_documents(khata_id, unique_id, file_name, type, document_type) VALUES (?,?,?,?,?)",
-      [khata_id, unique_id, file_name, type, document_type]
+      "INSERT INTO khata_documents(khata_id, unique_id, file_name, file_path, type, document_type) VALUES (?,?,?,?,?,?)",
+      [khata_id, unique_id, file_name, file_path, type, document_type]
     );
     return result;
   },

@@ -472,6 +472,7 @@ const uploadKhataDoc = async (req, res) => {
       khata_id,
       unique_id,
       req.file.filename,
+      `uploads/khata/${req.file.filename}`,
       type,
       document_type
     );
@@ -522,9 +523,8 @@ const getKhataFilesByKhataId = async (req, res) => {
       // url: `${req.protocol}://${req.get("host")}${prefix}/uploads/khata/${
       //   doc.file_name
       // }`,
-      url: `${req.protocol}://${req.get("host")}${
-        req.get("host").includes("localhost") ? "" : "/api"
-      }/uploads/khata/${doc.file_name}`,
+      url: `${req.protocol}://${req.get("host")}${req.get("host").includes("localhost") ? "" : "/api"
+        }/uploads/khata/${doc.file_name}`,
     }));
     res.status(200).json({
       success: true,
@@ -1013,9 +1013,8 @@ const getMapFiles = async (req, res) => {
     }
 
     const documents = await Khata.getMapDocumentsByKhataId(khata_id);
-    const baseURL = `${req.protocol}://${req.get("host")}${
-      req.get("host").includes("localhost") ? "" : "/api"
-    }`;
+    const baseURL = `${req.protocol}://${req.get("host")}${req.get("host").includes("localhost") ? "" : "/api"
+      }`;
     const formatted = documents.map((doc) => ({
       id: doc.id,
       khata_id: doc.khata_id,
