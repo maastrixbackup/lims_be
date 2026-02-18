@@ -61,7 +61,10 @@ router.post("/paymentReady", paymentReady);
 router.get("/getCompensationDetails", getAllPaymentReady);
 router.post(
   "/landCostPaymentUpload",
-  uploadGovtLandCostPayment.single("payment_proof"),
+  uploadGovtLandCostPayment.fields([
+    { name: "demand_note_attachment", maxCount: 1 },
+    { name: "payment_proof", maxCount: 1 }
+  ]),
   landCostPaymentUpload
 );
 router.put("/updatePlotPayment/:id", updatePlotPayment);

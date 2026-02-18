@@ -881,10 +881,14 @@ const GovtPlot = {
     return rows[0];
   },
 
-  async addPaymentProof(land_cost_id, filePath) {
+  async addPaymentProof(land_cost_id, paymentProof, demandNoteAttachment) {
     const [result] = await db.query(
-      `UPDATE plot_payments SET payment_proof = ? WHERE id = ? AND type = 2`,
-      [filePath, land_cost_id],
+      `UPDATE plot_payments
+      SET
+        payment_proof = COALESCE(?, payment_proof),
+        demand_note_attachment = COALESCE(?, demand_note_attachment)
+        WHERE id = ? AND type = 2`,
+      [paymentProof, demandNoteAttachment, land_cost_id],
     );
     return result;
   },
