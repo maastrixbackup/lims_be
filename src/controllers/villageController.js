@@ -5,7 +5,7 @@ const ExcelJS = require("exceljs");
 const addVillage = async (req, res) => {
   const userId = req.user.id;
   const safeRequestPayload = req.body;
-  const { village_name, tahasil, district, project_id, village_code, type, thana_name_no } =
+  const { village_name, tahasil, district, project_id, type, thana_name_no } =
     req.body;
 
   try {
@@ -14,7 +14,6 @@ const addVillage = async (req, res) => {
       !tahasil ||
       !district ||
       !project_id ||
-      !village_code ||
       !type
     ) {
       return res.status(400).json({
@@ -23,12 +22,20 @@ const addVillage = async (req, res) => {
       });
     }
 
+    const existVillage = await Village.checkVillageExists(project_id, type, village_name);
+
+    if (existVillage) {
+      return res.status(400).json({
+        status: false,
+        message: "Village already exists for this project and type"
+      });
+    }
+
     const village = await Village.create(
       village_name,
       tahasil,
       district,
       project_id,
-      village_code,
       type,
       thana_name_no
     );
@@ -116,7 +123,6 @@ const updateVillage = async (req, res) => {
     tahasil,
     district,
     project_id,
-    village_code,
     type,
     multiplying_factor,
     thana_name_no
@@ -137,7 +143,6 @@ const updateVillage = async (req, res) => {
       tahasil,
       district,
       project_id,
-      village_code,
       type,
       multiplying_factor,
       thana_name_no
