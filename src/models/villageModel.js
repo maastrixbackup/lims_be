@@ -6,13 +6,12 @@ const Village = {
     tahasil,
     district,
     project_id,
-    village_code,
     type,
     thana_name_no
   ) {
     const [result] = await db.query(
-      "INSERT INTO villages (village_name, tahasil, district, project_id, village_code, type, thana_name_no) VALUES (?,?,?,?,?,?,?)",
-      [village_name, tahasil, district, project_id, village_code, type, thana_name_no]
+      "INSERT INTO villages (village_name, tahasil, district, project_id, type, thana_name_no) VALUES (?,?,?,?,?,?)",
+      [village_name, tahasil, district, project_id, type, thana_name_no]
     );
     return {
       id: result.insertId,
@@ -20,7 +19,6 @@ const Village = {
       tahasil,
       district,
       project_id,
-      village_code,
       type,
       thana_name_no
     };
@@ -120,19 +118,17 @@ const Village = {
     tahasil,
     district,
     project_id,
-    village_code,
     type,
     multiplying_factor,
     thana_name_no
   ) {
     await db.query(
-      "UPDATE villages SET village_name = ?, tahasil = ?, district = ?, project_id = ?, village_code = ?, type = ?, multiplying_factor = ?, thana_name_no = ?, updated_at = NOW() WHERE id = ?",
+      "UPDATE villages SET village_name = ?, tahasil = ?, district = ?, project_id = ?, type = ?, multiplying_factor = ?, thana_name_no = ?, updated_at = NOW() WHERE id = ?",
       [
         village_name,
         tahasil,
         district,
         project_id,
-        village_code,
         type,
         multiplying_factor,
         thana_name_no,
@@ -145,7 +141,6 @@ const Village = {
       tahasil,
       district,
       project_id,
-      village_code,
       type,
       multiplying_factor,
       thana_name_no
@@ -162,6 +157,19 @@ const Village = {
       [project_id, type]
     );
     return rows;
+  },
+
+  async checkVillageExists(project_id, type, village_name) {
+    const [rows] = await db.query(
+      `SELECT id 
+     FROM villages 
+     WHERE project_id = ? 
+       AND type = ? 
+       AND village_name = ?
+     LIMIT 1`,
+      [project_id, type, village_name.trim()]
+    );
+    return rows.length > 0;
   },
 
   // async countAll(projectId = null) {
