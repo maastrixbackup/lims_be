@@ -1140,12 +1140,12 @@ const landCostPaymentUpload = async (req, res) => {
       });
     }
 
-    if (!req.file) {
-      return res.status(400).json({
-        success: false,
-        message: "Payment proof file is required",
-      });
-    }
+    // if (!req.file) {
+    //   return res.status(400).json({
+    //     success: false,
+    //     message: "Payment proof file is required",
+    //   });
+    // }
 
     const landCostData = await GovtPlot.fetchLandCostById(land_cost_id);
     if (!landCostData) {
@@ -1155,9 +1155,19 @@ const landCostPaymentUpload = async (req, res) => {
       });
     }
 
+    const paymentProof = req.files?.payment_proof?.[0]?.filename || null;
+
+    const demandNoteAttachment = req.files?.demand_note_attachment?.[0]?.filename || null;
+    if (!paymentProof && !demandNoteAttachment) {
+      return res.status(400).json({
+        success: false,
+        message: "At least one file is required",
+      });
+    }
+
     // const filePath = `uploads/land_cost_payments/${req.file.filename}`;
 
-    await GovtPlot.addPaymentProof(land_cost_id, req.file.filename);
+    await GovtPlot.addPaymentProof(land_cost_id, paymentProof, demandNoteAttachment);
 
     await logAction(
       userId,
