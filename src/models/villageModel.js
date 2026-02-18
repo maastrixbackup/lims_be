@@ -245,7 +245,7 @@ const Village = {
     if (!data || data.length === 0) return 0;
 
     const [existingVillages] = await db.query(
-      `SELECT village_name, tahasil, village_code 
+      `SELECT village_name, tahasil 
        FROM villages 
        WHERE project_id = ? AND type = ?`,
       [project_id, type]
@@ -254,9 +254,7 @@ const Village = {
     const existingSet = new Set(
       existingVillages.map(
         (v) =>
-          `${v.village_name?.trim().toLowerCase()}|${v.tahasil
-            ?.trim()
-            .toLowerCase()}`
+          `${v.village_name?.trim().toLowerCase()}`
       )
     );
 
@@ -271,7 +269,7 @@ const Village = {
         row["Name of Village"]?.trim() ||
         row["name of village"]?.trim() ||
         null;
-      const villageCode = row["Village Code"]?.trim();
+      // const villageCode = row["Village Code"]?.trim();
       // const tahasil = row["Name of the Tahasil"]?.trim();
       const tahasil =
         row["Name of the Tahasil"]?.trim() ||
@@ -286,7 +284,8 @@ const Village = {
           : null;
       const presentAddress = row["Present Address"] || null;
 
-      if (!villageName || !villageCode || !tahasil) continue;
+      // if (!villageName || !tahasil) continue;
+      if (!villageName) continue;
 
       let district = null;
       if (presentAddress) {
@@ -299,9 +298,10 @@ const Village = {
       }
 
       // Key for matching existing data
-      const baseKey = `${villageName.toLowerCase()}|${tahasil.toLowerCase()}`;
+      const baseKey = `${villageName.toLowerCase()}`;
       // const baseKey = `${villageCode.toLowerCase()}`;
-      const uniqueKey = `${baseKey}|${thanaNo?.toLowerCase() || ""}`;
+      const uniqueKey = baseKey;
+      // const uniqueKey = `${baseKey}|${thanaNo?.toLowerCase() || ""}`;
 
       // Skip if already exists in DB
       if (existingSet.has(baseKey)) {
@@ -319,9 +319,9 @@ const Village = {
       // Insert into DB
       await db.query(
         `INSERT INTO villages (
-          village_name, village_code, tahasil, district, project_id, type
-        ) VALUES (?, ?, ?, ?, ?, ?)`,
-        [villageName, villageCode, tahasil, district, project_id, type]
+          village_name, tahasil, district, project_id, type
+        ) VALUES (?, ?, ?, ?, ?)`,
+        [villageName, tahasil, district, project_id, type]
       );
 
       insertedCount++;
