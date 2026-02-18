@@ -1227,10 +1227,11 @@ const Plot = {
       if (acquiredHectares && !acquiredAcres)
         acquiredAcres = parseFloat((acquiredHectares * 2.47105).toFixed(4));
 
-      const villageCode = plot["Village Code"] || plot["village code"] || "NA";
+      // const villageCode = plot["Village Code"] || plot["village code"] || "NA";
+      const villageName = plot["Name of Village"] || plot["name of village"] || "NA";
 
       const khataNo = plot["Khata No."] || plot["Khata No"] || "NA";
-      const laCaseFileNo = `${projectName}/${villageCode}/${khataNo}`;
+      const laCaseFileNo = `${projectName}/${villageName}/${khataNo}`;
       //Return final row array
       return [
         project_id,
