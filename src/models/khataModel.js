@@ -548,7 +548,7 @@ const Khata = {
     }
 
     query += `
-    ORDER BY k.id DESC
+    ORDER BY k.id ASC
     LIMIT ? OFFSET ?
   `;
 

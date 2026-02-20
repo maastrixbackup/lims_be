@@ -59,7 +59,7 @@ const Village = {
       query += " AND v.type = ?";
       params.push(type);
     }
-    query += " ORDER BY v.id DESC LIMIT ? OFFSET ?";
+    query += " ORDER BY v.id ASC LIMIT ? OFFSET ?";
     params.push(limit, offset);
 
     const [rows] = await db.query(query, params);
