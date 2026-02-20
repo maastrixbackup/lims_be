@@ -1491,7 +1491,7 @@ const Plot = {
       params.push(type);
     }
 
-    query += " ORDER BY p.id DESC LIMIT ? OFFSET ?";
+    query += " ORDER BY p.id ASC LIMIT ? OFFSET ?";
     params.push(limit, offset);
 
     const [rows] = await db.query(query, params);
