@@ -10,11 +10,12 @@ const {
     forestLandAbstract,
     forestProjectList,
     updateForestProject,
-    deleteForestProject
+    deleteForestProject,
+    addStage0
 } = require("../controllers/forestLandController");
 
 const {
-    uploadEDS
+    uploadEDS, uploadStage0
 } = require("../middleware/upload");
 
 router.post("/addForestLand", addForestLand);
@@ -39,5 +40,26 @@ router.put(
 );
 
 router.delete("/deleteForestProject/:id", deleteForestProject);
+
+router.post(
+    "/addStage0",
+    uploadStage0.fields([
+        { name: "dgps_document", maxCount: 1 },
+        { name: "orsac_document", maxCount: 1 },
+        { name: "tree_enumeration_document", maxCount: 1 },
+        { name: "administrative_document", maxCount: 1 },
+        { name: "legal_lease_document", maxCount: 1 },
+        { name: "technical_document", maxCount: 1 },
+        { name: "forest_land_details_document", maxCount: 1 },
+        { name: "ca_ca_document", maxCount: 1 },
+        { name: "fra_document", maxCount: 1 },
+        { name: "environmental_document", maxCount: 1 },
+        { name: "wildlife_document", maxCount: 1 },
+        { name: "maps_document", maxCount: 1 },
+        { name: "financial_document", maxCount: 1 },
+        { name: "proposal_document", maxCount: 1 },
+    ]),
+    addStage0
+);
 
 module.exports = router;

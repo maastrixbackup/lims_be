@@ -354,6 +354,22 @@ const uploadEDS = multer({
   },
 });
 
+const stageZeroStorage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    cb(null, "uploads/stage0");
+  },
+  filename: (req, file, cb) => {
+    const name =
+      Date.now() + "_" + file.originalname.replace(/\s+/g, "_");
+    cb(null, name);
+  },
+});
+
+const uploadStage0 = multer({
+  storage: stageZeroStorage,
+  limits: { fileSize: 10 * 1024 * 1024 },
+});
+
 module.exports = {
   uploadPlotExcel,
   uploadProfilePic,
@@ -365,5 +381,6 @@ module.exports = {
   uploadGovtPlotExcel,
   uploadGovtKhata,
   uploadGovtMapDocument,
-  uploadEDS
+  uploadEDS,
+  uploadStage0
 };
