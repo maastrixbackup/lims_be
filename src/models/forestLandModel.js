@@ -403,6 +403,19 @@ const ForestLand = {
     return result;
   },
 
+  async createStage0(payload) {
+    const [result] = await db.query(
+      "INSERT INTO forest_stage_0 SET ?",
+      [payload]
+    );
+
+    const [rows] = await db.query(
+      "SELECT * FROM forest_stage_0 WHERE id = ?",
+      [result.insertId]
+    );
+    return rows[0];
+  },
+
 };
 
 module.exports = ForestLand;

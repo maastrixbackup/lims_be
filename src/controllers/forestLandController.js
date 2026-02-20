@@ -760,6 +760,185 @@ const deleteForestProject = async (req, res) => {
   }
 };
 
+const addStage0 = async (req, res) => {
+  try {
+    const body = req.body || {};
+    const files = req.files || {};
+
+    if (!body.forest_project_id) {
+      return res.status(400).json({
+        success: false,
+        message: "forest_project_id is required",
+      });
+    }
+
+    const dgpsSurveyDone = Number(body.dgps_survey_done) || 0;
+    const orsacAuth = Number(body.orsac_authentication) || 0;
+    const treeEnum = Number(body.tree_enumeration_done) || 0;
+    const adminDocs = Number(body.administrative_documents) || 0;
+    const legalLease = Number(body.legal_lease_documents) || 0;
+    const technicalData = Number(body.technical_data) || 0;
+    const caPlanning = Number(body.ca_ca_planning) || 0;
+    const proposalSubmitted = Number(body.proposal_submitted) || 0;
+
+    const stageStatus =
+      proposalSubmitted === 1 ? "Ready" : "Ongoing";
+
+    const requireFile = (condition, field, message) => {
+      if (condition && !files[field]?.[0]) {
+        throw new Error(message);
+      }
+    };
+
+    requireFile(dgpsSurveyDone === 1, "dgps_document", "DGPS document required");
+
+    requireFile(orsacAuth === 1, "orsac_document", "ORSAC document required");
+
+    requireFile(
+      treeEnum === 1,
+      "tree_enumeration_document",
+      "Tree enumeration document required"
+    );
+
+    requireFile(
+      adminDocs === 1,
+      "administrative_document",
+      "Administrative document required"
+    );
+
+    requireFile(
+      legalLease === 1,
+      "legal_lease_document",
+      "Legal & Lease document required"
+    );
+
+    requireFile(
+      technicalData === 1,
+      "technical_document",
+      "Technical document required"
+    );
+
+    requireFile(
+      body.forest_land_details === "Uploaded",
+      "forest_land_details_document",
+      "Forest land details document required"
+    );
+
+    requireFile(
+      caPlanning === 1,
+      "ca_ca_document",
+      "CA/CA Planning document required"
+    );
+
+    requireFile(
+      body.fra_records === "Completed",
+      "fra_document",
+      "FRA document required"
+    );
+
+    requireFile(
+      body.environmental_statutory === "Cleared",
+      "environmental_document",
+      "Environmental document required"
+    );
+
+    requireFile(
+      body.wildlife_safeguards === "Completed",
+      "wildlife_document",
+      "Wildlife document required"
+    );
+
+    requireFile(
+      body.maps_spatial_evidence === "Authenticated",
+      "maps_document",
+      "Maps document required"
+    );
+
+    requireFile(
+      body.financial_undertakings === "Submitted",
+      "financial_document",
+      "Financial document required"
+    );
+
+    requireFile(
+      proposalSubmitted === 1,
+      "proposal_document",
+      "Proposal document required"
+    );
+
+    const payload = {
+      forest_project_id: body.forest_project_id,
+
+      dgps_survey_done: dgpsSurveyDone,
+      dgps_area_ha: body.dgps_area_ha || null,
+      dgps_document: files.dgps_document?.[0]?.filename || null,
+
+      orsac_authentication: orsacAuth,
+      orsac_document: files.orsac_document?.[0]?.filename || null,
+
+      tree_enumeration_done: treeEnum,
+      tree_enumeration_document:
+        files.tree_enumeration_document?.[0]?.filename || null,
+
+      administrative_documents: adminDocs,
+      administrative_document:
+        files.administrative_document?.[0]?.filename || null,
+
+      legal_lease_documents: legalLease,
+      legal_lease_document:
+        files.legal_lease_document?.[0]?.filename || null,
+
+      technical_data: technicalData,
+      technical_document: files.technical_document?.[0]?.filename || null,
+
+      forest_land_details: body.forest_land_details || null,
+      forest_land_details_document:
+        files.forest_land_details_document?.[0]?.filename || null,
+
+      ca_ca_planning: caPlanning,
+      ca_ca_document: files.ca_ca_document?.[0]?.filename || null,
+
+      fra_records: body.fra_records || null,
+      fra_document: files.fra_document?.[0]?.filename || null,
+
+      environmental_statutory: body.environmental_statutory || null,
+      environmental_document:
+        files.environmental_document?.[0]?.filename || null,
+
+      wildlife_safeguards: body.wildlife_safeguards || null,
+      wildlife_document: files.wildlife_document?.[0]?.filename || null,
+
+      maps_spatial_evidence: body.maps_spatial_evidence || null,
+      maps_document: files.maps_document?.[0]?.filename || null,
+
+      financial_undertakings: body.financial_undertakings || null,
+      financial_document: files.financial_document?.[0]?.filename || null,
+
+      proposal_submitted: proposalSubmitted,
+      proposal_document: files.proposal_document?.[0]?.filename || null,
+
+      parivesh_proposal_no: body.parivesh_proposal_no || null,
+      submission_date: body.submission_date || null,
+
+      stage_0_status: stageStatus,
+    };
+
+    const result = await ForestLand.createStage0(payload);
+
+    return res.status(201).json({
+      success: true,
+      message: "Stage-0 data saved successfully",
+      data: result,
+    });
+  } catch (err) {
+    console.error("Stage0 Error:", err);
+    return res.status(500).json({
+      success: false,
+      message: err.message || "Server error",
+    });
+  }
+};
+
 module.exports = {
   addForestLand,
   updateForestLand,
@@ -769,5 +948,6 @@ module.exports = {
   addForestProject,
   forestProjectList,
   updateForestProject,
-  deleteForestProject
+  deleteForestProject,
+  addStage0
 };
