@@ -496,56 +496,169 @@ const forestLandAbstract = async (req, res) => {
 };
 
 
-const addForestProject = async (req, res) => {
+// const addForestProject = async (req, res) => {
+//   try {
+//     const {
+//       project_id,
+//       project_name,
+//       eds_flag
+//     } = req.body;
+
+//     // Basic required fields
+//     if (!project_id || !project_name) {
+//       return res.status(400).json({
+//         success: false,
+//         message: "project_id and project_name are required",
+//       });
+//     }
+
+//     // Convert eds_flag to number
+//     const edsFlag = Number(eds_flag);
+
+//     // RULE 1: eds_flag = 1 → document mandatory
+//     if (edsFlag === 1 && !req.file) {
+//       return res.status(400).json({
+//         success: false,
+//         message: "EDS document is required when EDS flag is Yes",
+//       });
+//     }
+
+//     // RULE 2: eds_flag = 0 → document should not be uploaded
+//     if (edsFlag === 0 && req.file) {
+//       return res.status(400).json({
+//         success: false,
+//         message: "EDS document should not be uploaded when EDS flag is No",
+//       });
+//     }
+
+//     const payload = {
+//       ...req.body,
+//       eds_flag: edsFlag,
+//       eds_document_path: req.file ? req.file.path : null,
+//     };
+
+//     const project = await ForestLand.createForestProject(payload);
+
+//     return res.status(201).json({
+//       success: true,
+//       message: "Forest Project created successfully",
+//       data: project,
+//     });
+//   } catch (err) {
+//     console.error(err);
+//     return res.status(500).json({
+//       success: false,
+//       message: err.message || "Server error",
+//     });
+//   }
+// };
+
+const addForestProjectWithEds = async (req, res) => {
   try {
-    const {
-      project_id,
-      project_name,
-      eds_flag
-    } = req.body;
+    const body = req.body || {};
+    const files = req.files || [];
 
-    // Basic required fields
-    if (!project_id || !project_name) {
-      return res.status(400).json({
-        success: false,
-        message: "project_id and project_name are required",
-      });
-    }
+    const edsFlag = Number(body.eds_flag) || 0;
 
-    // Convert eds_flag to number
-    const edsFlag = Number(eds_flag);
-
-    // RULE 1: eds_flag = 1 → document mandatory
-    if (edsFlag === 1 && !req.file) {
-      return res.status(400).json({
-        success: false,
-        message: "EDS document is required when EDS flag is Yes",
-      });
-    }
-
-    // RULE 2: eds_flag = 0 → document should not be uploaded
-    if (edsFlag === 0 && req.file) {
-      return res.status(400).json({
-        success: false,
-        message: "EDS document should not be uploaded when EDS flag is No",
-      });
-    }
-
-    const payload = {
-      ...req.body,
+    const master = await ForestLand.createForestProject({
+      project_id: body.project_id,
+      proposal_no: body.proposal_no,
+      project_name: body.project_name,
+      user_agency: body.user_agency,
+      project_category: body.project_category,
+      project_sub_category: body.project_sub_category,
+      project_nature: body.project_nature,
+      state: body.state,
+      district: body.district,
+      tahasil: body.tahasil,
+      mouza: body.mouza,
+      range_division: body.range_division,
+      forest_type: body.forest_type,
+      total_project_area_ha: body.total_project_area_ha,
+      forest_area_ha: body.forest_area_ha,
+      non_forest_area_ha: body.non_forest_area_ha,
+      project_status: body.project_status,
+      current_stage: body.current_stage,
       eds_flag: edsFlag,
-      eds_document_path: req.file ? req.file.path : null,
+      eds_document_path: null,
+    });
+
+    const masterId = master.id;
+
+    // Multiple EDS handling
+    // if (edsFlag === 1 && body.eds_list) {
+    //   const edsList =
+    //     typeof body.eds_list === "string"
+    //       ? JSON.parse(body.eds_list)
+    //       : body.eds_list;
+
+    //   for (let i = 0; i < edsList.length; i++) {
+    //     const eds = edsList[i];
+
+    //     //find matching file
+    //     const fileField = `eds_reply_document_${i}`;
+    //     const fileObj = files.find(f => f.fieldname === fileField);
+
+    //     await ForestLand.createEds({
+    //       project_master_id: masterId,
+    //       eds_ref_no: eds.eds_ref_no,
+    //       issuing_authority: eds.issuing_authority,
+    //       eds_issue_date: eds.eds_issue_date,
+    //       eds_due_date: eds.eds_due_date,
+    //       total_issues: eds.total_issues,
+    //       issues_closed: eds.issues_closed,
+    //       issues_pending: eds.issues_pending,
+    //       eds_reply_document: fileObj?.filename || null,
+    //       eds_status: eds.eds_status,
+    //     });
+    //   }
+    // }
+
+    const getFile = (field) => {
+      if (!req.files) return null;
+
+      if (Array.isArray(req.files)) {
+        return req.files.find(f => f.fieldname === field);
+      }
+
+      return req.files[field]?.[0] || null;
     };
 
-    const project = await ForestLand.createForestProject(payload);
+    if (edsFlag === 1 && body.eds_list) {
+      const edsList =
+        typeof body.eds_list === "string"
+          ? JSON.parse(body.eds_list)
+          : body.eds_list;
+
+      for (let i = 0; i < edsList.length; i++) {
+        const eds = edsList[i];
+
+        // const fileField = `eds_reply_document_${i}`;
+        // const fileObj = getFile(fileField);
+        const fileObj = files[i];
+
+        await ForestLand.createEds({
+          project_master_id: masterId,
+          eds_ref_no: eds.eds_ref_no,
+          issuing_authority: eds.issuing_authority,
+          eds_issue_date: eds.eds_issue_date,
+          eds_due_date: eds.eds_due_date,
+          total_issues: eds.total_issues,
+          issues_closed: eds.issues_closed,
+          issues_pending: eds.issues_pending,
+          eds_reply_document: fileObj?.filename || null,
+          eds_status: eds.eds_status,
+        });
+      }
+    }
 
     return res.status(201).json({
       success: true,
-      message: "Forest Project created successfully",
-      data: project,
+      message: "Forest project with EDS saved successfully",
+      project_id: masterId,
     });
   } catch (err) {
-    console.error(err);
+    console.error("EDS Error:", err);
     return res.status(500).json({
       success: false,
       message: err.message || "Server error",
@@ -939,15 +1052,410 @@ const addStage0 = async (req, res) => {
   }
 };
 
+const addStage1 = async (req, res) => {
+  try {
+    const body = req.body || {};
+    const files = req.files || {};
+
+    if (!body.forest_project_id) {
+      return res.status(400).json({
+        success: false,
+        message: "forest_project_id is required",
+      });
+    }
+
+    const conditionsExtracted = Number(body.stage1_conditions_extracted) || 0;
+    const caLandHandedOver = Number(body.ca_land_handed_over) || 0;
+    const stage1Accepted = Number(body.stage1_compliance_accepted) || 0;
+
+    const eligibleForStage2 = stage1Accepted === 1 ? 1 : 0;
+
+    const stage1Status =
+      stage1Accepted === 1 ? "Completed" : "Pending";
+
+    const requireFile = (condition, field, message) => {
+      if (condition && !files[field]?.[0]) {
+        throw new Error(message);
+      }
+    };
+
+    requireFile(
+      body.stage1_approval_letter === "Uploaded",
+      "stage1_approval_document",
+      "Stage-1 approval document required"
+    );
+
+    requireFile(
+      conditionsExtracted === 1,
+      "stage1_conditions_document",
+      "Stage-1 conditions document required"
+    );
+
+    requireFile(
+      caLandHandedOver === 1,
+      "ca_land_document",
+      "CA land document required"
+    );
+
+    requireFile(
+      body.fra_compliance === "Complied",
+      "fra_document",
+      "FRA document required"
+    );
+
+    requireFile(
+      body.npv_payment === "Paid",
+      "npv_document",
+      "NPV payment document required"
+    );
+
+    requireFile(
+      body.ca_payment === "Paid",
+      "ca_payment_document",
+      "CA payment document required"
+    );
+
+    requireFile(
+      body.aca_payment === "Paid",
+      "aca_payment_document",
+      "ACA payment document required"
+    );
+
+    requireFile(
+      body.wildlife_payment === "Paid",
+      "wildlife_payment_document",
+      "Wildlife payment document required"
+    );
+
+    requireFile(
+      body.technical_compliance === "Completed",
+      "technical_document",
+      "Technical compliance document required"
+    );
+
+    requireFile(
+      stage1Accepted === 1,
+      "stage1_acceptance_document",
+      "Stage-1 acceptance document required"
+    );
+
+    const payload = {
+      forest_project_id: body.forest_project_id,
+
+      stage1_approval_letter: body.stage1_approval_letter || null,
+      stage1_approval_document:
+        files.stage1_approval_document?.[0]?.filename || null,
+
+      stage1_conditions_extracted: conditionsExtracted,
+      stage1_conditions_document:
+        files.stage1_conditions_document?.[0]?.filename || null,
+
+      ca_land_handed_over: caLandHandedOver,
+      ca_land_document:
+        files.ca_land_document?.[0]?.filename || null,
+
+      fra_compliance: body.fra_compliance || null,
+      fra_document: files.fra_document?.[0]?.filename || null,
+
+      npv_payment: body.npv_payment || null,
+      npv_document: files.npv_document?.[0]?.filename || null,
+
+      ca_payment: body.ca_payment || null,
+      ca_payment_document:
+        files.ca_payment_document?.[0]?.filename || null,
+
+      aca_payment: body.aca_payment || null,
+      aca_payment_document:
+        files.aca_payment_document?.[0]?.filename || null,
+
+      wildlife_payment: body.wildlife_payment || null,
+      wildlife_payment_document:
+        files.wildlife_payment_document?.[0]?.filename || null,
+
+      technical_compliance: body.technical_compliance || null,
+      technical_document:
+        files.technical_document?.[0]?.filename || null,
+
+      stage1_compliance_accepted: stage1Accepted,
+      stage1_acceptance_document:
+        files.stage1_acceptance_document?.[0]?.filename || null,
+
+      eligible_for_stage2: eligibleForStage2,
+      stage1_status: stage1Status,
+    };
+
+    const result = await ForestLand.insertUpdateStage1(payload);
+
+    return res.status(201).json({
+      success: true,
+      message: "Stage-1 data saved successfully",
+      data: result,
+    });
+  } catch (err) {
+    console.error("Stage1 Error:", err);
+    return res.status(500).json({
+      success: false,
+      message: err.message || "Server error",
+    });
+  }
+};
+
+const addStage2 = async (req, res) => {
+  try {
+    const body = req.body || {};
+    const files = req.files || {};
+
+    if (!body.forest_project_id) {
+      return res.status(400).json({
+        success: false,
+        message: "forest_project_id is required",
+      });
+    }
+
+    const stage2Letter = Number(body.stage2_approval_letter) || 0;
+    const mapsApproved = Number(body.final_maps_approved) || 0;
+
+    const stage2Status =
+      stage2Letter === 1 ? "Granted" : "Not Granted";
+
+    const eligiblePostClearance =
+      stage2Status === "Granted" ? 1 : 0;
+
+    const requireFile = (condition, field, message) => {
+      if (condition && !files[field]?.[0]) {
+        throw new Error(message);
+      }
+    };
+
+    requireFile(
+      body.environmental_clearance === "Obtained",
+      "environmental_document",
+      "Environmental clearance document required"
+    );
+
+    requireFile(
+      body.nbwl_clearance === "Obtained",
+      "nbwl_document",
+      "NBWL document required"
+    );
+
+    requireFile(
+      body.final_ca_execution === "Completed",
+      "final_ca_document",
+      "Final CA document required"
+    );
+
+    requireFile(
+      mapsApproved === 1,
+      "final_maps_document",
+      "Final maps document required"
+    );
+
+    requireFile(
+      body.final_technical_approval === "Completed",
+      "final_technical_document",
+      "Final technical document required"
+    );
+
+    requireFile(
+      stage2Letter === 1,
+      "stage2_approval_document",
+      "Stage-II approval document required"
+    );
+
+    const payload = {
+      forest_project_id: body.forest_project_id,
+
+      environmental_clearance: body.environmental_clearance || null,
+      environmental_document:
+        files.environmental_document?.[0]?.filename || null,
+
+      nbwl_clearance: body.nbwl_clearance || null,
+      nbwl_document: files.nbwl_document?.[0]?.filename || null,
+
+      final_ca_execution: body.final_ca_execution || null,
+      final_ca_document:
+        files.final_ca_document?.[0]?.filename || null,
+
+      final_maps_approved: mapsApproved,
+      final_maps_document:
+        files.final_maps_document?.[0]?.filename || null,
+
+      final_technical_approval:
+        body.final_technical_approval || null,
+      final_technical_document:
+        files.final_technical_document?.[0]?.filename || null,
+
+      stage2_approval_letter: stage2Letter,
+      stage2_approval_document:
+        files.stage2_approval_document?.[0]?.filename || null,
+
+      stage2_approval_date: body.stage2_approval_date || null,
+
+      approved_forest_area_ha:
+        body.approved_forest_area_ha || null,
+      approved_non_forest_area_ha:
+        body.approved_non_forest_area_ha || null,
+
+      stage2_status: stage2Status,
+      eligible_post_clearance: eligiblePostClearance,
+    };
+
+    const result = await ForestLand.createStage2(payload);
+
+    return res.status(201).json({
+      success: true,
+      message: "Stage-2 data saved successfully",
+      data: result,
+    });
+  } catch (err) {
+    console.error("Stage2 Error:", err);
+    return res.status(500).json({
+      success: false,
+      message: err.message || "Server error",
+    });
+  }
+};
+
+const addPostClearance = async (req, res) => {
+  try {
+    const body = req.body || {};
+    const files = req.files || {};
+
+    if (!body.forest_project_id) {
+      return res.status(400).json({
+        success: false,
+        message: "forest_project_id is required",
+      });
+    }
+
+    const started = Number(body.ca_plantation_started) || 0;
+    const completed = Number(body.ca_plantation_completed) || 0;
+    const survival = Number(body.survival_report_submitted) || 0;
+    const wildlife = Number(body.wildlife_mitigation) || 0;
+    const safety = Number(body.safety_zone_maintained) || 0;
+    const periodic = Number(body.periodic_compliance_submitted) || 0;
+
+    const requireFile = (condition, field, message) => {
+      if (condition && !files[field]?.[0]) {
+        throw new Error(message);
+      }
+    };
+
+    requireFile(
+      started === 1,
+      "ca_plantation_started_document",
+      "CA plantation started document required"
+    );
+
+    requireFile(
+      completed === 1,
+      "ca_plantation_completed_document",
+      "CA plantation completed document required"
+    );
+
+    requireFile(
+      survival === 1,
+      "survival_report_document",
+      "Survival report document required"
+    );
+
+    requireFile(
+      wildlife === 1,
+      "wildlife_mitigation_document",
+      "Wildlife mitigation document required"
+    );
+
+    requireFile(
+      safety === 1,
+      "safety_zone_document",
+      "Safety zone document required"
+    );
+
+    if (periodic === 1 && !body.periodic_compliance_type) {
+      throw new Error("Periodic compliance type required");
+    }
+
+    if (
+      body.inspection_observations === "Open" &&
+      !body.inspection_remarks
+    ) {
+      throw new Error("Inspection remarks required when Open");
+    }
+
+    const postStatus = body.post_clearance_status;
+    // const postStatus =
+    //   completed === 1 &&
+    //   survival === 1 &&
+    //   safety === 1
+    //     ? "Completed"
+    //     : "Ongoing";
+
+    const payload = {
+      forest_project_id: body.forest_project_id,
+
+      ca_plantation_started: started,
+      ca_plantation_started_document:
+        files.ca_plantation_started_document?.[0]?.filename || null,
+
+      ca_plantation_completed: completed,
+      ca_plantation_completed_document:
+        files.ca_plantation_completed_document?.[0]?.filename || null,
+
+      survival_report_submitted: survival,
+      survival_report_document:
+        files.survival_report_document?.[0]?.filename || null,
+
+      wildlife_mitigation: wildlife,
+      wildlife_mitigation_document:
+        files.wildlife_mitigation_document?.[0]?.filename || null,
+
+      safety_zone_maintained: safety,
+      safety_zone_document:
+        files.safety_zone_document?.[0]?.filename || null,
+
+      periodic_compliance_submitted: periodic,
+      periodic_compliance_type:
+        periodic === 1 ? body.periodic_compliance_type : null,
+
+      inspection_observations: body.inspection_observations || null,
+      inspection_remarks:
+        body.inspection_observations === "Open"
+          ? body.inspection_remarks
+          : null,
+
+      post_clearance_status: postStatus,
+    };
+
+    const result = await ForestLand.createPostClearance(payload);
+
+    return res.status(201).json({
+      success: true,
+      message: "Post-clearance data saved successfully",
+      data: result,
+    });
+  } catch (err) {
+    console.error("PostClearance Error:", err);
+    return res.status(500).json({
+      success: false,
+      message: err.message || "Server error",
+    });
+  }
+};
+
 module.exports = {
   addForestLand,
   updateForestLand,
   forestLandList,
   deleteForestLand,
   forestLandAbstract,
-  addForestProject,
+  // addForestProject,
+  addForestProjectWithEds,
   forestProjectList,
   updateForestProject,
   deleteForestProject,
-  addStage0
+  addStage0,
+  addStage1,
+  addStage2,
+  addPostClearance
 };

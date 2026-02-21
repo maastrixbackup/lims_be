@@ -219,7 +219,9 @@ const ForestLand = {
         proposal_no,
         project_name,
         user_agency,
-        sector,
+        project_category,
+        project_sub_category,
+        project_nature,
         state,
         district,
         tahasil,
@@ -234,7 +236,7 @@ const ForestLand = {
         eds_flag,
         eds_document_path
       )
-      VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+      VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
     `;
 
     const values = [
@@ -242,7 +244,9 @@ const ForestLand = {
       emptyToNull(data.proposal_no),
       data.project_name,
       emptyToNull(data.user_agency),
-      emptyToNull(data.sector),
+      emptyToNull(data.project_category),
+      emptyToNull(data.project_sub_category),
+      emptyToNull(data.project_nature),
       emptyToNull(data.state),
       emptyToNull(data.district),
       emptyToNull(data.tahasil),
@@ -268,6 +272,72 @@ const ForestLand = {
     return rows[0];
   },
 
+  // async createEds(data) {
+  //   const sql = `
+  //   INSERT INTO forest_eds_master (
+  //     project_master_id,
+  //     eds_ref_no,
+  //     issuing_authority,
+  //     eds_issue_date,
+  //     eds_due_date,
+  //     total_issues,
+  //     issues_closed,
+  //     issues_pending,
+  //     eds_reply_document,
+  //     eds_status
+  //   )
+  //   VALUES (?,?,?,?,?,?,?,?,?,?)
+  // `;
+
+  //   await db.query(sql, [
+  //     data.project_master_id,
+  //     data.eds_ref_no,
+  //     data.issuing_authority,
+  //     data.eds_issue_date,
+  //     data.eds_due_date,
+  //     data.total_issues,
+  //     data.issues_closed,
+  //     data.issues_pending,
+  //     data.eds_reply_document,
+  //     data.eds_status,
+  //   ]);
+  // },
+
+
+  async createEds(data) {
+    const sql = `
+    INSERT INTO forest_eds_master (
+      project_master_id,
+      eds_ref_no,
+      issuing_authority,
+      eds_issue_date,
+      eds_due_date,
+      total_issues,
+      issues_closed,
+      issues_pending,
+      eds_reply_document,
+      eds_status
+    )
+    VALUES (?,?,?,?,?,?,?,?,?,?)
+  `;
+
+    const values = [
+      1,
+      data.eds_ref_no,
+      data.issuing_authority,
+      data.eds_issue_date,
+      data.eds_due_date,
+      data.total_issues,
+      data.issues_closed,
+      data.issues_pending,
+      data.eds_reply_document,
+      data.eds_status,
+    ];
+
+    console.log("EDS INSERT VALUES:", values); // 🔥 debug
+
+    await db.query(sql, values);
+  },
   async listForestProjects({ limit, offset, project_id }) {
     // let whereClause = `WHERE 1=1`;
     let whereClause = `WHERE is_deleted = 0`;
@@ -413,6 +483,138 @@ const ForestLand = {
       "SELECT * FROM forest_stage_0 WHERE id = ?",
       [result.insertId]
     );
+    return rows[0];
+  },
+
+  async insertUpdateStage1(data) {
+    const [existing] = await db.query(
+      `SELECT id FROM forest_stage_1 
+       WHERE forest_project_id = ? AND is_deleted = 0`,
+      [data.forest_project_id]
+    );
+
+    if (existing.length > 0) {
+      await db.query(
+        `UPDATE forest_stage_1 SET ? WHERE forest_project_id = ?`,
+        [data, data.forest_project_id]
+      );
+    } else {
+      await db.query(`INSERT INTO forest_stage_1 SET ?`, [data]);
+    }
+
+    const [rows] = await db.query(
+      `SELECT * FROM forest_stage_1 WHERE forest_project_id = ?`,
+      [data.forest_project_id]
+    );
+
+    return rows[0];
+  },
+
+  async createStage2(data) {
+    const sql = `
+    INSERT INTO forest_stage_2 (
+      forest_project_id,
+      environmental_clearance,
+      environmental_document,
+      nbwl_clearance,
+      nbwl_document,
+      final_ca_execution,
+      final_ca_document,
+      final_maps_approved,
+      final_maps_document,
+      final_technical_approval,
+      final_technical_document,
+      stage2_approval_letter,
+      stage2_approval_document,
+      stage2_approval_date,
+      approved_forest_area_ha,
+      approved_non_forest_area_ha,
+      stage2_status,
+      eligible_post_clearance
+    )
+    VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+  `;
+
+    const values = [
+      data.forest_project_id,
+      data.environmental_clearance,
+      data.environmental_document,
+      data.nbwl_clearance,
+      data.nbwl_document,
+      data.final_ca_execution,
+      data.final_ca_document,
+      data.final_maps_approved,
+      data.final_maps_document,
+      data.final_technical_approval,
+      data.final_technical_document,
+      data.stage2_approval_letter,
+      data.stage2_approval_document,
+      data.stage2_approval_date,
+      data.approved_forest_area_ha,
+      data.approved_non_forest_area_ha,
+      data.stage2_status,
+      data.eligible_post_clearance,
+    ];
+
+    const [result] = await db.query(sql, values);
+
+    const [rows] = await db.query(
+      `SELECT * FROM forest_stage_2 WHERE id = ?`,
+      [result.insertId]
+    );
+
+    return rows[0];
+  },
+
+  async createPostClearance(data) {
+    const sql = `
+    INSERT INTO forest_post_clearance (
+      forest_project_id,
+      ca_plantation_started,
+      ca_plantation_started_document,
+      ca_plantation_completed,
+      ca_plantation_completed_document,
+      survival_report_submitted,
+      survival_report_document,
+      wildlife_mitigation,
+      wildlife_mitigation_document,
+      safety_zone_maintained,
+      safety_zone_document,
+      periodic_compliance_submitted,
+      periodic_compliance_type,
+      inspection_observations,
+      inspection_remarks,
+      post_clearance_status
+    )
+    VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+  `;
+
+    const values = [
+      data.forest_project_id,
+      data.ca_plantation_started,
+      data.ca_plantation_started_document,
+      data.ca_plantation_completed,
+      data.ca_plantation_completed_document,
+      data.survival_report_submitted,
+      data.survival_report_document,
+      data.wildlife_mitigation,
+      data.wildlife_mitigation_document,
+      data.safety_zone_maintained,
+      data.safety_zone_document,
+      data.periodic_compliance_submitted,
+      data.periodic_compliance_type,
+      data.inspection_observations,
+      data.inspection_remarks,
+      data.post_clearance_status,
+    ];
+
+    const [result] = await db.query(sql, values);
+
+    const [rows] = await db.query(
+      `SELECT * FROM forest_post_clearance WHERE id = ?`,
+      [result.insertId]
+    );
+
     return rows[0];
   },
 
