@@ -318,42 +318,74 @@ const uploadGovtMapDocument = multer({
   limits: { fileSize: 10 * 1024 * 1024 }, // 10MB limit
 });
 
-const EDSStorage = multer.diskStorage({
+// const EDSStorage = multer.diskStorage({
+//   destination: (req, file, cb) => {
+//     cb(null, "uploads/eds");
+//   },
+//   filename: (req, file, cb) => {
+//     const safeName = file.originalname.replace(/\s+/g, "_");
+//     const uniqueName = Date.now() + "_" + safeName;
+//     cb(null, uniqueName);
+//   },
+// });
+
+// const edsFileFilter = (req, file, cb) => {
+//   const allowedMimeTypes = [
+//     "application/pdf",
+//     "image/jpeg",
+//     "image/png",
+//     "application/vnd.ms-excel",
+//     "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+//   ];
+
+//   if (allowedMimeTypes.includes(file.mimetype)) {
+//     cb(null, true);
+//   } else {
+//     cb(
+//       new Error("Only PDF or Excel files are allowed for EDS document"),
+//       false
+//     );
+//   }
+// };
+
+// const uploadEDS = multer({
+//   storage: EDSStorage,
+//   fileFilter: edsFileFilter,
+//   limits: {
+//     fileSize: 10 * 1024 * 1024, // 10 MB
+//   },
+// });
+
+const edsStorage = multer.diskStorage({
   destination: (req, file, cb) => {
     cb(null, "uploads/eds");
   },
   filename: (req, file, cb) => {
-    const safeName = file.originalname.replace(/\s+/g, "_");
-    const uniqueName = Date.now() + "_" + safeName;
-    cb(null, uniqueName);
+    const originalname = file.originalname.replace(/\s+/g, "_");
+    cb(null, Date.now() + "_" + originalname);
   },
 });
 
 const edsFileFilter = (req, file, cb) => {
   const allowedMimeTypes = [
     "application/pdf",
-    "application/vnd.ms-excel",
-    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    "image/png",
+    "image/jpeg",
+    "image/jpg",
   ];
 
   if (allowedMimeTypes.includes(file.mimetype)) {
     cb(null, true);
   } else {
-    cb(
-      new Error("Only PDF or Excel files are allowed for EDS document"),
-      false
-    );
+    cb(new Error("Only PDF/JPG/PNG files allowed"), false);
   }
 };
 
-const uploadEDS = multer({
-  storage: EDSStorage,
+const uploadEdsDocuments = multer({
+  storage: edsStorage,
   fileFilter: edsFileFilter,
-  limits: {
-    fileSize: 10 * 1024 * 1024, // 10 MB
-  },
+  limits: { fileSize: 10 * 1024 * 1024 },
 });
-
 const stageZeroStorage = multer.diskStorage({
   destination: (req, file, cb) => {
     cb(null, "uploads/stage0");
@@ -370,6 +402,99 @@ const uploadStage0 = multer({
   limits: { fileSize: 10 * 1024 * 1024 },
 });
 
+const stage1Storage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    cb(null, "uploads/stage1");
+  },
+  filename: (req, file, cb) => {
+    const originalname = file.originalname.replace(/\s+/g, "_");
+    cb(null, Date.now() + "_" + originalname);
+  },
+});
+
+const stage1FileFilter = (req, file, cb) => {
+  const allowedMimeTypes = [
+    "application/pdf",
+    "application/zip",
+    "image/png",
+    "image/jpeg",
+  ];
+
+  if (allowedMimeTypes.includes(file.mimetype)) {
+    cb(null, true);
+  } else {
+    cb(new Error("Invalid file type"), false);
+  }
+};
+
+const uploadStage1 = multer({
+  storage: stage1Storage,
+  fileFilter: stage1FileFilter,
+  limits: { fileSize: 20 * 1024 * 1024 }, // 20MB
+});
+
+const stage2Storage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    cb(null, "uploads/stage2");
+  },
+  filename: (req, file, cb) => {
+    const cleanName = file.originalname.replace(/\s+/g, "_");
+    const unique =
+      Date.now() + "_" + Math.round(Math.random() * 1e9);
+    cb(null, unique + "_" + cleanName);
+  },
+});
+
+const stage2FileFilter = (req, file, cb) => {
+  const allowedMimeTypes = [
+    "application/pdf",
+    "image/jpeg",
+    "image/png",
+    "application/zip",
+  ];
+
+  if (allowedMimeTypes.includes(file.mimetype)) {
+    cb(null, true);
+  } else {
+    cb(new Error("Invalid file type"), false);
+  }
+};
+
+const uploadStage2 = multer({
+  storage: stage2Storage,
+  fileFilter: stage2FileFilter,
+  limits: { fileSize: 20 * 1024 * 1024 }, // 20MB
+});
+
+const storage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    cb(null, "uploads/post_clearance");
+  },
+  filename: (req, file, cb) => {
+    const clean = file.originalname.replace(/\s+/g, "_");
+    const unique =
+      Date.now() + "_" + Math.round(Math.random() * 1e9);
+    cb(null, unique + "_" + clean);
+  },
+});
+
+const fileFilter = (req, file, cb) => {
+  const allowed = [
+    "application/pdf",
+    "image/jpeg",
+    "image/png",
+  ];
+
+  if (allowed.includes(file.mimetype)) cb(null, true);
+  else cb(new Error("Invalid file type"), false);
+};
+
+const uploadPostClearance = multer({
+  storage,
+  fileFilter,
+  limits: { fileSize: 20 * 1024 * 1024 },
+});
+
 module.exports = {
   uploadPlotExcel,
   uploadProfilePic,
@@ -381,6 +506,10 @@ module.exports = {
   uploadGovtPlotExcel,
   uploadGovtKhata,
   uploadGovtMapDocument,
-  uploadEDS,
-  uploadStage0
+  // uploadEDS,
+  uploadEdsDocuments,
+  uploadStage0,
+  uploadStage1,
+  uploadStage2,
+  uploadPostClearance
 };
