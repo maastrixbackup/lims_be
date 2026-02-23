@@ -117,6 +117,6 @@ router.post(
 );
 
 // router.get("/getForestProject/:projectId", getForestProjectWithEds);
-router.post("/getStageStatus", getStageStatus);
+router.get("/getStageStatus", getStageStatus);
 
 module.exports = router;
