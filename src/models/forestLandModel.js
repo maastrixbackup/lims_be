@@ -322,7 +322,8 @@ const ForestLand = {
   `;
 
     const values = [
-      1,
+      // 1,
+      data.project_master_id,
       data.eds_ref_no,
       data.issuing_authority,
       data.eds_issue_date,
@@ -338,6 +339,72 @@ const ForestLand = {
 
     await db.query(sql, values);
   },
+
+  async getProjectByProjectId(projectId) {
+    const [rows] = await db.query(
+      `SELECT * FROM forest_project_master WHERE project_id = ?`,
+      [projectId]
+    );
+    return rows[0] || null;
+  },
+
+
+  async updateForestProject(id, data) {
+    const sql = `
+    UPDATE forest_project_master
+    SET
+      proposal_no = ?,
+      project_name = ?,
+      user_agency = ?,
+      project_category = ?,
+      project_sub_category = ?,
+      project_nature = ?,
+      state = ?,
+      district = ?,
+      tahasil = ?,
+      mouza = ?,
+      range_division = ?,
+      forest_type = ?,
+      total_project_area_ha = ?,
+      forest_area_ha = ?,
+      non_forest_area_ha = ?,
+      project_status = ?,
+      current_stage = ?,
+      eds_flag = ?
+    WHERE id = ?
+  `;
+
+    await db.query(sql, [
+      data.proposal_no,
+      data.project_name,
+      data.user_agency,
+      data.project_category,
+      data.project_sub_category,
+      data.project_nature,
+      data.state,
+      data.district,
+      data.tahasil,
+      data.mouza,
+      data.range_division,
+      data.forest_type,
+      data.total_project_area_ha,
+      data.forest_area_ha,
+      data.non_forest_area_ha,
+      data.project_status,
+      data.current_stage,
+      data.eds_flag,
+      id,
+    ]);
+  },
+
+
+  async deleteEdsByMasterId(masterId) {
+    await db.query(
+      `DELETE FROM forest_eds_master WHERE project_master_id = ?`,
+      [masterId]
+    );
+  },
+
   async listForestProjects({ limit, offset, project_id }) {
     // let whereClause = `WHERE 1=1`;
     let whereClause = `WHERE is_deleted = 0`;
@@ -406,61 +473,81 @@ const ForestLand = {
     return rows.length ? rows[0] : null;
   },
 
-  async updateForestProject(id, data) {
-    const sql = `
-    UPDATE forest_project_master
-    SET
-      proposal_no = ?,
-      project_name = ?,
-      user_agency = ?,
-      sector = ?,
-      state = ?,
-      district = ?,
-      tahasil = ?,
-      mouza = ?,
-      range_division = ?,
-      forest_type = ?,
-      total_project_area_ha = ?,
-      forest_area_ha = ?,
-      non_forest_area_ha = ?,
-      project_status = ?,
-      current_stage = ?,
-      eds_flag = ?,
-      eds_document_path = ?
-    WHERE id = ? AND is_deleted = 0
-  `;
+  // async updateForestProject(id, data) {
+  //   const sql = `
+  //   UPDATE forest_project_master
+  //   SET
+  //     proposal_no = ?,
+  //     project_name = ?,
+  //     user_agency = ?,
+  //     state = ?,
+  //     district = ?,
+  //     tahasil = ?,
+  //     mouza = ?,
+  //     range_division = ?,
+  //     forest_type = ?,
+  //     total_project_area_ha = ?,
+  //     forest_area_ha = ?,
+  //     non_forest_area_ha = ?,
+  //     project_status = ?,
+  //     current_stage = ?,
+  //     eds_flag = ?,
+  //     eds_document_path = ?
+  //   WHERE id = ? AND is_deleted = 0
+  // `;
 
-    const values = [
-      data.proposal_no,
-      data.project_name,
-      data.user_agency,
-      data.sector,
-      data.state,
-      data.district,
-      data.tahasil,
-      data.mouza,
-      data.range_division,
-      data.forest_type,
-      data.total_project_area_ha,
-      data.forest_area_ha,
-      data.non_forest_area_ha,
-      data.project_status,
-      data.current_stage,
-      data.eds_flag,
-      data.eds_document_path,
-      id,
-    ];
+  //   const values = [
+  //     data.proposal_no,
+  //     data.project_name,
+  //     data.user_agency,
+  //     data.state,
+  //     data.district,
+  //     data.tahasil,
+  //     data.mouza,
+  //     data.range_division,
+  //     data.forest_type,
+  //     data.total_project_area_ha,
+  //     data.forest_area_ha,
+  //     data.non_forest_area_ha,
+  //     data.project_status,
+  //     data.current_stage,
+  //     data.eds_flag,
+  //     data.eds_document_path,
+  //     id,
+  //   ];
 
-    await db.query(sql, values);
+  //   await db.query(sql, values);
 
-    const [rows] = await db.query(
-      `SELECT * FROM forest_project_master WHERE id = ?`,
-      [id]
-    );
+  //   const [rows] = await db.query(
+  //     `SELECT * FROM forest_project_master WHERE id = ?`,
+  //     [id]
+  //   );
 
-    return rows[0];
-  },
+  //   return rows[0];
+  // },
 
+  // async getProjectWithEds(projectId) {
+  //   const [masterRows] = await db.query(
+  //     `SELECT * FROM forest_project_master WHERE project_id = ? AND is_deleted = 0`,
+  //     [projectId]
+  //   );
+
+  //   if (!masterRows.length) return null;
+
+  //   const master = masterRows[0];
+
+  //   const [edsRows] = await db.query(
+  //     `SELECT * FROM forest_eds_master 
+  //    WHERE project_master_id = ? AND is_deleted = 0
+  //    ORDER BY id ASC`,
+  //     [master.id]
+  //   );
+
+  //   return {
+  //     master,
+  //     eds_list: edsRows,
+  //   };
+  // },
   async deleteForestProject(projectId) {
     const sql = `
     UPDATE forest_project_master
@@ -616,6 +703,41 @@ const ForestLand = {
     );
 
     return rows[0];
+  },
+
+  async getStageStatus(projectId, stage) {
+    let sql = "";
+    let statusColumn = "";
+
+    //table based on stage
+    if (stage === "Stage 0") {
+      sql = `
+      SELECT stage_0_status AS status
+      FROM forest_stage_0
+      WHERE forest_project_id = ? AND is_deleted = 0
+      LIMIT 1
+    `;
+    } else if (stage === "Stage 1") {
+      sql = `
+      SELECT stage1_status AS status
+      FROM forest_stage_1
+      WHERE forest_project_id = ? AND is_deleted = 0
+      LIMIT 1
+    `;
+    } else if (stage === "Stage 2") {
+      sql = `
+      SELECT stage2_status AS status
+      FROM forest_stage_2
+      WHERE forest_project_id = ? AND is_deleted = 0
+      LIMIT 1
+    `;
+    } else {
+      return null;
+    }
+
+    const [rows] = await db.query(sql, [projectId]);
+
+    return rows.length ? rows[0].status : null;
   },
 
 };

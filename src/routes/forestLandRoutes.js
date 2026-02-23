@@ -10,12 +10,14 @@ const {
     addForestProjectWithEds,
     forestLandAbstract,
     forestProjectList,
-    updateForestProject,
+    // updateForestProject,
     deleteForestProject,
     addStage0,
     addStage1,
     addStage2,
-    addPostClearance
+    addPostClearance,
+    // getForestProjectWithEds
+    getStageStatus
 } = require("../controllers/forestLandController");
 
 const {
@@ -113,5 +115,8 @@ router.post(
     ]),
     addPostClearance
 );
+
+// router.get("/getForestProject/:projectId", getForestProjectWithEds);
+router.post("/getStageStatus", getStageStatus);
 
 module.exports = router;

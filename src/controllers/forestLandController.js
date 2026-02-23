@@ -666,6 +666,98 @@ const addForestProjectWithEds = async (req, res) => {
   }
 };
 
+// const addForestProjectWithEds = async (req, res) => {
+//   try {
+//     const body = req.body || {};
+//     const files = req.files || [];
+//     const edsFlag = Number(body.eds_flag) || 0;
+
+//     let master = await ForestLand.getProjectByProjectId(body.project_id);
+
+//     let masterId;
+
+//     if (master) {
+//       await ForestLand.updateForestProject(master.id, body);
+//       masterId = master.id;
+
+//       await ForestLand.deleteEdsByMasterId(masterId);
+//     } else {
+//       const newMaster = await ForestLand.createForestProject({
+//         ...body,
+//         eds_flag: edsFlag,
+//         eds_document_path: null,
+//       });
+
+//       masterId = newMaster.id;
+//     }
+
+//     if (edsFlag === 1 && body.eds_list) {
+//       const edsList =
+//         typeof body.eds_list === "string"
+//           ? JSON.parse(body.eds_list)
+//           : body.eds_list;
+
+//       for (let i = 0; i < edsList.length; i++) {
+//         const eds = edsList[i];
+//         const fileObj = files[i];
+
+//         await ForestLand.createEds({
+//           project_master_id: masterId,
+//           eds_ref_no: eds.eds_ref_no,
+//           issuing_authority: eds.issuing_authority,
+//           eds_issue_date: eds.eds_issue_date,
+//           eds_due_date: eds.eds_due_date,
+//           total_issues: eds.total_issues,
+//           issues_closed: eds.issues_closed,
+//           issues_pending: eds.issues_pending,
+//           eds_reply_document: fileObj?.filename || null,
+//           eds_status: eds.eds_status,
+//         });
+//       }
+//     }
+
+//     return res.status(200).json({
+//       success: true,
+//       message: master
+//         ? "Forest project updated successfully"
+//         : "Forest project created successfully",
+//       project_id: masterId,
+//     });
+//   } catch (err) {
+//     console.error("EDS Error:", err);
+//     return res.status(500).json({
+//       success: false,
+//       message: err.message || "Server error",
+//     });
+//   }
+// };
+
+// const getForestProjectWithEds = async (req, res) => {
+//   try {
+//     const { projectId } = req.params;
+
+//     const data = await ForestLand.getProjectWithEds(projectId);
+
+//     if (!data) {
+//       return res.status(404).json({
+//         success: false,
+//         message: "Data not found for this project",
+//       });
+//     }
+
+//     return res.json({
+//       success: true,
+//       data,
+//     });
+//   } catch (err) {
+//     console.error("Fetch Error:", err);
+//     return res.status(500).json({
+//       success: false,
+//       message: err.message || "Server error",
+//     });
+//   }
+// };
+
 const forestProjectList = async (req, res) => {
   try {
     let {
@@ -1443,6 +1535,40 @@ const addPostClearance = async (req, res) => {
   }
 };
 
+const getStageStatus = async (req, res) => {
+  try {
+    const { project_id, stage } = req.body;
+
+    if (!project_id || !stage) {
+      return res.status(400).json({
+        success: false,
+        message: "project_id and stage are required",
+      });
+    }
+
+    const status = await ForestLand.getStageStatus(project_id, stage);
+
+    if (!status) {
+      return res.json({
+        success: true,
+        stage_status: null,
+        message: "No data found for this stage",
+      });
+    }
+
+    return res.json({
+      success: true,
+      stage_status: status,
+    });
+  } catch (err) {
+    console.error("Stage Status Error:", err);
+    return res.status(500).json({
+      success: false,
+      message: err.message || "Server error",
+    });
+  }
+};
+
 module.exports = {
   addForestLand,
   updateForestLand,
@@ -1451,11 +1577,13 @@ module.exports = {
   forestLandAbstract,
   // addForestProject,
   addForestProjectWithEds,
+  // getForestProjectWithEds,
   forestProjectList,
   updateForestProject,
   deleteForestProject,
   addStage0,
   addStage1,
   addStage2,
-  addPostClearance
+  addPostClearance,
+  getStageStatus
 };
