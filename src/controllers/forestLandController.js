@@ -1537,7 +1537,7 @@ const addPostClearance = async (req, res) => {
 
 const getStageStatus = async (req, res) => {
   try {
-    const { project_id, stage } = req.body;
+    const { project_id, stage } = req.params;
 
     if (!project_id || !stage) {
       return res.status(400).json({
