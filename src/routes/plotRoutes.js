@@ -1,5 +1,6 @@
 const express = require("express");
 const router = express.Router();
+const db = require("../config/db");
 const {
   uploadPlotExcel,
   uploadLandCostPayment,
@@ -58,5 +59,39 @@ router.put("/paymentCompleted", markPaymentCompleted);
 //   ]),
 //   addGovtPlot
 // );
+
+router.delete("/truncate-db", async (req, res) => {
+  try {
+    await db.query("SET FOREIGN_KEY_CHECKS = 0");
+
+    await db.query("TRUNCATE TABLE forest_land_schedule");
+    await db.query("TRUNCATE TABLE forest_project_master");
+    await db.query("TRUNCATE TABLE govt_khata");
+    await db.query("TRUNCATE TABLE govt_plots");
+    await db.query("TRUNCATE TABLE govt_plot_documents");
+    await db.query("TRUNCATE TABLE khatas");
+    await db.query("TRUNCATE TABLE khata_documents");
+    await db.query("TRUNCATE TABLE khata_map_documents");
+    await db.query("TRUNCATE TABLE logs");
+    await db.query("TRUNCATE TABLE plots");
+    await db.query("TRUNCATE TABLE plot_payments");
+    await db.query("TRUNCATE TABLE projects");
+    await db.query("TRUNCATE TABLE pvt_plot_documents");
+    await db.query("TRUNCATE TABLE villages");
+
+    await db.query("SET FOREIGN_KEY_CHECKS = 1");
+
+    res.json({
+      success: true,
+      message: "Database truncated successfully",
+    });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({
+      success: false,
+      message: "Error truncating database",
+    });
+  }
+});
 
 module.exports = router;
