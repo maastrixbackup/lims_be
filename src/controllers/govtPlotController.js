@@ -1299,12 +1299,12 @@ const markPaymentCompleted = async (req, res) => {
       });
     }
 
-    const invalid = records.find((r) => !r.payment_proof || !r.transaction_no);
+    const invalid = records.find((r) => !r.payment_proof);
 
     if (invalid) {
       return res.status(400).json({
         success: false,
-        message: "Payment proof and transaction number are required",
+        message: "Payment proof required",
       });
     }
 
