@@ -903,6 +903,7 @@ const Khata = {
   // },
 
   async insertKhatasFromExcel(data, project_id, type) {
+    await db.query("SET SESSION group_concat_max_len = 1000000"); //for plot_no column in khatas table
     await db.query(
       `
     INSERT INTO khatas (
