@@ -943,7 +943,7 @@ const Khata = {
       pl.khata_no,
       pl.type,
 
-      GROUP_CONCAT(DISTINCT pl.plot_no SEPARATOR ', ') AS plot_no,
+      GROUP_CONCAT(pl.plot_no SEPARATOR ', ') AS plot_no,
       GROUP_CONCAT(DISTINCT pl.kissam_of_land SEPARATOR ', ') AS kissam_of_land,
       GROUP_CONCAT(DISTINCT pl.land_category SEPARATOR ', ') AS land_category,
 
