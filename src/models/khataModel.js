@@ -147,185 +147,6 @@ const Khata = {
   //   offset = 0,
   // }) {
   //   let query = `
-  //       SELECT k.*, p.project_name, v.village_name,
-  //       (
-  //         SELECT COUNT(*)
-  //         FROM plots
-  //         WHERE plots.khata_no = k.khata_no
-  //         AND plots.project_id = k.project_id
-  //       ) AS plot_count,
-  //         pl.village_name,
-  //         pl.village_code,
-  //         pl.khata_no,
-  //         pl.plot_no,
-  //         pl.kissam_of_land,
-  //         pl.land_category,
-  //         pl.land_area_total_acres,
-  //         pl.land_area_total_hectares,
-  //         pl.land_area_acquired_acres,
-  //         pl.land_area_acquired_hectares,
-  //         pl.lo13_remarks,
-  //         pl.tahasil_name,
-  //         pl.ri_circle_name,
-  //         pl.thana_no,
-  //         pl.date_of_award,
-  //         pl.name_of_recorded_tenant,
-  //         pl.name_of_present_tenant,
-  //         pl.present_address,
-  //         pl.displaced_affected_person
-  //       FROM khatas k
-  //       LEFT JOIN projects p ON k.project_id = p.id
-  //       LEFT JOIN villages v ON k.village_id = v.id
-  //       LEFT JOIN plots pl
-  //       ON pl.id = (
-  //           SELECT MIN(id)
-  //           FROM plots
-  //           WHERE khata_no = k.khata_no
-  //           AND project_id = k.project_id
-  //           AND type = k.type
-  //       )
-  //       WHERE 1=1
-  //   `;
-  //   const params = [];
-  //   if (project_id) {
-  //     query += " AND k.project_id = ?";
-  //     params.push(project_id);
-  //   }
-  //   // if (village_id) {
-  //   //   query += " AND k.village_id = ?";
-  //   //   params.push(village_id);
-  //   // }
-  //   if (village_id && Array.isArray(village_id)) {
-  //     const placeholders = village_id.map(() => "?").join(",");
-  //     query += ` AND k.village_id IN (${placeholders})`;
-  //     params.push(...village_id);
-  //   }
-  //   if (type) {
-  //     query += " AND k.type = ?";
-  //     params.push(type);
-  //   }
-  //   query += " ORDER BY k.id DESC LIMIT ? OFFSET ?";
-  //   params.push(limit, offset);
-  //   const [rows] = await db.query(query, params);
-  //   return rows;
-  // },
-
-  // async findAll({
-  //   project_id = null,
-  //   village_id = null,
-  //   type = null,
-  //   limit = 10,
-  //   offset = 0,
-  // }) {
-  //   let query = `
-  //   SELECT
-  //     MIN(k.id) AS id,
-  //     MIN(k.unique_id) AS unique_id,
-  //     MIN(k.project_id) AS project_id,
-  //     MIN(k.village_id) AS village_id,
-  //     MIN(k.khata_no) AS khata_no,
-  //     MIN(k.type) AS type,
-  //     MIN(k.created_at) AS created_at,
-  //     MIN(k.updated_at) AS updated_at,
-
-  //     MIN(p.project_name) AS project_name,
-  //     MIN(v.village_name) AS village_name,
-  //     MIN(v.village_code) AS village_code,
-
-  //     COUNT(DISTINCT pl.id) AS plot_count,
-  //     (SELECT COUNT(*)
-  //       FROM khata_documents kd
-  //       WHERE kd.khata_id = k.id
-  //     ) AS khata_document_count,
-
-  //     (SELECT COUNT(*)
-  //       FROM khata_map_documents km
-  //       WHERE km.khata_id = k.id
-  //     ) AS khata_map_document_count,
-
-  //     SUM(pl.land_area_total_acres) AS land_area_total_acres,
-  //     SUM(pl.land_area_total_hectares) AS land_area_total_hectares,
-  //     SUM(pl.land_area_acquired_acres) AS land_area_acquired_acres,
-  //     SUM(pl.land_area_acquired_hectares) AS land_area_acquired_hectares,
-
-  //     GROUP_CONCAT(pl.plot_no SEPARATOR ', ') AS plot_no,
-  //     GROUP_CONCAT(pl.kissam_of_land SEPARATOR ', ') AS kissam_of_land,
-  //     GROUP_CONCAT(pl.land_category SEPARATOR ', ') AS land_category,
-  //     MIN(pl.lo13_remarks) AS lo13_remarks,
-  //     MIN(pl.tahasil_name) AS tahasil_name,
-  //     GROUP_CONCAT(pl.ri_circle_name SEPARATOR ', ') AS ri_circle_name,
-
-  //     MIN(pl.thana_no) AS thana_no,
-  //     MIN(pl.date_of_award) AS date_of_award,
-  //     CASE
-  //         WHEN MIN(pl.name_of_recorded_tenant) = MAX(pl.name_of_recorded_tenant)
-  //         THEN MIN(pl.name_of_recorded_tenant)
-  //         ELSE GROUP_CONCAT(DISTINCT pl.name_of_recorded_tenant SEPARATOR ', ')
-  //     END AS name_of_recorded_tenant,
-
-  //     CASE
-  //         WHEN MIN(pl.name_of_present_tenant) = MAX(pl.name_of_present_tenant)
-  //         THEN MIN(pl.name_of_present_tenant)
-  //         ELSE GROUP_CONCAT(DISTINCT pl.name_of_present_tenant SEPARATOR ', ')
-  //     END AS name_of_present_tenant,
-  //     MIN(pl.present_address) AS present_address,
-  //     MIN(pl.displaced_affected_person) AS displaced_affected_person
-
-  //   FROM khatas k
-  //   LEFT JOIN projects p ON k.project_id = p.id
-  //   LEFT JOIN villages v ON k.village_id = v.id
-
-  //   LEFT JOIN plots pl
-  //     ON pl.khata_no = k.khata_no
-  //     AND pl.project_id = k.project_id
-  //     AND pl.type = k.type
-
-  //   WHERE 1=1
-  // `;
-
-  //   const params = [];
-
-  //   if (project_id) {
-  //     query += " AND k.project_id = ?";
-  //     params.push(project_id);
-  //   }
-
-  //   // if (village_id && Array.isArray(village_id)) {
-  //   //   const placeholders = village_id.map(() => "?").join(",");
-  //   //   query += ` AND k.village_id IN (${placeholders})`;
-  //   //   params.push(...village_id);
-  //   // }
-
-  //   if (village_id && Array.isArray(village_id) && village_id.length > 0) {
-  //     const placeholders = village_id.map(() => "?").join(",");
-  //     query += ` AND k.village_id IN (${placeholders})`;
-  //     params.push(...village_id);
-  //   }
-
-  //   if (type) {
-  //     query += " AND k.type = ?";
-  //     params.push(type);
-  //   }
-
-  //   query += `
-  //   GROUP BY k.id
-  //   ORDER BY k.id DESC
-  //   LIMIT ? OFFSET ?
-  // `;
-  //   params.push(limit, offset);
-
-  //   const [rows] = await db.query(query, params);
-  //   return rows;
-  // },
-
-  // async findAll({
-  //   project_id = null,
-  //   village_id = null,
-  //   type = null,
-  //   limit = 10,
-  //   offset = 0,
-  // }) {
-  //   let query = `
   //   SELECT
   //     k.id,
   //     k.unique_id,
@@ -422,6 +243,142 @@ const Khata = {
   //   return rows;
   // },
 
+  // async findAll({
+  //   project_id = null,
+  //   village_id = null,
+  //   type = null,
+  //   limit = 10,
+  //   offset = 0,
+  // }) {
+  //   let query = `
+  //   SELECT 
+  //     k.id,
+  //     k.unique_id,
+  //     k.project_id,
+  //     k.village_id,
+  //     k.khata_no,
+  //     k.type,
+  //     k.created_at,
+  //     k.updated_at,
+
+  //     k.kissam_of_land,
+  //     k.land_category,
+  //     k.land_area_total_acres,
+  //     k.land_area_total_hectares,
+  //     k.land_area_acquired_acres,
+  //     k.land_area_acquired_hectares,
+  //     k.lo13_remarks,
+  //     k.tahasil_name,
+  //     k.ri_circle_name,
+  //     k.thana_no,
+  //     k.date_of_award,
+  //     k.name_of_recorded_tenant,
+  //     k.name_of_present_tenant,
+  //     k.present_address,
+  //     k.displaced_affected_person,
+  //     k.full_part,
+
+  //     kp.plot_nos AS plot_no,
+
+  //     p.project_name,
+  //     v.village_name,
+  //     v.village_code,
+
+  //     IFNULL(pc.plot_count, 0) AS plot_count,
+  //     IFNULL(kd.doc_count, 0) AS khata_document_count,
+  //     IFNULL(km.map_count, 0) AS khata_map_document_count,
+
+  //     k.rr_employment,
+  //     k.rr_cash_in_lieu,
+  //     k.rr_training_skill_upgradation,
+  //     k.rr_self_employment,
+  //     k.rr_special_allowance_st_ntfp,
+  //     k.rr_homestead_allotment,
+  //     k.rr_house_building_assistance,
+  //     k.rr_constructed_by,
+  //     k.rr_transit_shed,
+  //     k.rr_transport_allowance,
+  //     k.rr_maintenance_allowance,
+  //     k.rr_multiple_displacement_allowance,
+  //     k.rr_exgratia,
+  //     k.rr_other_benefits
+
+  //   FROM khatas k
+
+  //   LEFT JOIN projects p ON p.id = k.project_id
+  //   LEFT JOIN villages v ON v.id = k.village_id
+
+  //   LEFT JOIN (
+  //     SELECT
+  //       project_id,
+  //       type,
+  //       khata_no,
+  //       GROUP_CONCAT(plot_no ORDER BY plot_no SEPARATOR ', ') AS plot_nos
+  //     FROM khatas
+  //     GROUP BY project_id, type, khata_no
+  //   ) kp
+  //     ON kp.project_id = k.project_id
+  //   AND kp.type = k.type
+  //   AND kp.khata_no = k.khata_no
+
+  //   LEFT JOIN (
+  //     SELECT
+  //       project_id,
+  //       type,
+  //       khata_no,
+  //       COUNT(*) AS plot_count
+  //     FROM plots
+  //     GROUP BY project_id, type, khata_no
+  //   ) pc
+  //     ON pc.project_id = k.project_id
+  //    AND pc.type = k.type
+  //    AND pc.khata_no = k.khata_no
+
+
+
+  //   LEFT JOIN (
+  //     SELECT khata_id, COUNT(*) AS doc_count
+  //     FROM khata_documents
+  //     GROUP BY khata_id
+  //   ) kd ON kd.khata_id = k.id
+
+  //   LEFT JOIN (
+  //     SELECT khata_id, COUNT(*) AS map_count
+  //     FROM khata_map_documents
+  //     GROUP BY khata_id
+  //   ) km ON km.khata_id = k.id
+
+  //   WHERE 1=1
+  // `;
+
+  //   const params = [];
+
+  //   if (project_id) {
+  //     query += " AND k.project_id = ?";
+  //     params.push(project_id);
+  //   }
+
+  //   if (Array.isArray(village_id) && village_id.length > 0) {
+  //     query += ` AND k.village_id IN (${village_id.map(() => "?").join(",")})`;
+  //     params.push(...village_id);
+  //   }
+
+  //   if (type) {
+  //     query += " AND k.type = ?";
+  //     params.push(type);
+  //   }
+
+  //   query += `
+  //   ORDER BY k.id ASC
+  //   LIMIT ? OFFSET ?
+  // `;
+
+  //   params.push(limit, offset);
+
+  //   const [rows] = await db.query(query, params);
+  //   return rows;
+  // },
+
   async findAll({
     project_id = null,
     village_id = null,
@@ -457,7 +414,7 @@ const Khata = {
       k.displaced_affected_person,
       k.full_part,
 
-      kp.plot_nos AS plot_no,
+      k.plot_no,
 
       p.project_name,
       v.village_name,
@@ -486,19 +443,6 @@ const Khata = {
 
     LEFT JOIN projects p ON p.id = k.project_id
     LEFT JOIN villages v ON v.id = k.village_id
-
-    LEFT JOIN (
-      SELECT
-        project_id,
-        type,
-        khata_no,
-        GROUP_CONCAT(plot_no ORDER BY plot_no SEPARATOR ', ') AS plot_nos
-      FROM khatas
-      GROUP BY project_id, type, khata_no
-    ) kp
-      ON kp.project_id = k.project_id
-    AND kp.type = k.type
-    AND kp.khata_no = k.khata_no
 
     LEFT JOIN (
       SELECT
