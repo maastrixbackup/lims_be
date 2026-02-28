@@ -17,7 +17,8 @@ const {
     addStage2,
     addPostClearance,
     // getForestProjectWithEds
-    getStageStatus
+    getStageStatus,
+    getMasterDashboard
 } = require("../controllers/forestLandController");
 
 const {
@@ -118,5 +119,7 @@ router.post(
 
 // router.get("/getForestProject/:projectId", getForestProjectWithEds);
 router.get("/getStageStatus/:project_id/:stage", getStageStatus);
+
+router.get("/masterDashboardSummary", getMasterDashboard);
 
 module.exports = router;

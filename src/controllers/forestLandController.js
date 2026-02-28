@@ -1569,6 +1569,23 @@ const getStageStatus = async (req, res) => {
   }
 };
 
+const getMasterDashboard = async (req, res) => {
+  try {
+    const data = await ForestLand.getDashboardSummary();
+
+    return res.json({
+      success: true,
+      data,
+    });
+  } catch (err) {
+    console.error("Dashboard Error:", err);
+    return res.status(500).json({
+      success: false,
+      message: err.message || "Server error",
+    });
+  }
+};
+
 module.exports = {
   addForestLand,
   updateForestLand,
@@ -1585,5 +1602,6 @@ module.exports = {
   addStage1,
   addStage2,
   addPostClearance,
-  getStageStatus
+  getStageStatus,
+  getMasterDashboard
 };

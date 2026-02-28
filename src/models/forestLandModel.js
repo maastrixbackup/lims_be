@@ -740,6 +740,141 @@ const ForestLand = {
     return rows.length ? rows[0].status : null;
   },
 
+  async getDashboardSummary() {
+
+    // TOTAL PROJECTS
+    const [[totalProjects]] = await db.query(`
+    SELECT COUNT(*) AS total
+    FROM forest_project_master
+    WHERE is_deleted = 0
+  `);
+
+    // ACTIVE PROJECTS
+    const [[activeProjects]] = await db.query(`
+    SELECT COUNT(*) AS total
+    FROM forest_project_master
+    WHERE project_status = 'Active'
+    AND is_deleted = 0
+  `);
+
+    // COMPLETED PROJECTS
+    const [[completedProjects]] = await db.query(`
+    SELECT COUNT(*) AS total
+    FROM forest_project_master
+    WHERE project_status = 'Completed'
+    AND is_deleted = 0
+  `);
+
+    //Post-Clearance Ongoing
+    const [[postClearanceOngoing]] = await db.query(`
+    SELECT COUNT(*) AS total
+    FROM forest_post_clearance
+    WHERE post_clearance_status = 'Ongoing'
+    AND is_deleted = 0
+  `);
+
+    // STAGE 0 READY
+    const [[stage0Ready]] = await db.query(`
+    SELECT COUNT(*) AS total
+    FROM forest_stage_0
+    WHERE stage_0_status = 'Ongoing'
+    AND is_deleted = 0
+  `);
+
+    const [[stage0NotReady]] = await db.query(`
+    SELECT COUNT(*) AS total
+    FROM forest_stage_0
+    WHERE stage_0_status = 'NOT READY'
+    AND is_deleted = 0
+  `);
+
+    // STAGE 1 STATUS
+    const [[stage1Completed]] = await db.query(`
+    SELECT COUNT(*) AS total
+    FROM forest_stage_1
+    WHERE stage1_status = 'Completed'
+    AND is_deleted = 0
+  `);
+
+    const [[stage1InProgress]] = await db.query(`
+    SELECT COUNT(*) AS total
+    FROM forest_stage_1
+    WHERE stage1_status = 'In Progress'
+    AND is_deleted = 0
+  `);
+
+    const [[stage1Delayed]] = await db.query(`
+    SELECT COUNT(*) AS total
+    FROM forest_stage_1
+    WHERE stage1_status = 'Delayed'
+    AND is_deleted = 0
+  `);
+
+    // STAGE 2 STATUS
+    const [[stage2Granted]] = await db.query(`
+    SELECT COUNT(*) AS total
+    FROM forest_stage_2
+    WHERE stage2_status = 'Granted'
+    AND is_deleted = 0
+  `);
+
+    const [[stage2InProcess]] = await db.query(`
+    SELECT COUNT(*) AS total
+    FROM forest_stage_2
+    WHERE stage2_status = 'Not Granted'
+    AND is_deleted = 0
+  `);
+
+    // EDS RAISED
+    const [[edsRaised]] = await db.query(`
+    SELECT COUNT(DISTINCT project_master_id) AS total
+    FROM forest_eds_master
+    WHERE is_deleted = 0
+  `);
+
+    // EDS PENDING
+    const [[edsPending]] = await db.query(`
+    SELECT COUNT(*) AS total
+    FROM forest_eds_master
+    WHERE eds_status = 'Open'
+    AND is_deleted = 0
+  `);
+
+    return {
+      total_projects: totalProjects.total,
+      active_projects: activeProjects.total,
+      completed_projects: completedProjects.total,
+      post_clearance_ongoing: postClearanceOngoing.total,
+
+      stage0_ready: stage0Ready.total,
+      stage0_not_ready: stage0NotReady.total,
+
+      stage1_completed: stage1Completed.total,
+      stage1_in_progress: stage1InProgress.total,
+      stage1_delayed: stage1Delayed.total,
+
+      stage2_granted: stage2Granted.total,
+      stage2_in_process: stage2InProcess.total,
+
+      mining_projects: 0,
+      linear_projects: 0,
+      utility_projects: 0,
+      hydel_irrigation_projects: 0,
+      defence_strategic_projects: 0,
+      projects_90_ready: 0,
+      projects_60_89: 0,
+      projects_60: 0,
+
+      eds_raised: edsRaised.total,
+      eds_pending: edsPending.total,
+
+      npv_payment_pending: 0,
+      ca_land_issue_pending: 0,
+      fra_compliance_pending: 0,
+      ec_nbwl_pending: 0
+    };
+  },
+
 };
 
 module.exports = ForestLand;
