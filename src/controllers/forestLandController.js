@@ -1575,6 +1575,7 @@ const getMasterDashboard = async (req, res) => {
 
     return res.json({
       success: true,
+      message: "Forest land master dashboard fetched successfully",
       data,
     });
   } catch (err) {
