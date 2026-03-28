@@ -10,7 +10,7 @@ const {
     addForestProjectWithEds,
     forestLandAbstract,
     forestProjectList,
-    // updateForestProject,
+    updateForestProject,
     deleteForestProject,
     addStage0,
     addStage1,
@@ -48,13 +48,13 @@ router.post(
 //     addForestProjectWithEds
 // );
 router.get("/forestProjectList", forestProjectList);
-// router.put("/updateForestProject/:id", updateForestProject);
+router.put("/updateForestProject/:id", updateForestProject);
 
-// router.put(
-//     "/updateForestProject/:id",
-//     uploadEDS.single("eds_document"),
-//     updateForestProject
-// );
+router.put(
+    "/updateForestProject/:id",
+    uploadEDS.single("eds_document"),
+    updateForestProject
+);
 router.post(
     "/forest-project",
     uploadEdsDocuments.any(), //for dynamic multiple EDS files
