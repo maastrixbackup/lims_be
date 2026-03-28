@@ -421,8 +421,10 @@ const ForestLand = {
       project_id,
       proposal_no,
       project_name,
+      project_category,
+      project_sub_category,
+      project_nature,   
       user_agency,
-      sector,
       state,
       district,
       tahasil,
@@ -473,81 +475,87 @@ const ForestLand = {
     return rows.length ? rows[0] : null;
   },
 
-  // async updateForestProject(id, data) {
-  //   const sql = `
-  //   UPDATE forest_project_master
-  //   SET
-  //     proposal_no = ?,
-  //     project_name = ?,
-  //     user_agency = ?,
-  //     state = ?,
-  //     district = ?,
-  //     tahasil = ?,
-  //     mouza = ?,
-  //     range_division = ?,
-  //     forest_type = ?,
-  //     total_project_area_ha = ?,
-  //     forest_area_ha = ?,
-  //     non_forest_area_ha = ?,
-  //     project_status = ?,
-  //     current_stage = ?,
-  //     eds_flag = ?,
-  //     eds_document_path = ?
-  //   WHERE id = ? AND is_deleted = 0
-  // `;
+  async updateForestProject(id, data) {
+    const sql = `
+    UPDATE forest_project_master
+    SET
+      proposal_no = ?,
+      project_name = ?,
+      user_agency = ?,
+      project_category = ?,
+      project_sub_category = ?,
+      project_nature = ?,
+      state = ?,
+      district = ?,
+      tahasil = ?,
+      mouza = ?,
+      range_division = ?,
+      forest_type = ?,
+      total_project_area_ha = ?,
+      forest_area_ha = ?,
+      non_forest_area_ha = ?,
+      project_status = ?,
+      current_stage = ?,
+      eds_flag = ?,
+      eds_document_path = ?
+    WHERE id = ? AND is_deleted = 0
+  `;
 
-  //   const values = [
-  //     data.proposal_no,
-  //     data.project_name,
-  //     data.user_agency,
-  //     data.state,
-  //     data.district,
-  //     data.tahasil,
-  //     data.mouza,
-  //     data.range_division,
-  //     data.forest_type,
-  //     data.total_project_area_ha,
-  //     data.forest_area_ha,
-  //     data.non_forest_area_ha,
-  //     data.project_status,
-  //     data.current_stage,
-  //     data.eds_flag,
-  //     data.eds_document_path,
-  //     id,
-  //   ];
+    const values = [
+      data.proposal_no,
+      data.project_name,
+      data.user_agency,
+      data.project_category,
+      data.project_sub_category,
+      data.project_nature,
+      data.state,
+      data.district,
+      data.tahasil,
+      data.mouza,
+      data.range_division,
+      data.forest_type,
+      data.total_project_area_ha,
+      data.forest_area_ha,
+      data.non_forest_area_ha,
+      data.project_status,
+      data.current_stage,
+      data.eds_flag,
+      data.eds_document_path,
+      id,
+    ];
 
-  //   await db.query(sql, values);
+    await db.query(sql, values);
 
-  //   const [rows] = await db.query(
-  //     `SELECT * FROM forest_project_master WHERE id = ?`,
-  //     [id]
-  //   );
+    const [rows] = await db.query(
+      `SELECT * FROM forest_project_master WHERE id = ?`,
+      [id]
+    );
 
-  //   return rows[0];
-  // },
+    return rows[0];
+  },
 
-  // async getProjectWithEds(projectId) {
-  //   const [masterRows] = await db.query(
-  //     `SELECT * FROM forest_project_master WHERE project_id = ? AND is_deleted = 0`,
-  //     [projectId]
-  //   );
+  async getProjectWithEds(projectId) {
+    const [masterRows] = await db.query(
+      `SELECT * FROM forest_project_master WHERE project_id = ? AND is_deleted = 0`,
+      [projectId]
+    );
 
-  //   if (!masterRows.length) return null;
+    if (!masterRows.length) return null;
 
-  //   const master = masterRows[0];
+    const master = masterRows[0];
 
-  //   const [edsRows] = await db.query(
-  //     `SELECT * FROM forest_eds_master 
-  //    WHERE project_master_id = ? AND is_deleted = 0
-  //    ORDER BY id ASC`,
-  //     [master.id]
-  //   );
+    const [edsRows] = await db.query(
+      `SELECT * FROM forest_eds_master 
+     WHERE project_master_id = ? AND is_deleted = 0
+     ORDER BY id ASC`,
+      [master.id]
+    );
 
-  //   return {
-  //     master,
-  //     eds_list: edsRows,
-  //   };
-  // },
+    return {
+      master,
+      eds_list: edsRows,
+    };
+  },
   async deleteForestProject(projectId) {
     const sql = `
     UPDATE forest_project_master
@@ -571,6 +579,22 @@ const ForestLand = {
       [result.insertId]
     );
     return rows[0];
+  },
+
+  async updateStage0(forestProjectId, data) {
+    const updateSql = `UPDATE forest_stage_0 SET ? WHERE forest_project_id = ? AND is_deleted = 0`;
+    const [result] = await db.query(updateSql, [data, forestProjectId]);
+
+    if (result.affectedRows === 0) {
+      return null;
+    }
+
+    const [rows] = await db.query(
+      `SELECT * FROM forest_stage_0 WHERE forest_project_id = ? AND is_deleted = 0`,
+      [forestProjectId]
+    );
+
+    return rows[0] || null;
   },
 
   async insertUpdateStage1(data) {
@@ -653,6 +677,22 @@ const ForestLand = {
     return rows[0];
   },
 
+  async updateStage2(forestProjectId, data) {
+    const updateSql = `UPDATE forest_stage_2 SET ? WHERE forest_project_id = ? AND is_deleted = 0`;
+    const [result] = await db.query(updateSql, [data, forestProjectId]);
+
+    if (result.affectedRows === 0) {
+      return null;
+    }
+
+    const [rows] = await db.query(
+      `SELECT * FROM forest_stage_2 WHERE forest_project_id = ? AND is_deleted = 0`,
+      [forestProjectId]
+    );
+
+    return rows[0] || null;
+  },
+
   async createPostClearance(data) {
     const sql = `
     INSERT INTO forest_post_clearance (
@@ -703,6 +743,54 @@ const ForestLand = {
     );
 
     return rows[0];
+  },
+
+  async updatePostClearance(forestProjectId, data) {
+    const updateSql = `UPDATE forest_post_clearance SET ? WHERE forest_project_id = ? AND is_deleted = 0`;
+    const [result] = await db.query(updateSql, [data, forestProjectId]);
+
+    if (result.affectedRows === 0) {
+      return null;
+    }
+
+    const [rows] = await db.query(
+      `SELECT * FROM forest_post_clearance WHERE forest_project_id = ? AND is_deleted = 0`,
+      [forestProjectId]
+    );
+
+    return rows[0] || null;
+  },
+
+  async getStage0ByProjectId(forestProjectId) {
+    const [rows] = await db.query(
+      `SELECT * FROM forest_stage_0 WHERE forest_project_id = ? AND is_deleted = 0 LIMIT 1`,
+      [forestProjectId]
+    );
+    return rows[0] || null;
+  },
+
+  async getStage1ByProjectId(forestProjectId) {
+    const [rows] = await db.query(
+      `SELECT * FROM forest_stage_1 WHERE forest_project_id = ? AND is_deleted = 0 LIMIT 1`,
+      [forestProjectId]
+    );
+    return rows[0] || null;
+  },
+
+  async getStage2ByProjectId(forestProjectId) {
+    const [rows] = await db.query(
+      `SELECT * FROM forest_stage_2 WHERE forest_project_id = ? AND is_deleted = 0 LIMIT 1`,
+      [forestProjectId]
+    );
+    return rows[0] || null;
+  },
+
+  async getPostClearanceByProjectId(forestProjectId) {
+    const [rows] = await db.query(
+      `SELECT * FROM forest_post_clearance WHERE forest_project_id = ? AND is_deleted = 0 LIMIT 1`,
+      [forestProjectId]
+    );
+    return rows[0] || null;
   },
 
   async getStageStatus(projectId, stage) {
