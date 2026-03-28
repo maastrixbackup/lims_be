@@ -1,7 +1,39 @@
 const ForestLand = require("../models/forestLandModel");
 const logAction = require("../utils/logger");
-const fs = require("fs");
-const path = require("path");
+
+const normalizeDocumentList = (value) => {
+  if (!value) return [];
+  if (Array.isArray(value)) return value.filter(Boolean);
+
+  if (typeof value === "string") {
+    const trimmed = value.trim();
+    if (!trimmed) return [];
+
+    try {
+      const parsed = JSON.parse(trimmed);
+      if (Array.isArray(parsed)) return parsed.filter(Boolean);
+    } catch (e) {
+      // legacy single-file string values are supported
+    }
+
+    return [trimmed];
+  }
+
+  return [];
+};
+
+const hasUploadedDocuments = (files, field) =>
+  Array.isArray(files[field]) && files[field].length > 0;
+
+const hasAnyDocuments = (value) => normalizeDocumentList(value).length > 0;
+
+const buildDocumentValue = (files, field, existingValue = null) => {
+  const existingDocs = normalizeDocumentList(existingValue);
+  const newDocs = (files[field] || []).map((file) => file.filename).filter(Boolean);
+
+  const merged = [...new Set([...existingDocs, ...newDocs])];
+  return merged.length ? JSON.stringify(merged) : null;
+};
 
 // validation helpers
 // const validateForestArea = (d) =>
@@ -130,20 +162,47 @@ const forestLandList = async (req, res) => {
 };
 
 const updateForestLand = async (req, res) => {
-  const userId = req.user.id;
+  const userId = req.user?.id || null;
   const { id } = req.params;
 
   try {
-    const { schedule_type } = req.body;
+    const body = req.body || {};
 
-    if (!schedule_type) {
+    if (!id) {
+      return res.status(400).json({
+        success: false,
+        message: "id is required",
+      });
+    }
+
+    const existingData = await ForestLand.findById(id);
+    if (!existingData) {
+      return res.status(404).json({
+        success: false,
+        message: "Forest land record not found",
+      });
+    }
+
+    if (!Object.keys(body).length) {
+      return res.status(400).json({
+        success: false,
+        message: "At least one field is required to update",
+      });
+    }
+
+    const payload = {
+      ...existingData,
+      ...body,
+    };
+
+    if (!payload.schedule_type) {
       return res.status(400).json({
         success: false,
         message: "Schedule type is required",
       });
     }
 
-    const updatedData = await ForestLand.update(id, req.body);
+    const updatedData = await ForestLand.update(id, payload);
 
     if (!updatedData) {
       return res.status(404).json({
@@ -157,7 +216,7 @@ const updateForestLand = async (req, res) => {
       "update forest land",
       "success",
       "Forest land updated successfully",
-      req.body,
+      body,
       updatedData
     );
 
@@ -172,7 +231,7 @@ const updateForestLand = async (req, res) => {
       "update forest land",
       "failure",
       err.message,
-      req.body,
+      req.body || {},
       null
     );
 
@@ -732,31 +791,31 @@ const addForestProjectWithEds = async (req, res) => {
 //   }
 // };
 
-// const getForestProjectWithEds = async (req, res) => {
-//   try {
-//     const { projectId } = req.params;
+const getForestProjectWithEds = async (req, res) => {
+  try {
+    const { projectId } = req.params;
 
-//     const data = await ForestLand.getProjectWithEds(projectId);
+    const data = await ForestLand.getProjectWithEds(projectId);
 
-//     if (!data) {
-//       return res.status(404).json({
-//         success: false,
-//         message: "Data not found for this project",
-//       });
-//     }
+    if (!data) {
+      return res.status(404).json({
+        success: false,
+        message: "Data not found for this project",
+      });
+    }
 
-//     return res.json({
-//       success: true,
-//       data,
-//     });
-//   } catch (err) {
-//     console.error("Fetch Error:", err);
-//     return res.status(500).json({
-//       success: false,
-//       message: err.message || "Server error",
-//     });
-//   }
-// };
+    return res.json({
+      success: true,
+      data,
+    });
+  } catch (err) {
+    console.error("Fetch Error:", err);
+    return res.status(500).json({
+      success: false,
+      message: err.message || "Server error",
+    });
+  }
+};
 
 const forestProjectList = async (req, res) => {
   try {
@@ -804,10 +863,11 @@ const forestProjectList = async (req, res) => {
 };
 
 const updateForestProject = async (req, res) => {
-  const userId = req.user.id;
+  const userId = req.user?.id || null;
   try {
     const masterProjectId = req.params.id;
-    const edsFlag = Number(req.body.eds_flag);
+    const body = req.body || {};
+    const files = req.files || [];
 
     // Fetch existing project
     const existing = await ForestLand.getForestProjectById(masterProjectId);
@@ -818,64 +878,60 @@ const updateForestProject = async (req, res) => {
       });
     }
 
-    // If eds_flag = 1 then document required (existing or new)
-    if (edsFlag === 1 && !req.file && !existing.eds_document_path) {
-      return res.status(400).json({
-        success: false,
-        message: "EDS document is required when EDS flag is Yes",
-      });
-    }
-
-    // If new document uploaded & old document exists then delete old
-    if (existing.eds_document_path && (edsFlag === 0 || (edsFlag === 1 && req.file))
-    ) {
-      const oldPath = path.join(
-        process.cwd(), //project root
-        existing.eds_document_path
-      );
-
-      // console.log("Deleting file:", oldPath);
-
-      if (fs.existsSync(oldPath)) {
-        fs.unlinkSync(oldPath);
-      } else {
-        console.log("File not found:", oldPath);
-      }
-    }
-
-    // If eds_flag = 0 then document not allowed
-    if (edsFlag === 0 && req.file) {
-      return res.status(400).json({
-        success: false,
-        message: "EDS document should not be uploaded when EDS flag is No",
-      });
-    }
+    const edsFlag =
+      body.eds_flag !== undefined
+        ? Number(body.eds_flag)
+        : Number(existing.eds_flag || 0);
 
     const payload = {
-      proposal_no: req.body.proposal_no,
-      project_name: req.body.project_name,
-      user_agency: req.body.user_agency,
-      sector: req.body.sector,
-      state: req.body.state,
-      district: req.body.district,
-      tahasil: req.body.tahasil,
-      mouza: req.body.mouza,
-      range_division: req.body.range_division,
-      forest_type: req.body.forest_type,
-      total_project_area_ha: req.body.total_project_area_ha,
-      forest_area_ha: req.body.forest_area_ha,
-      non_forest_area_ha: req.body.non_forest_area_ha,
-      project_status: req.body.project_status,
-      current_stage: req.body.current_stage,
+      proposal_no:
+        body.proposal_no !== undefined ? body.proposal_no : existing.proposal_no,
+      project_name:
+        body.project_name !== undefined ? body.project_name : existing.project_name,
+      project_category:
+        body.project_category !== undefined
+          ? body.project_category
+          : existing.project_category,
+      project_sub_category:
+        body.project_sub_category !== undefined
+          ? body.project_sub_category
+          : existing.project_sub_category,
+      project_nature:
+        body.project_nature !== undefined
+          ? body.project_nature
+          : existing.project_nature,
+      user_agency:
+        body.user_agency !== undefined ? body.user_agency : existing.user_agency,
+      state: body.state !== undefined ? body.state : existing.state,
+      district: body.district !== undefined ? body.district : existing.district,
+      tahasil: body.tahasil !== undefined ? body.tahasil : existing.tahasil,
+      mouza: body.mouza !== undefined ? body.mouza : existing.mouza,
+      range_division:
+        body.range_division !== undefined
+          ? body.range_division
+          : existing.range_division,
+      forest_type:
+        body.forest_type !== undefined ? body.forest_type : existing.forest_type,
+      total_project_area_ha:
+        body.total_project_area_ha !== undefined
+          ? body.total_project_area_ha
+          : existing.total_project_area_ha,
+      forest_area_ha:
+        body.forest_area_ha !== undefined
+          ? body.forest_area_ha
+          : existing.forest_area_ha,
+      non_forest_area_ha:
+        body.non_forest_area_ha !== undefined
+          ? body.non_forest_area_ha
+          : existing.non_forest_area_ha,
+      project_status:
+        body.project_status !== undefined
+          ? body.project_status
+          : existing.project_status,
+      current_stage:
+        body.current_stage !== undefined ? body.current_stage : existing.current_stage,
       eds_flag: edsFlag,
-
-      // document logic
-      eds_document_path:
-        edsFlag === 1
-          ? req.file
-            ? req.file.path
-            : existing.eds_document_path
-          : null,
+      eds_document_path: null,
     };
 
     const updatedProject = await ForestLand.updateForestProject(
@@ -883,12 +939,39 @@ const updateForestProject = async (req, res) => {
       payload
     );
 
+    await ForestLand.deleteEdsByMasterId(masterProjectId);
+
+    if (edsFlag === 1 && body.eds_list) {
+      const edsList =
+        typeof body.eds_list === "string"
+          ? JSON.parse(body.eds_list)
+          : body.eds_list;
+
+      for (let i = 0; i < edsList.length; i++) {
+        const eds = edsList[i];
+        const fileObj = files[i];
+
+        await ForestLand.createEds({
+          project_master_id: masterProjectId,
+          eds_ref_no: eds.eds_ref_no,
+          issuing_authority: eds.issuing_authority,
+          eds_issue_date: eds.eds_issue_date,
+          eds_due_date: eds.eds_due_date,
+          total_issues: eds.total_issues,
+          issues_closed: eds.issues_closed,
+          issues_pending: eds.issues_pending,
+          eds_reply_document: fileObj?.filename || null,
+          eds_status: eds.eds_status,
+        });
+      }
+    }
+
     await logAction(
       userId,
       "update forest project",
       "success",
       "Forest project updated",
-      payload,
+      body,
       updatedProject
     );
 
@@ -990,7 +1073,7 @@ const addStage0 = async (req, res) => {
       proposalSubmitted === 1 ? "Ready" : "Ongoing";
 
     const requireFile = (condition, field, message) => {
-      if (condition && !files[field]?.[0]) {
+      if (condition && !hasUploadedDocuments(files, field)) {
         throw new Error(message);
       }
     };
@@ -1076,51 +1159,52 @@ const addStage0 = async (req, res) => {
 
       dgps_survey_done: dgpsSurveyDone,
       dgps_area_ha: body.dgps_area_ha || null,
-      dgps_document: files.dgps_document?.[0]?.filename || null,
+      dgps_document: buildDocumentValue(files, "dgps_document"),
 
       orsac_authentication: orsacAuth,
-      orsac_document: files.orsac_document?.[0]?.filename || null,
+      orsac_document: buildDocumentValue(files, "orsac_document"),
 
       tree_enumeration_done: treeEnum,
-      tree_enumeration_document:
-        files.tree_enumeration_document?.[0]?.filename || null,
+      tree_enumeration_document: buildDocumentValue(
+        files,
+        "tree_enumeration_document"
+      ),
 
       administrative_documents: adminDocs,
-      administrative_document:
-        files.administrative_document?.[0]?.filename || null,
+      administrative_document: buildDocumentValue(files, "administrative_document"),
 
       legal_lease_documents: legalLease,
-      legal_lease_document:
-        files.legal_lease_document?.[0]?.filename || null,
+      legal_lease_document: buildDocumentValue(files, "legal_lease_document"),
 
       technical_data: technicalData,
-      technical_document: files.technical_document?.[0]?.filename || null,
+      technical_document: buildDocumentValue(files, "technical_document"),
 
       forest_land_details: body.forest_land_details || null,
-      forest_land_details_document:
-        files.forest_land_details_document?.[0]?.filename || null,
+      forest_land_details_document: buildDocumentValue(
+        files,
+        "forest_land_details_document"
+      ),
 
       ca_ca_planning: caPlanning,
-      ca_ca_document: files.ca_ca_document?.[0]?.filename || null,
+      ca_ca_document: buildDocumentValue(files, "ca_ca_document"),
 
       fra_records: body.fra_records || null,
-      fra_document: files.fra_document?.[0]?.filename || null,
+      fra_document: buildDocumentValue(files, "fra_document"),
 
       environmental_statutory: body.environmental_statutory || null,
-      environmental_document:
-        files.environmental_document?.[0]?.filename || null,
+      environmental_document: buildDocumentValue(files, "environmental_document"),
 
       wildlife_safeguards: body.wildlife_safeguards || null,
-      wildlife_document: files.wildlife_document?.[0]?.filename || null,
+      wildlife_document: buildDocumentValue(files, "wildlife_document"),
 
       maps_spatial_evidence: body.maps_spatial_evidence || null,
-      maps_document: files.maps_document?.[0]?.filename || null,
+      maps_document: buildDocumentValue(files, "maps_document"),
 
       financial_undertakings: body.financial_undertakings || null,
-      financial_document: files.financial_document?.[0]?.filename || null,
+      financial_document: buildDocumentValue(files, "financial_document"),
 
       proposal_submitted: proposalSubmitted,
-      proposal_document: files.proposal_document?.[0]?.filename || null,
+      proposal_document: buildDocumentValue(files, "proposal_document"),
 
       parivesh_proposal_no: body.parivesh_proposal_no || null,
       submission_date: body.submission_date || null,
@@ -1166,7 +1250,7 @@ const addStage1 = async (req, res) => {
       stage1Accepted === 1 ? "Completed" : "Pending";
 
     const requireFile = (condition, field, message) => {
-      if (condition && !files[field]?.[0]) {
+      if (condition && !hasUploadedDocuments(files, field)) {
         throw new Error(message);
       }
     };
@@ -1235,42 +1319,37 @@ const addStage1 = async (req, res) => {
       forest_project_id: body.forest_project_id,
 
       stage1_approval_letter: body.stage1_approval_letter || null,
-      stage1_approval_document:
-        files.stage1_approval_document?.[0]?.filename || null,
+      stage1_approval_document: buildDocumentValue(files, "stage1_approval_document"),
 
       stage1_conditions_extracted: conditionsExtracted,
-      stage1_conditions_document:
-        files.stage1_conditions_document?.[0]?.filename || null,
+      stage1_conditions_document: buildDocumentValue(files, "stage1_conditions_document"),
 
       ca_land_handed_over: caLandHandedOver,
-      ca_land_document:
-        files.ca_land_document?.[0]?.filename || null,
+      ca_land_document: buildDocumentValue(files, "ca_land_document"),
 
       fra_compliance: body.fra_compliance || null,
-      fra_document: files.fra_document?.[0]?.filename || null,
+      fra_document: buildDocumentValue(files, "fra_document"),
 
       npv_payment: body.npv_payment || null,
-      npv_document: files.npv_document?.[0]?.filename || null,
+      npv_document: buildDocumentValue(files, "npv_document"),
 
       ca_payment: body.ca_payment || null,
-      ca_payment_document:
-        files.ca_payment_document?.[0]?.filename || null,
+      ca_payment_document: buildDocumentValue(files, "ca_payment_document"),
 
       aca_payment: body.aca_payment || null,
-      aca_payment_document:
-        files.aca_payment_document?.[0]?.filename || null,
+      aca_payment_document: buildDocumentValue(files, "aca_payment_document"),
 
       wildlife_payment: body.wildlife_payment || null,
-      wildlife_payment_document:
-        files.wildlife_payment_document?.[0]?.filename || null,
+      wildlife_payment_document: buildDocumentValue(files, "wildlife_payment_document"),
 
       technical_compliance: body.technical_compliance || null,
-      technical_document:
-        files.technical_document?.[0]?.filename || null,
+      technical_document: buildDocumentValue(files, "technical_document"),
 
       stage1_compliance_accepted: stage1Accepted,
-      stage1_acceptance_document:
-        files.stage1_acceptance_document?.[0]?.filename || null,
+      stage1_acceptance_document: buildDocumentValue(
+        files,
+        "stage1_acceptance_document"
+      ),
 
       eligible_for_stage2: eligibleForStage2,
       stage1_status: stage1Status,
@@ -1314,7 +1393,7 @@ const addStage2 = async (req, res) => {
       stage2Status === "Granted" ? 1 : 0;
 
     const requireFile = (condition, field, message) => {
-      if (condition && !files[field]?.[0]) {
+      if (condition && !hasUploadedDocuments(files, field)) {
         throw new Error(message);
       }
     };
@@ -1359,28 +1438,23 @@ const addStage2 = async (req, res) => {
       forest_project_id: body.forest_project_id,
 
       environmental_clearance: body.environmental_clearance || null,
-      environmental_document:
-        files.environmental_document?.[0]?.filename || null,
+      environmental_document: buildDocumentValue(files, "environmental_document"),
 
       nbwl_clearance: body.nbwl_clearance || null,
-      nbwl_document: files.nbwl_document?.[0]?.filename || null,
+      nbwl_document: buildDocumentValue(files, "nbwl_document"),
 
       final_ca_execution: body.final_ca_execution || null,
-      final_ca_document:
-        files.final_ca_document?.[0]?.filename || null,
+      final_ca_document: buildDocumentValue(files, "final_ca_document"),
 
       final_maps_approved: mapsApproved,
-      final_maps_document:
-        files.final_maps_document?.[0]?.filename || null,
+      final_maps_document: buildDocumentValue(files, "final_maps_document"),
 
       final_technical_approval:
         body.final_technical_approval || null,
-      final_technical_document:
-        files.final_technical_document?.[0]?.filename || null,
+      final_technical_document: buildDocumentValue(files, "final_technical_document"),
 
       stage2_approval_letter: stage2Letter,
-      stage2_approval_document:
-        files.stage2_approval_document?.[0]?.filename || null,
+      stage2_approval_document: buildDocumentValue(files, "stage2_approval_document"),
 
       stage2_approval_date: body.stage2_approval_date || null,
 
@@ -1429,7 +1503,7 @@ const addPostClearance = async (req, res) => {
     const periodic = Number(body.periodic_compliance_submitted) || 0;
 
     const requireFile = (condition, field, message) => {
-      if (condition && !files[field]?.[0]) {
+      if (condition && !hasUploadedDocuments(files, field)) {
         throw new Error(message);
       }
     };
@@ -1487,24 +1561,28 @@ const addPostClearance = async (req, res) => {
       forest_project_id: body.forest_project_id,
 
       ca_plantation_started: started,
-      ca_plantation_started_document:
-        files.ca_plantation_started_document?.[0]?.filename || null,
+      ca_plantation_started_document: buildDocumentValue(
+        files,
+        "ca_plantation_started_document"
+      ),
 
       ca_plantation_completed: completed,
-      ca_plantation_completed_document:
-        files.ca_plantation_completed_document?.[0]?.filename || null,
+      ca_plantation_completed_document: buildDocumentValue(
+        files,
+        "ca_plantation_completed_document"
+      ),
 
       survival_report_submitted: survival,
-      survival_report_document:
-        files.survival_report_document?.[0]?.filename || null,
+      survival_report_document: buildDocumentValue(files, "survival_report_document"),
 
       wildlife_mitigation: wildlife,
-      wildlife_mitigation_document:
-        files.wildlife_mitigation_document?.[0]?.filename || null,
+      wildlife_mitigation_document: buildDocumentValue(
+        files,
+        "wildlife_mitigation_document"
+      ),
 
       safety_zone_maintained: safety,
-      safety_zone_document:
-        files.safety_zone_document?.[0]?.filename || null,
+      safety_zone_document: buildDocumentValue(files, "safety_zone_document"),
 
       periodic_compliance_submitted: periodic,
       periodic_compliance_type:
@@ -1534,6 +1612,676 @@ const addPostClearance = async (req, res) => {
     });
   }
 };
+
+const updateStage0 = async (req, res) => {
+  try {
+    const forestProjectId = req.params.forest_project_id;
+    const body = req.body || {};
+    const files = req.files || {};
+
+    if (!forestProjectId) {
+      return res.status(400).json({
+        success: false,
+        message: "forest_project_id is required",
+      });
+    }
+
+    const existing = await ForestLand.getStage0ByProjectId(forestProjectId);
+    const isNewRecord = !existing;
+    const existingData = existing || {};
+
+    const dgpsSurveyDone =
+      body.dgps_survey_done !== undefined
+        ? Number(body.dgps_survey_done)
+        : Number(existingData.dgps_survey_done || 0);
+    const orsacAuth =
+      body.orsac_authentication !== undefined
+        ? Number(body.orsac_authentication)
+        : Number(existingData.orsac_authentication || 0);
+    const treeEnum =
+      body.tree_enumeration_done !== undefined
+        ? Number(body.tree_enumeration_done)
+        : Number(existingData.tree_enumeration_done || 0);
+    const adminDocs =
+      body.administrative_documents !== undefined
+        ? Number(body.administrative_documents)
+        : Number(existingData.administrative_documents || 0);
+    const legalLease =
+      body.legal_lease_documents !== undefined
+        ? Number(body.legal_lease_documents)
+        : Number(existingData.legal_lease_documents || 0);
+    const technicalData =
+      body.technical_data !== undefined
+        ? Number(body.technical_data)
+        : Number(existingData.technical_data || 0);
+    const caPlanning =
+      body.ca_ca_planning !== undefined
+        ? Number(body.ca_ca_planning)
+        : Number(existingData.ca_ca_planning || 0);
+    const proposalSubmitted =
+      body.proposal_submitted !== undefined
+        ? Number(body.proposal_submitted)
+        : Number(existingData.proposal_submitted || 0);
+
+    const stageStatus = proposalSubmitted === 1 ? "Ready" : "Ongoing";
+
+    const resolveFile = (field, existingValue) =>
+      buildDocumentValue(files, field, existingValue);
+
+    const requireFile = (condition, fileValue, message) => {
+      if (condition && !hasAnyDocuments(fileValue)) {
+        throw new Error(message);
+      }
+    };
+
+    const dgpsDocument = resolveFile("dgps_document", existingData.dgps_document);
+    const orsacDocument = resolveFile(
+      "orsac_document",
+      existingData.orsac_document
+    );
+    const treeEnumerationDocument = resolveFile(
+      "tree_enumeration_document",
+      existingData.tree_enumeration_document
+    );
+    const administrativeDocument = resolveFile(
+      "administrative_document",
+      existingData.administrative_document
+    );
+    const legalLeaseDocument = resolveFile(
+      "legal_lease_document",
+      existingData.legal_lease_document
+    );
+    const technicalDocument = resolveFile(
+      "technical_document",
+      existingData.technical_document
+    );
+    const forestLandDetailsDocument = resolveFile(
+      "forest_land_details_document",
+      existingData.forest_land_details_document
+    );
+    const caCaDocument = resolveFile("ca_ca_document", existingData.ca_ca_document);
+    const fraDocument = resolveFile("fra_document", existingData.fra_document);
+    const environmentalDocument = resolveFile(
+      "environmental_document",
+      existingData.environmental_document
+    );
+    const wildlifeDocument = resolveFile(
+      "wildlife_document",
+      existingData.wildlife_document
+    );
+    const mapsDocument = resolveFile("maps_document", existingData.maps_document);
+    const financialDocument = resolveFile(
+      "financial_document",
+      existingData.financial_document
+    );
+    const proposalDocument = resolveFile(
+      "proposal_document",
+      existingData.proposal_document
+    );
+
+    requireFile(dgpsSurveyDone === 1, dgpsDocument, "DGPS document required");
+    requireFile(orsacAuth === 1, orsacDocument, "ORSAC document required");
+    requireFile(treeEnum === 1, treeEnumerationDocument, "Tree enumeration document required");
+    requireFile(adminDocs === 1, administrativeDocument, "Administrative document required");
+    requireFile(legalLease === 1, legalLeaseDocument, "Legal & Lease document required");
+    requireFile(technicalData === 1, technicalDocument, "Technical document required");
+    requireFile(
+      (body.forest_land_details || existingData.forest_land_details) === "Uploaded",
+      forestLandDetailsDocument,
+      "Forest land details document required"
+    );
+    requireFile(caPlanning === 1, caCaDocument, "CA/CA Planning document required");
+    requireFile(
+      (body.fra_records || existingData.fra_records) === "Completed",
+      fraDocument,
+      "FRA document required"
+    );
+    requireFile(
+      (body.environmental_statutory || existingData.environmental_statutory) === "Cleared",
+      environmentalDocument,
+      "Environmental document required"
+    );
+    requireFile(
+      (body.wildlife_safeguards || existingData.wildlife_safeguards) === "Completed",
+      wildlifeDocument,
+      "Wildlife document required"
+    );
+    requireFile(
+      (body.maps_spatial_evidence || existingData.maps_spatial_evidence) === "Authenticated",
+      mapsDocument,
+      "Maps document required"
+    );
+    requireFile(
+      (body.financial_undertakings || existingData.financial_undertakings) === "Submitted",
+      financialDocument,
+      "Financial document required"
+    );
+    requireFile(proposalSubmitted === 1, proposalDocument, "Proposal document required");
+
+    const payload = {
+      forest_project_id: forestProjectId,
+      dgps_survey_done: dgpsSurveyDone,
+      dgps_area_ha:
+        body.dgps_area_ha !== undefined
+          ? body.dgps_area_ha
+          : existingData.dgps_area_ha,
+      dgps_document: dgpsDocument,
+      orsac_authentication: orsacAuth,
+      orsac_document: orsacDocument,
+      tree_enumeration_done: treeEnum,
+      tree_enumeration_document: treeEnumerationDocument,
+      administrative_documents: adminDocs,
+      administrative_document: administrativeDocument,
+      legal_lease_documents: legalLease,
+      legal_lease_document: legalLeaseDocument,
+      technical_data: technicalData,
+      technical_document: technicalDocument,
+      forest_land_details:
+        body.forest_land_details !== undefined
+          ? body.forest_land_details
+          : existingData.forest_land_details,
+      forest_land_details_document: forestLandDetailsDocument,
+      ca_ca_planning: caPlanning,
+      ca_ca_document: caCaDocument,
+      fra_records:
+        body.fra_records !== undefined ? body.fra_records : existingData.fra_records,
+      fra_document: fraDocument,
+      environmental_statutory:
+        body.environmental_statutory !== undefined
+          ? body.environmental_statutory
+          : existingData.environmental_statutory,
+      environmental_document: environmentalDocument,
+      wildlife_safeguards:
+        body.wildlife_safeguards !== undefined
+          ? body.wildlife_safeguards
+          : existingData.wildlife_safeguards,
+      wildlife_document: wildlifeDocument,
+      maps_spatial_evidence:
+        body.maps_spatial_evidence !== undefined
+          ? body.maps_spatial_evidence
+          : existingData.maps_spatial_evidence,
+      maps_document: mapsDocument,
+      financial_undertakings:
+        body.financial_undertakings !== undefined
+          ? body.financial_undertakings
+          : existingData.financial_undertakings,
+      financial_document: financialDocument,
+      proposal_submitted: proposalSubmitted,
+      proposal_document: proposalDocument,
+      parivesh_proposal_no:
+        body.parivesh_proposal_no !== undefined
+          ? body.parivesh_proposal_no
+          : existingData.parivesh_proposal_no,
+      submission_date:
+        body.submission_date !== undefined
+          ? body.submission_date
+          : existingData.submission_date,
+      stage_0_status: stageStatus,
+    };
+
+    const result = isNewRecord
+      ? await ForestLand.createStage0(payload)
+      : await ForestLand.updateStage0(forestProjectId, payload);
+
+    return res.status(isNewRecord ? 201 : 200).json({
+      success: true,
+      message: isNewRecord
+        ? "Stage-0 data saved successfully"
+        : "Stage-0 data updated successfully",
+      data: result,
+    });
+  } catch (err) {
+    console.error("Stage0 Update Error:", err);
+    return res.status(500).json({
+      success: false,
+      message: err.message || "Server error",
+    });
+  }
+};
+
+const updateStage1 = async (req, res) => {
+  try {
+    const forestProjectId = req.params.forest_project_id;
+    const body = req.body || {};
+    const files = req.files || {};
+
+    if (!forestProjectId) {
+      return res.status(400).json({
+        success: false,
+        message: "forest_project_id is required",
+      });
+    }
+
+    const existing = await ForestLand.getStage1ByProjectId(forestProjectId);
+    const isNewRecord = !existing;
+    const existingData = existing || {};
+
+    const conditionsExtracted =
+      body.stage1_conditions_extracted !== undefined
+        ? Number(body.stage1_conditions_extracted)
+        : Number(existingData.stage1_conditions_extracted || 0);
+    const caLandHandedOver =
+      body.ca_land_handed_over !== undefined
+        ? Number(body.ca_land_handed_over)
+        : Number(existingData.ca_land_handed_over || 0);
+    const stage1Accepted =
+      body.stage1_compliance_accepted !== undefined
+        ? Number(body.stage1_compliance_accepted)
+        : Number(existingData.stage1_compliance_accepted || 0);
+
+    const eligibleForStage2 = stage1Accepted === 1 ? 1 : 0;
+    const stage1Status = stage1Accepted === 1 ? "Completed" : "Pending";
+
+    const resolveFile = (field, existingValue) =>
+      buildDocumentValue(files, field, existingValue);
+
+    const requireFile = (condition, fileValue, message) => {
+      if (condition && !hasAnyDocuments(fileValue)) {
+        throw new Error(message);
+      }
+    };
+
+    const stage1ApprovalDocument = resolveFile(
+      "stage1_approval_document",
+      existingData.stage1_approval_document
+    );
+    const stage1ConditionsDocument = resolveFile(
+      "stage1_conditions_document",
+      existingData.stage1_conditions_document
+    );
+    const caLandDocument = resolveFile("ca_land_document", existingData.ca_land_document);
+    const fraDocument = resolveFile("fra_document", existingData.fra_document);
+    const npvDocument = resolveFile("npv_document", existingData.npv_document);
+    const caPaymentDocument = resolveFile(
+      "ca_payment_document",
+      existingData.ca_payment_document
+    );
+    const acaPaymentDocument = resolveFile(
+      "aca_payment_document",
+      existingData.aca_payment_document
+    );
+    const wildlifeDocument = resolveFile(
+      "wildlife_payment_document",
+      existingData.wildlife_payment_document
+    );
+    const technicalDocument = resolveFile("technical_document", existingData.technical_document);
+    const stage1AcceptanceDocument = resolveFile(
+      "stage1_acceptance_document",
+      existingData.stage1_acceptance_document
+    );
+
+    requireFile(
+      (body.stage1_approval_letter || existingData.stage1_approval_letter) === "Uploaded",
+      stage1ApprovalDocument,
+      "Stage-1 approval document required"
+    );
+    requireFile(
+      conditionsExtracted === 1,
+      stage1ConditionsDocument,
+      "Stage-1 conditions document required"
+    );
+    requireFile(caLandHandedOver === 1, caLandDocument, "CA land document required");
+    requireFile(
+      (body.fra_compliance || existingData.fra_compliance) === "Complied",
+      fraDocument,
+      "FRA document required"
+    );
+    requireFile(
+      (body.npv_payment || existingData.npv_payment) === "Paid",
+      npvDocument,
+      "NPV payment document required"
+    );
+    requireFile(
+      (body.ca_payment || existingData.ca_payment) === "Paid",
+      caPaymentDocument,
+      "CA payment document required"
+    );
+    requireFile(
+      (body.aca_payment || existingData.aca_payment) === "Paid",
+      acaPaymentDocument,
+      "ACA payment document required"
+    );
+    requireFile(
+      (body.wildlife_payment || existingData.wildlife_payment) === "Paid",
+      wildlifeDocument,
+      "Wildlife payment document required"
+    );
+    requireFile(
+      (body.technical_compliance || existingData.technical_compliance) === "Completed",
+      technicalDocument,
+      "Technical compliance document required"
+    );
+    requireFile(stage1Accepted === 1, stage1AcceptanceDocument, "Stage-1 acceptance document required");
+
+    const payload = {
+      forest_project_id: forestProjectId,
+      stage1_approval_letter:
+        body.stage1_approval_letter !== undefined
+          ? body.stage1_approval_letter
+          : existingData.stage1_approval_letter,
+      stage1_approval_document: stage1ApprovalDocument,
+      stage1_conditions_extracted: conditionsExtracted,
+      stage1_conditions_document: stage1ConditionsDocument,
+      ca_land_handed_over: caLandHandedOver,
+      ca_land_document: caLandDocument,
+      fra_compliance:
+        body.fra_compliance !== undefined ? body.fra_compliance : existingData.fra_compliance,
+      fra_document: fraDocument,
+      npv_payment: body.npv_payment !== undefined ? body.npv_payment : existingData.npv_payment,
+      npv_document: npvDocument,
+      ca_payment: body.ca_payment !== undefined ? body.ca_payment : existingData.ca_payment,
+      ca_payment_document: caPaymentDocument,
+      aca_payment: body.aca_payment !== undefined ? body.aca_payment : existingData.aca_payment,
+      aca_payment_document: acaPaymentDocument,
+      wildlife_payment:
+        body.wildlife_payment !== undefined
+          ? body.wildlife_payment
+          : existingData.wildlife_payment,
+      wildlife_payment_document: wildlifeDocument,
+      technical_compliance:
+        body.technical_compliance !== undefined
+          ? body.technical_compliance
+          : existingData.technical_compliance,
+      technical_document: technicalDocument,
+      stage1_compliance_accepted: stage1Accepted,
+      stage1_acceptance_document: stage1AcceptanceDocument,
+      eligible_for_stage2: eligibleForStage2,
+      stage1_status: stage1Status,
+    };
+
+    const result = await ForestLand.insertUpdateStage1(payload);
+
+    return res.status(isNewRecord ? 201 : 200).json({
+      success: true,
+      message: isNewRecord
+        ? "Stage-1 data saved successfully"
+        : "Stage-1 data updated successfully",
+      data: result,
+    });
+  } catch (err) {
+    console.error("Stage1 Update Error:", err);
+    return res.status(500).json({
+      success: false,
+      message: err.message || "Server error",
+    });
+  }
+};
+
+const updateStage2 = async (req, res) => {
+  try {
+    const forestProjectId = req.params.forest_project_id;
+    const body = req.body || {};
+    const files = req.files || {};
+
+    if (!forestProjectId) {
+      return res.status(400).json({
+        success: false,
+        message: "forest_project_id is required",
+      });
+    }
+
+    const existing = await ForestLand.getStage2ByProjectId(forestProjectId);
+    const isNewRecord = !existing;
+    const existingData = existing || {};
+
+    const stage2Letter =
+      body.stage2_approval_letter !== undefined
+        ? Number(body.stage2_approval_letter)
+        : Number(existingData.stage2_approval_letter || 0);
+    const mapsApproved =
+      body.final_maps_approved !== undefined
+        ? Number(body.final_maps_approved)
+        : Number(existingData.final_maps_approved || 0);
+
+    const stage2Status = stage2Letter === 1 ? "Granted" : "Not Granted";
+    const eligiblePostClearance = stage2Status === "Granted" ? 1 : 0;
+
+    const resolveFile = (field, existingValue) =>
+      buildDocumentValue(files, field, existingValue);
+
+    const requireFile = (condition, fileValue, message) => {
+      if (condition && !hasAnyDocuments(fileValue)) {
+        throw new Error(message);
+      }
+    };
+
+    const environmentalDocument = resolveFile(
+      "environmental_document",
+      existingData.environmental_document
+    );
+    const nbwlDocument = resolveFile("nbwl_document", existingData.nbwl_document);
+    const finalCaDocument = resolveFile("final_ca_document", existingData.final_ca_document);
+    const finalMapsDocument = resolveFile("final_maps_document", existingData.final_maps_document);
+    const technicalDocument = resolveFile("final_technical_document", existingData.final_technical_document);
+    const stage2ApprovalDocument = resolveFile(
+      "stage2_approval_document",
+      existingData.stage2_approval_document
+    );
+
+    requireFile(
+      (body.environmental_clearance || existingData.environmental_clearance) === "Obtained",
+      environmentalDocument,
+      "Environmental clearance document required"
+    );
+    requireFile(
+      (body.nbwl_clearance || existingData.nbwl_clearance) === "Obtained",
+      nbwlDocument,
+      "NBWL document required"
+    );
+    requireFile(
+      (body.final_ca_execution || existingData.final_ca_execution) === "Completed",
+      finalCaDocument,
+      "Final CA document required"
+    );
+    requireFile(mapsApproved === 1, finalMapsDocument, "Final maps document required");
+    requireFile(
+      (body.final_technical_approval || existingData.final_technical_approval) === "Completed",
+      technicalDocument,
+      "Final technical document required"
+    );
+    requireFile(stage2Letter === 1, stage2ApprovalDocument, "Stage-II approval document required");
+
+    const payload = {
+      forest_project_id: forestProjectId,
+      environmental_clearance:
+        body.environmental_clearance !== undefined
+          ? body.environmental_clearance
+          : existingData.environmental_clearance,
+      environmental_document: environmentalDocument,
+      nbwl_clearance:
+        body.nbwl_clearance !== undefined
+          ? body.nbwl_clearance
+          : existingData.nbwl_clearance,
+      nbwl_document: nbwlDocument,
+      final_ca_execution:
+        body.final_ca_execution !== undefined
+          ? body.final_ca_execution
+          : existingData.final_ca_execution,
+      final_ca_document: finalCaDocument,
+      final_maps_approved: mapsApproved,
+      final_maps_document: finalMapsDocument,
+      final_technical_approval:
+        body.final_technical_approval !== undefined
+          ? body.final_technical_approval
+          : existingData.final_technical_approval,
+      final_technical_document: technicalDocument,
+      stage2_approval_letter: stage2Letter,
+      stage2_approval_document: stage2ApprovalDocument,
+      stage2_approval_date:
+        body.stage2_approval_date !== undefined
+          ? body.stage2_approval_date
+          : existingData.stage2_approval_date,
+      approved_forest_area_ha:
+        body.approved_forest_area_ha !== undefined
+          ? body.approved_forest_area_ha
+          : existingData.approved_forest_area_ha,
+      approved_non_forest_area_ha:
+        body.approved_non_forest_area_ha !== undefined
+          ? body.approved_non_forest_area_ha
+          : existingData.approved_non_forest_area_ha,
+      stage2_status: stage2Status,
+      eligible_post_clearance: eligiblePostClearance,
+    };
+
+    const result = isNewRecord
+      ? await ForestLand.createStage2(payload)
+      : await ForestLand.updateStage2(forestProjectId, payload);
+
+    return res.status(isNewRecord ? 201 : 200).json({
+      success: true,
+      message: isNewRecord
+        ? "Stage-2 data saved successfully"
+        : "Stage-2 data updated successfully",
+      data: result,
+    });
+  } catch (err) {
+    console.error("Stage2 Update Error:", err);
+    return res.status(500).json({
+      success: false,
+      message: err.message || "Server error",
+    });
+  }
+};
+
+const updatePostClearance = async (req, res) => {
+  try {
+    const forestProjectId = req.params.forest_project_id;
+    const body = req.body || {};
+    const files = req.files || {};
+
+    if (!forestProjectId) {
+      return res.status(400).json({
+        success: false,
+        message: "forest_project_id is required",
+      });
+    }
+
+    const existing = await ForestLand.getPostClearanceByProjectId(forestProjectId);
+    const isNewRecord = !existing;
+    const existingData = existing || {};
+
+    const started =
+      body.ca_plantation_started !== undefined
+        ? Number(body.ca_plantation_started)
+        : Number(existingData.ca_plantation_started || 0);
+    const completed =
+      body.ca_plantation_completed !== undefined
+        ? Number(body.ca_plantation_completed)
+        : Number(existingData.ca_plantation_completed || 0);
+    const survival =
+      body.survival_report_submitted !== undefined
+        ? Number(body.survival_report_submitted)
+        : Number(existingData.survival_report_submitted || 0);
+    const wildlife =
+      body.wildlife_mitigation !== undefined
+        ? Number(body.wildlife_mitigation)
+        : Number(existingData.wildlife_mitigation || 0);
+    const safety =
+      body.safety_zone_maintained !== undefined
+        ? Number(body.safety_zone_maintained)
+        : Number(existingData.safety_zone_maintained || 0);
+    const periodic =
+      body.periodic_compliance_submitted !== undefined
+        ? Number(body.periodic_compliance_submitted)
+        : Number(existingData.periodic_compliance_submitted || 0);
+
+    const resolveFile = (field, existingValue) =>
+      buildDocumentValue(files, field, existingValue);
+
+    const requireFile = (condition, fileValue, message) => {
+      if (condition && !hasAnyDocuments(fileValue)) {
+        throw new Error(message);
+      }
+    };
+
+    const startedDoc = resolveFile(
+      "ca_plantation_started_document",
+      existingData.ca_plantation_started_document
+    );
+    const completedDoc = resolveFile(
+      "ca_plantation_completed_document",
+      existingData.ca_plantation_completed_document
+    );
+    const survivalDoc = resolveFile(
+      "survival_report_document",
+      existingData.survival_report_document
+    );
+    const wildlifeDoc = resolveFile(
+      "wildlife_mitigation_document",
+      existingData.wildlife_mitigation_document
+    );
+    const safetyDoc = resolveFile("safety_zone_document", existingData.safety_zone_document);
+
+    requireFile(started === 1, startedDoc, "CA plantation started document required");
+    requireFile(completed === 1, completedDoc, "CA plantation completed document required");
+    requireFile(survival === 1, survivalDoc, "Survival report document required");
+    requireFile(wildlife === 1, wildlifeDoc, "Wildlife mitigation document required");
+    requireFile(safety === 1, safetyDoc, "Safety zone document required");
+
+    if (periodic === 1 && !(body.periodic_compliance_type || existingData.periodic_compliance_type)) {
+      throw new Error("Periodic compliance type required");
+    }
+
+    const inspectionObservations =
+      body.inspection_observations !== undefined
+        ? body.inspection_observations
+        : existingData.inspection_observations;
+    const inspectionRemarks =
+      inspectionObservations === "Open"
+        ? (body.inspection_remarks || existingData.inspection_remarks)
+        : null;
+
+    if (inspectionObservations === "Open" && !inspectionRemarks) {
+      throw new Error("Inspection remarks required when Open");
+    }
+
+    const postStatus =
+      body.post_clearance_status !== undefined
+        ? body.post_clearance_status
+        : existingData.post_clearance_status;
+
+    const payload = {
+      forest_project_id: forestProjectId,
+      ca_plantation_started: started,
+      ca_plantation_started_document: startedDoc,
+      ca_plantation_completed: completed,
+      ca_plantation_completed_document: completedDoc,
+      survival_report_submitted: survival,
+      survival_report_document: survivalDoc,
+      wildlife_mitigation: wildlife,
+      wildlife_mitigation_document: wildlifeDoc,
+      safety_zone_maintained: safety,
+      safety_zone_document: safetyDoc,
+      periodic_compliance_submitted: periodic,
+      periodic_compliance_type:
+        periodic === 1
+          ? body.periodic_compliance_type || existingData.periodic_compliance_type
+          : null,
+      inspection_observations: inspectionObservations,
+      inspection_remarks: inspectionRemarks,
+      post_clearance_status: postStatus,
+    };
+
+    const result = isNewRecord
+      ? await ForestLand.createPostClearance(payload)
+      : await ForestLand.updatePostClearance(forestProjectId, payload);
+
+    return res.status(isNewRecord ? 201 : 200).json({
+      success: true,
+      message: isNewRecord
+        ? "Post-clearance data saved successfully"
+        : "Post-clearance data updated successfully",
+      data: result,
+    });
+  } catch (err) {
+    console.error("PostClearance Update Error:", err);
+    return res.status(500).json({
+      success: false,
+      message: err.message || "Server error",
+    });
+  }
+};
+
 
 const getStageStatus = async (req, res) => {
   try {
@@ -1586,6 +2334,140 @@ const getMasterDashboard = async (req, res) => {
     });
   }
 };
+const getStage0 = async (req, res) => {
+  try {
+    const { forest_project_id } = req.params;
+
+    if (!forest_project_id) {
+      return res.status(400).json({
+        success: false,
+        message: "forest_project_id is required",
+      });
+    }
+
+    const data = await ForestLand.getStage0ByProjectId(forest_project_id);
+
+    if (!data) {
+      return res.status(404).json({
+        success: false,
+        message: "Stage-0 data not found",
+      });
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: "Stage-0 data fetched successfully",
+      data,
+    });
+  } catch (err) {
+    console.error("Get Stage0 Error:", err);
+    return res.status(500).json({
+      success: false,
+      message: err.message || "Server error",
+    });
+  }
+};
+const getStage1 = async (req, res) => {
+  try {
+    const { forest_project_id } = req.params;
+
+    if (!forest_project_id) {
+      return res.status(400).json({
+        success: false,
+        message: "forest_project_id is required",
+      });
+    }
+
+    const data = await ForestLand.getStage1ByProjectId(forest_project_id);
+
+    if (!data) {
+      return res.status(404).json({
+        success: false,
+        message: "Stage-1 data not found",
+      });
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: "Stage-1 data fetched successfully",
+      data,
+    });
+  } catch (err) {
+    console.error("Get Stage1 Error:", err);
+    return res.status(500).json({
+      success: false,
+      message: err.message || "Server error",
+    });
+  }
+};
+const getStage2 = async (req, res) => {
+  try {
+    const { forest_project_id } = req.params;
+
+    if (!forest_project_id) {
+      return res.status(400).json({
+        success: false,
+        message: "forest_project_id is required",
+      });
+    }
+
+    const data = await ForestLand.getStage2ByProjectId(forest_project_id);
+
+    if (!data) {
+      return res.status(404).json({
+        success: false,
+        message: "Stage-2 data not found",
+      });
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: "Stage-2 data fetched successfully",
+      data,
+    });
+  } catch (err) {
+    console.error("Get Stage2 Error:", err);
+    return res.status(500).json({
+      success: false,
+      message: err.message || "Server error",
+    });
+  }
+};
+const getPostClearance = async (req, res) => {
+  try {
+    const { forest_project_id } = req.params;
+
+    if (!forest_project_id) {
+      return res.status(400).json({
+        success: false,
+        message: "forest_project_id is required",
+      });
+    }
+
+    const data = await ForestLand.getPostClearanceByProjectId(
+      forest_project_id
+    );
+
+    if (!data) {
+      return res.status(404).json({
+        success: false,
+        message: "Post-clearance data not found",
+      });
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: "Post-clearance data fetched successfully",
+      data,
+    });
+  } catch (err) {
+    console.error("Get PostClearance Error:", err);
+    return res.status(500).json({
+      success: false,
+      message: err.message || "Server error",
+    });
+  }
+};
 
 module.exports = {
   addForestLand,
@@ -1595,7 +2477,7 @@ module.exports = {
   forestLandAbstract,
   // addForestProject,
   addForestProjectWithEds,
-  // getForestProjectWithEds,
+  getForestProjectWithEds,
   forestProjectList,
   updateForestProject,
   deleteForestProject,
@@ -1604,5 +2486,15 @@ module.exports = {
   addStage2,
   addPostClearance,
   getStageStatus,
-  getMasterDashboard
+  getMasterDashboard,
+  updateStage0,
+  updateStage1,
+  updateStage2,
+  updatePostClearance,
+  getStageStatus,
+  getMasterDashboard,
+  getStage0,
+  getStage1,
+  getStage2,
+  getPostClearance,
 };
