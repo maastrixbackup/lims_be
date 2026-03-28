@@ -3,11 +3,12 @@ const logAction = require("../utils/logger");
 
 const createProject = async (req, res) => {
   const userId = req.user.id;
-  const { project_name, status = 0, client_code } = req.body;
-  const safeRequestPayload = { project_name, status, client_code };
+  const roleId = req.user.role_id;
+  const { project_name, status = 0, client_code, type, project_location } = req.body;
+  const safeRequestPayload = { project_name, status, client_code, type };
 
   try {
-    if (!project_name || !client_code) {
+    if (!project_name || !client_code || !type || !project_location) {
       return res.status(400).json({
         success: false,
         message: "All fields are required",
@@ -22,7 +23,18 @@ const createProject = async (req, res) => {
       });
     }
 
-    const project = await Project.create(project_name, status, client_code);
+    const project = await Project.create(
+      project_name,
+      status,
+      client_code,
+      type,
+      project_location
+    );
+
+    if (roleId === 2) {
+      await Project.assignUserToProject(userId, project.id);
+    }
+
     await logAction(
       userId,
       "create project",
@@ -56,13 +68,24 @@ const createProject = async (req, res) => {
 const projectList = async (req, res) => {
   try {
     // const projects = await Project.findAll();
-    let projects;
+    let { page = 1, limit = 10 } = req.query;
+
+    page = parseInt(page);
+    limit = parseInt(limit);
+    const offset = (page - 1) * limit;
+    let projects, total;
     if (req.user.role_id === 1) {
       // Admin can see all projects
-      projects = await Project.findAll();
+      projects = await Project.findAll({ limit, offset });
+      total = await Project.countAll();
     } else {
       // Others sees only their assigned projects
-      projects = await Project.findByUserId(req.user.id);
+      projects = await Project.findByUserId({
+        userId: req.user.id,
+        limit,
+        offset,
+      });
+      total = await Project.countByUserId(req.user.id);
     }
 
     const statusMap = { 0: "Pending", 1: "Active", 2: "Closed" };
@@ -74,6 +97,10 @@ const projectList = async (req, res) => {
     return res.status(200).json({
       success: true,
       message: "Project fetched successfully",
+      page,
+      limit,
+      total,
+      totalPages: Math.ceil(total / limit),
       projects: formattedProjects,
     });
   } catch (err) {
@@ -106,9 +133,16 @@ const getActiveProjects = async (req, res) => {
 const updateProject = async (req, res) => {
   const userId = req.user.id;
   const { id } = req.params;
-  const { project_name, status, client_code } = req.body;
+  const { project_name, status, client_code, type, project_location } = req.body;
 
-  const safeRequestPayload = { id, project_name, status, client_code };
+  const safeRequestPayload = {
+    id,
+    project_name,
+    status,
+    client_code,
+    type,
+    project_location,
+  };
 
   try {
     if (!id || isNaN(id)) {
@@ -120,7 +154,9 @@ const updateProject = async (req, res) => {
     if (
       project_name === undefined &&
       status === undefined &&
-      client_code === undefined
+      client_code === undefined &&
+      type === undefined &&
+      project_location === undefined
     ) {
       return res.status(400).json({
         success: false,
@@ -143,12 +179,22 @@ const updateProject = async (req, res) => {
         });
       }
     }
+
+    const oldClientCode = project.client_code;
+
     const updatedProject = await Project.update(
       id,
       project_name,
       status,
-      client_code
+      client_code,
+      type,
+      project_location
     );
+
+    if (client_code && client_code !== oldClientCode) {
+      await Project.updateClientCodeByProjectId(id, client_code);
+    }
+
     await logAction(
       userId,
       "update project",

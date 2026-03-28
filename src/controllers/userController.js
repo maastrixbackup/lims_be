@@ -20,10 +20,15 @@ const usersList = async (req, res) => {
       phone_number: user.phone_number,
       role_id: user.role_id,
       role_name: user.role_name,
+      // profile_pic: user.profile_pic
+      //   ? `${req.protocol}://${req.get("host")}/uploads/profile_pics/${
+      //       user.profile_pic
+      //     }`
+      //   : null,
       profile_pic: user.profile_pic
-        ? `${req.protocol}://${req.get("host")}/uploads/profile_pics/${
-            user.profile_pic
-          }`
+        ? `${req.protocol}://${req.get("host")}${
+            req.get("host").includes("localhost") ? "" : "/api"
+          }/uploads/profile_pics/${user.profile_pic}`
         : null,
       created_at: user.created_at,
       accessed_projects: user.accessed_projects_name,
@@ -172,9 +177,12 @@ const updateUser = async (req, res) => {
       profile_pic || user.profile_pic
     );
     if (updatedUser.profile_pic) {
-      updatedUser.profile_pic = `${req.protocol}://${req.get(
-        "host"
-      )}/uploads/profile_pics/${updatedUser.profile_pic}`;
+      // updatedUser.profile_pic = `${req.protocol}://${req.get(
+      //   "host"
+      // )}/uploads/profile_pics/${updatedUser.profile_pic}`;
+      updatedUser.profile_pic = `${req.protocol}://${req.get("host")}${
+        req.get("host").includes("localhost") ? "" : "/api"
+      }/uploads/profile_pics/${updatedUser.profile_pic}`;
     }
     await logAction(
       userId,
@@ -223,11 +231,17 @@ const getProfile = async (req, res) => {
       });
     }
     const accessedProjects = await UserProject.getProjectsByUserId(userId);
+    // const profilePicUrl = user.profile_pic
+    //   ? `${req.protocol}://${req.get("host")}/uploads/profile_pics/${
+    //       user.profile_pic
+    //     }`
+    //   : null;
     const profilePicUrl = user.profile_pic
-      ? `${req.protocol}://${req.get("host")}/uploads/profile_pics/${
-          user.profile_pic
-        }`
+      ? `${req.protocol}://${req.get("host")}${
+          req.get("host").includes("localhost") ? "" : "/api"
+        }/uploads/profile_pics/${user.profile_pic}`
       : null;
+
     const role = await Role.findById(user.role_id);
     user.role_name = role ? role.name : null;
     const userProfile = {
