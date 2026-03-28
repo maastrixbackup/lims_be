@@ -1,6 +1,5 @@
 const express = require("express");
 const router = express.Router();
-const multer = require("multer");
 const {
     addForestLand,
     updateForestLand,
@@ -22,7 +21,11 @@ const {
     updatePostClearance,
     getForestProjectWithEds,
     getStageStatus,
-    getMasterDashboard
+    getMasterDashboard,
+    getStage0,
+    getStage1,
+    getStage2,
+    getPostClearance
 } = require("../controllers/forestLandController");
 
 const {
@@ -41,19 +44,6 @@ router.post(
     "/addForestProject",
     uploadEdsDocuments.array("eds_reply_document"),
     addForestProjectWithEds
-);
-// router.post(
-//     "/forest-project",
-//     uploadEds.any(), //for dynamic multiple EDS files
-//     addForestProjectWithEds
-// );
-router.get("/forestProjectList", forestProjectList);
-router.put("/updateForestProject/:id", updateForestProject);
-
-router.put(
-    "/updateForestProject/:id",
-    uploadEDS.single("eds_document"),
-    updateForestProject
 );
 router.post(
     "/forest-project",
