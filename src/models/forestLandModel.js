@@ -64,14 +64,16 @@ const ForestLand = {
     return rows[0];
   },
 
-  // async findById(id) {
-  //   const sql = `
-  //     SELECT * FROM forest_land_schedule
-  //     WHERE id = ? AND is_active = 1
-  //   `;
-  //   const [rows] = await db.query(sql, [id]);
-  //   return rows[0];
-  // },
+  async findById(id) {
+    const sql = `
+      SELECT *
+      FROM forest_land_schedule
+      WHERE id = ? AND is_deleted = 0
+      LIMIT 1
+    `;
+    const [rows] = await db.query(sql, [id]);
+    return rows[0] || null;
+  },
 
   async list({ project_master_id, schedule_type, limit, offset }) {
     let whereClause = `WHERE project_master_id = ? AND is_deleted = 0`;
