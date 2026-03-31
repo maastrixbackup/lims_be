@@ -1,5 +1,6 @@
 const multer = require("multer");
 const path = require("path");
+const fs = require("fs");
 
 //Upload excel
 const excelStorage = multer.diskStorage({
@@ -263,6 +264,37 @@ const uploadGovtPlotExcel = multer({
   limits: { fileSize: 10 * 1024 * 1024 }, // 10 MB
 });
 
+const forestLandExcelStorage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    const dir = "uploads/forest_land_excels";
+    fs.mkdirSync(dir, { recursive: true });
+    cb(null, dir);
+  },
+  filename: (req, file, cb) => {
+    const originalname = file.originalname.replace(/\s+/g, "_");
+    cb(null, originalname);
+  },
+});
+
+const forestLandExcelFileFilter = (req, file, cb) => {
+  const allowedMimeTypes = [
+    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    "application/vnd.ms-excel",
+  ];
+
+  if (allowedMimeTypes.includes(file.mimetype)) {
+    cb(null, true);
+  } else {
+    cb(new Error("Only Excel files (.xls, .xlsx) are allowed"), false);
+  }
+};
+
+const uploadForestLandExcel = multer({
+  storage: forestLandExcelStorage,
+  fileFilter: forestLandExcelFileFilter,
+  limits: { fileSize: 10 * 1024 * 1024 },
+});
+
 //Upload Govt khata
 const GovtKhataStorage = multer.diskStorage({
   destination: (req, file, cb) => {
@@ -504,6 +536,7 @@ module.exports = {
   uploadGovtLandCostPayment,
   uploadGovtPlotAttachments,
   uploadGovtPlotExcel,
+  uploadForestLandExcel,
   uploadGovtKhata,
   uploadGovtMapDocument,
   // uploadEDS,

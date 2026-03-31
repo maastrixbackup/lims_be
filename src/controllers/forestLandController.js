@@ -1,5 +1,7 @@
 const ForestLand = require("../models/forestLandModel");
 const logAction = require("../utils/logger");
+const xlsx = require("xlsx");
+const fs = require("fs");
 
 const normalizeDocumentList = (value) => {
   if (!value) return [];
@@ -43,16 +45,188 @@ const buildDocumentValue = (files, field, existingValue = null) => {
 
 // const validateCA = (d) => d.ca_area_ha && d.patch_name;
 
+const uploadForestLandSchedule = async (req, res) => {
+  const userId = req.user?.id || null;
+
+  try {
+    const project_master_id = req.body.project_master_id || req.body.project_id;
+    const schedule_type = req.body.schedule_type || req.body.type;
+
+    if (!project_master_id || !schedule_type) {
+      return res.status(400).json({
+        success: false,
+        message: "project_id (or project_master_id) and schedule_type (or type) are required",
+      });
+    }
+
+    if (!req.file) {
+      return res.status(400).json({
+        success: false,
+        message: "Excel file is required",
+      });
+    }
+
+    const workbook = xlsx.readFile(req.file.path);
+
+    if (workbook.SheetNames.length !== 1) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid Excel format. Only ONE sheet is allowed inside file.",
+      });
+    }
+
+    const sheetName = workbook.SheetNames[0];
+    const rawRows = xlsx.utils.sheet_to_json(workbook.Sheets[sheetName], {
+      defval: null,
+    });
+
+    if (!rawRows.length) {
+      return res.status(400).json({
+        success: false,
+        message: "Excel file is empty",
+      });
+    }
+
+    const normalizeKey = (key) =>
+      key
+        ?.toString()
+        .replace(/\r?\n/g, " ")
+        .replace(/[_-]+/g, " ")
+        .replace(/\s+/g, " ")
+        .trim()
+        .toLowerCase();
+
+    const toNumberOrNull = (value) => {
+      if (value === null || value === undefined || value === "") return null;
+      const num = Number(value);
+      return Number.isFinite(num) ? num : null;
+    };
+
+    const normalizedRows = rawRows.map((row) => {
+      const obj = {};
+      for (const key in row) obj[normalizeKey(key)] = row[key];
+      return obj;
+    });
+
+    const pick = (row, aliases) => {
+      for (const alias of aliases) {
+        const v = row[alias];
+        if (v !== undefined) return v;
+      }
+      return null;
+    };
+
+    const parsedRows = normalizedRows
+      .map((row) => ({
+        district: pick(row, ["district"]),
+        ri_circle: pick(row, ["ri circle", "ri_circle"]),
+        tahasil: pick(row, ["tahasil", "tehasil"]),
+        village: pick(row, ["village", "mouza", "mauza"]),
+        forest_division: pick(row, ["forest division", "forest_division"]),
+        forest_range: pick(row, ["forest range", "forest_range"]),
+        khata_no: pick(row, ["khata no", "khata_no"]),
+        plot_no: pick(row, ["plot no", "plot_no"]),
+        kisam: pick(row, ["kisam", "kissam"]),
+        forest_category_id: pick(row, [
+          "forest category id",
+          "forest_category_id",
+          "forest category",
+        ]),
+        ownership: pick(row, ["ownership"]),
+        fra_allotted: pick(row, ["fra allotted", "fra_allotted"]),
+        total_area_ha: toNumberOrNull(
+          pick(row, ["total area ha", "total_area_ha", "total area"]),
+        ),
+        proposed_acquired_area_ha: toNumberOrNull(
+          pick(row, [
+            "proposed acquired area ha",
+            "proposed_acquired_area_ha",
+            "proposed area ha",
+          ]),
+        ),
+        digital_area_ha: toNumberOrNull(
+          pick(row, ["digital area ha", "digital_area_ha"]),
+        ),
+        ca_area_ha: toNumberOrNull(pick(row, ["ca area ha", "ca_area_ha"])),
+        patch_name: pick(row, ["patch name", "patch_name"]),
+        remarks: pick(row, ["remarks", "remark"]),
+      }))
+      .filter((row) =>
+        Object.values(row).some(
+          (value) => value !== null && value !== undefined && value !== "",
+        ),
+      );
+
+    if (!parsedRows.length) {
+      return res.status(400).json({
+        success: false,
+        message: "No valid rows found in Excel file",
+      });
+    }
+
+    const insertedCount = await ForestLand.bulkInsertFromExcel(
+      parsedRows,
+      project_master_id,
+      schedule_type,
+    );
+
+    await logAction(
+      userId,
+      "upload forest land schedule excel",
+      "success",
+      `Inserted ${insertedCount} forest land rows`,
+      { project_master_id, schedule_type, rows: parsedRows.length },
+      null,
+    );
+
+    return res.status(201).json({
+      success: true,
+      message: "Forest Land Schedule uploaded successfully",
+      insertedCount,
+    });
+  } catch (err) {
+    await logAction(
+      userId,
+      "upload forest land schedule excel",
+      "failure",
+      err.message,
+      req.body || {},
+      null,
+    );
+
+    console.error("Forest Land Schedule Upload Error:", err);
+    return res.status(500).json({
+      success: false,
+      message: "Server error",
+    });
+  } finally {
+    if (req.file?.path && fs.existsSync(req.file.path)) {
+      fs.unlinkSync(req.file.path);
+    }
+  }
+};
+
 const addForestLand = async (req, res) => {
   const userId = req.user.id;
 
   try {
-    const { schedule_type } = req.body;
+    req.body.project_master_id =
+      req.body.project_master_id || req.body.project_id;
+    req.body.schedule_type = req.body.schedule_type || req.body.type;
+
+    const { project_master_id, schedule_type } = req.body;
+
+    if (!project_master_id) {
+      return res.status(400).json({
+        success: false,
+        message: "project_id (or project_master_id) is required",
+      });
+    }
 
     if (!schedule_type) {
       return res.status(400).json({
         success: false,
-        message: "Schedule type is required",
+        message: "schedule_type (or type) is required",
       });
     }
 
@@ -118,15 +292,20 @@ const forestLandList = async (req, res) => {
   try {
     let {
       project_master_id,
+      project_id,
       schedule_type,
+      type,
       page = 1,
       limit = 10,
     } = req.query;
 
-    if (!project_master_id || !schedule_type) {
+    project_master_id = project_master_id || project_id;
+    schedule_type = schedule_type || type;
+
+    if (!project_master_id || !schedule_type ) {
       return res.status(400).json({
         success: false,
-        message: "Project master id and schedule type is required",
+        message: "project_id (or project_master_id) and schedule_type (or type) are required",
       });
     }
 
@@ -445,7 +624,7 @@ const deleteForestLand = async (req, res) => {
 
 const forestLandAbstract = async (req, res) => {
   try {
-    const { project_master_id } = req.query;
+    const project_master_id = req.query.project_master_id || req.query.project_id;
 
     const rows = await ForestLand.getAbstract(project_master_id || null);
 
@@ -2470,6 +2649,7 @@ const getPostClearance = async (req, res) => {
 };
 
 module.exports = {
+  uploadForestLandSchedule,
   addForestLand,
   updateForestLand,
   forestLandList,
