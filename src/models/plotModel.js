@@ -1165,34 +1165,85 @@ const Plot = {
 
     const projectName = projectRows[0].project_name;
 
-    const values = plots.map((plot) => {
-      //Handle date formatting
-      let dateValue = plot["Date of Award"];
-      let formattedDate = null;
-
-      if (dateValue) {
-        if (typeof dateValue === "number") {
-          const excelEpoch = new Date(Date.UTC(1900, 0, 1));
-          formattedDate = new Date(
-            excelEpoch.getTime() + (dateValue - 2) * 86400000,
-          )
-            .toISOString()
-            .split("T")[0];
-        } else if (typeof dateValue === "string") {
-          const parts = dateValue.includes("-")
-            ? dateValue.split("-")
-            : dateValue.split("/");
-          if (parts.length === 3) {
-            const [day, month, year] = parts.map((p) => p.trim());
-            if (!isNaN(day) && !isNaN(month) && !isNaN(year)) {
-              formattedDate = `${year}-${month.padStart(2, "0")}-${day.padStart(
-                2,
-                "0",
-              )}`;
-            }
-          }
-        }
+    const pad2 = (n) => String(n).padStart(2, "0");
+    const toMysqlDate = (rawValue) => {
+      if (rawValue === null || rawValue === undefined || rawValue === "") {
+        return null;
       }
+
+      const buildDate = (year, month, day) => {
+        const y = Number(year);
+        const m = Number(month);
+        const d = Number(day);
+        if (!y || !m || !d) return null;
+
+        const dt = new Date(Date.UTC(y, m - 1, d));
+        const isValid =
+          dt.getUTCFullYear() === y &&
+          dt.getUTCMonth() === m - 1 &&
+          dt.getUTCDate() === d;
+
+        if (!isValid) return null;
+        return `${y}-${pad2(m)}-${pad2(d)}`;
+      };
+
+      // Excel serial number (or numeric string)
+      if (
+        typeof rawValue === "number" ||
+        (typeof rawValue === "string" && /^\d+(\.\d+)?$/.test(rawValue.trim()))
+      ) {
+        const serial = Math.floor(Number(rawValue));
+        if (!Number.isFinite(serial) || serial <= 0) return null;
+        // Excel epoch (Windows): 1899-12-30
+        const excelBase = new Date(Date.UTC(1899, 11, 30));
+        excelBase.setUTCDate(excelBase.getUTCDate() + serial);
+        return `${excelBase.getUTCFullYear()}-${pad2(
+          excelBase.getUTCMonth() + 1,
+        )}-${pad2(excelBase.getUTCDate())}`;
+      }
+
+      if (rawValue instanceof Date && !Number.isNaN(rawValue.getTime())) {
+        return `${rawValue.getFullYear()}-${pad2(
+          rawValue.getMonth() + 1,
+        )}-${pad2(rawValue.getDate())}`;
+      }
+
+      if (typeof rawValue !== "string") return null;
+      const value = rawValue.trim();
+      if (!value) return null;
+
+      // DD-MM-YYYY / DD/MM/YYYY / DD.MM.YYYY
+      let match = value.match(/^(\d{1,2})[-/.](\d{1,2})[-/.](\d{4})$/);
+      if (match) {
+        const [, d, m, y] = match;
+        return buildDate(y, m, d);
+      }
+
+      // YYYY-MM-DD / YYYY/MM/DD / YYYY.MM.DD
+      match = value.match(/^(\d{4})[-/.](\d{1,2})[-/.](\d{1,2})$/);
+      if (match) {
+        const [, y, m, d] = match;
+        return buildDate(y, m, d);
+      }
+
+      // Last fallback for textual date strings
+      const parsed = new Date(value);
+      if (!Number.isNaN(parsed.getTime())) {
+        return `${parsed.getFullYear()}-${pad2(parsed.getMonth() + 1)}-${pad2(
+          parsed.getDate(),
+        )}`;
+      }
+
+      return null;
+    };
+
+    const values = plots.map((plot) => {
+      const dateValue =
+        plot["Date of Award"] ??
+        plot["date of award"] ??
+        plot["Date of award"] ??
+        null;
+      const formattedDate = toMysqlDate(dateValue);
 
       //Land area conversion logic
       let totalAcres = null;
