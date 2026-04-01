@@ -44,7 +44,7 @@ const GovtKhata = {
         type,
         khata_no: khataNo,
         village_id: villageId,
-        kissam_of_land: r["kissam of land"] || null,
+        kissam: r["kissam"] || null,
         plot_no: r["plot no"] || null,
         lease_case_no: r["lease case no"] || null,
         present_status: presentStatusMap(r["present status"]),
@@ -59,7 +59,7 @@ const GovtKhata = {
       k.type,
       k.khata_no,
       k.village_id,
-      k.kissam_of_land,
+      k.kissam,
       k.plot_no,
       k.lease_case_no,
       k.present_status,
@@ -69,11 +69,11 @@ const GovtKhata = {
     // await db.query(
     //   `
     //   INSERT INTO govt_khata
-    //     (project_id, type, khata_no, village_id, kissam_of_land, plot_no,
+    //     (project_id, type, khata_no, village_id, kissam, plot_no,
     //      lease_case_no, present_status, case_details)
     //   VALUES ?
     //   ON DUPLICATE KEY UPDATE
-    //     kissam_of_land = VALUES(kissam_of_land),
+    //     kissam = VALUES(kissam),
     //     plot_no = VALUES(plot_no),
     //     lease_case_no = VALUES(lease_case_no),
     //     present_status = VALUES(present_status),
@@ -87,11 +87,11 @@ const GovtKhata = {
       `
       INSERT INTO govt_khata
         (project_id, type, khata_no, village_id,
-        kissam_of_land, plot_no, lease_case_no,
+        kissam, plot_no, lease_case_no,
         present_status, case_details)
       VALUES ?
       ON DUPLICATE KEY UPDATE
-        kissam_of_land = VALUES(kissam_of_land),
+        kissam = VALUES(kissam),
         plot_no = VALUES(plot_no),
         lease_case_no = VALUES(lease_case_no),
         present_status = VALUES(present_status),
@@ -145,7 +145,7 @@ const GovtKhata = {
   //     khata_no,
   //     village_id,
 
-  //     kissam_of_land,
+  //     kissam,
   //     plot_no,
   //     lease_case_no,
   //     present_status,
@@ -158,7 +158,7 @@ const GovtKhata = {
   //       type,
   //       khata_no,
   //       village_id,
-  //       kissam_of_land,
+  //       kissam,
   //       plot_no,
   //       lease_case_no,
   //       present_status,
@@ -176,7 +176,7 @@ const GovtKhata = {
   //       type,
   //       khata_no,
   //       village_id,
-  //       kissam_of_land,
+  //       kissam,
   //       plot_no,
   //       lease_case_no,
   //       present_status,
@@ -197,12 +197,12 @@ const GovtKhata = {
       type,
       khata_no,
       village_id,
-      kissam_of_land,
+      kissam,
       plot_no,
       lease_case_no,
       present_status,
       case_details,
-      ror_name,
+      name_of_ror,
       land_category
     } = data;
 
@@ -214,12 +214,12 @@ const GovtKhata = {
       type,
       khata_no,
       village_id,
-      kissam_of_land,
+      kissam,
       plot_no,
       lease_case_no,
       present_status,
       case_details,
-      ror_name,
+      name_of_ror,
       land_category
     )
     SELECT
@@ -241,12 +241,12 @@ const GovtKhata = {
         type,
         khata_no,
         village_id,
-        kissam_of_land,
+        kissam,
         plot_no,
         lease_case_no,
         present_status,
         case_details,
-        ror_name,
+        name_of_ror,
         land_category,
         village_id,
         project_id,
