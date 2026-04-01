@@ -28,12 +28,12 @@ const addGovtKhata = async (req, res) => {
     type,
     khata_no,
     village_id,
-    kissam_of_land,
+    kissam,
     plot_no,
     lease_case_no,
     present_status,
     case_details,
-    ror_name,
+    name_of_ror,
     land_category
   } = safeRequestPayload;
 
@@ -66,12 +66,12 @@ const addGovtKhata = async (req, res) => {
       type,
       khata_no,
       village_id,
-      kissam_of_land,
+      kissam,
       plot_no,
       lease_case_no,
       present_status,
       case_details,
-      ror_name,
+      name_of_ror,
       land_category
     });
     await logAction(

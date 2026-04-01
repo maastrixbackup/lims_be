@@ -64,6 +64,63 @@ const ForestLand = {
     return rows[0];
   },
 
+  async bulkInsertFromExcel(rows, project_master_id, schedule_type) {
+    if (!rows || rows.length === 0) return 0;
+
+    const sql = `
+      INSERT INTO forest_land_schedule
+      (
+        project_master_id,
+        schedule_type,
+        district,
+        ri_circle,
+        tahasil,
+        village,
+        forest_division,
+        forest_range,
+        khata_no,
+        plot_no,
+        kisam,
+        forest_category_id,
+        ownership,
+        fra_allotted,
+        total_area_ha,
+        proposed_acquired_area_ha,
+        digital_area_ha,
+        ca_area_ha,
+        patch_name,
+        remarks
+      )
+      VALUES ?
+    `;
+
+    const values = rows.map((data) => [
+      project_master_id,
+      schedule_type,
+      emptyToNull(data.district),
+      emptyToNull(data.ri_circle),
+      emptyToNull(data.tahasil),
+      emptyToNull(data.village),
+      emptyToNull(data.forest_division),
+      emptyToNull(data.forest_range),
+      emptyToNull(data.khata_no),
+      emptyToNull(data.plot_no),
+      emptyToNull(data.kisam),
+      emptyToNull(data.forest_category_id),
+      emptyToNull(data.ownership),
+      emptyToNull(data.fra_allotted),
+      emptyToNull(data.total_area_ha),
+      emptyToNull(data.proposed_acquired_area_ha),
+      emptyToNull(data.digital_area_ha),
+      emptyToNull(data.ca_area_ha),
+      emptyToNull(data.patch_name),
+      emptyToNull(data.remarks),
+    ]);
+
+    const [result] = await db.query(sql, [values]);
+    return result.affectedRows || 0;
+  },
+
   async findById(id) {
     const sql = `
       SELECT *

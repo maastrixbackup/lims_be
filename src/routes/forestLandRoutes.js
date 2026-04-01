@@ -1,6 +1,7 @@
 const express = require("express");
 const router = express.Router();
 const {
+    uploadForestLandSchedule,
     addForestLand,
     updateForestLand,
     forestLandList,
@@ -29,9 +30,14 @@ const {
 } = require("../controllers/forestLandController");
 
 const {
-    uploadEdsDocuments, uploadStage0, uploadStage1, uploadStage2, uploadPostClearance
+    uploadEdsDocuments, uploadStage0, uploadStage1, uploadStage2, uploadPostClearance, uploadForestLandExcel
 } = require("../middleware/upload");
 
+router.post(
+    "/uploadForestLandSchedule",
+    uploadForestLandExcel.single("file"),
+    uploadForestLandSchedule
+);
 router.post("/addForestLand", addForestLand);
 router.put("/updateForestLand/:id", updateForestLand);
 router.get("/forestLandList", forestLandList);

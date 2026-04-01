@@ -1277,6 +1277,15 @@ const exportPlot = async (req, res) => {
 
     const workbook = new ExcelJS.Workbook();
     const sheet = workbook.addWorksheet("Plot Report");
+    const toDisplayDate = (value) => {
+      if (!value) return null;
+      const dt = new Date(value);
+      if (Number.isNaN(dt.getTime())) return value;
+      const dd = String(dt.getDate()).padStart(2, "0");
+      const mm = String(dt.getMonth() + 1).padStart(2, "0");
+      const yyyy = dt.getFullYear();
+      return `${dd}-${mm}-${yyyy}`;
+    };
 
     sheet.addRow([
       "Sl/No",
@@ -1309,7 +1318,7 @@ const exportPlot = async (req, res) => {
         p.khata_no,
         p.plot_no,
         p.ses_survey_no,
-        p.date_of_award,
+        toDisplayDate(p.date_of_award),
         p.name_of_recorded_tenant,
         p.name_of_present_tenant,
         p.present_tenant_count,
