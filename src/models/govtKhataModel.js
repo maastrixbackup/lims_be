@@ -33,11 +33,25 @@ const GovtKhata = {
       const khataNo = String(r["khata no"]).trim();
       if (!khataNo) return;
 
-      const villageKey = `${String(r["mouza"]).trim()}_${r["tahasil"] || null}`;
+      const tahasil = String(r["tahasil"] || "").trim();
+      if (!tahasil) return;
+
+      const villageKey = `${String(r["mouza"]).trim()}_${tahasil}`;
       const villageId = villageMap[villageKey];
       if (!villageId) return;
 
       const key = `${villageId}_${khataNo}`;
+      const existing = khataMap.get(key);
+      const rowNameOfRor =
+        r["name of ror"] ||
+        r["name_of_ror"] ||
+        r["name of khata"] ||
+        null;
+      const rowLandCategory =
+        r["land category"] ||
+        r["land_category"] ||
+        r["kissam"] ||
+        null;
 
       khataMap.set(key, {
         project_id,
@@ -49,6 +63,8 @@ const GovtKhata = {
         lease_case_no: r["lease case no"] || null,
         present_status: presentStatusMap(r["present status"]),
         case_details: r["case details/ deservation req."] || null,
+        name_of_ror: rowNameOfRor || existing?.name_of_ror || null,
+        land_category: rowLandCategory || existing?.land_category || null,
       });
     });
 
@@ -64,6 +80,8 @@ const GovtKhata = {
       k.lease_case_no,
       k.present_status,
       k.case_details,
+      k.name_of_ror,
+      k.land_category,
     ]);
 
     // await db.query(
@@ -88,7 +106,7 @@ const GovtKhata = {
       INSERT INTO govt_khata
         (project_id, type, khata_no, village_id,
         kissam, plot_no, lease_case_no,
-        present_status, case_details)
+        present_status, case_details, name_of_ror, land_category)
       VALUES ?
       ON DUPLICATE KEY UPDATE
         kissam = VALUES(kissam),
@@ -96,6 +114,8 @@ const GovtKhata = {
         lease_case_no = VALUES(lease_case_no),
         present_status = VALUES(present_status),
         case_details = VALUES(case_details),
+        name_of_ror = COALESCE(VALUES(name_of_ror), name_of_ror),
+        land_category = COALESCE(VALUES(land_category), land_category),
         updated_at = NOW()
       `,
       [values]
@@ -284,14 +304,20 @@ const GovtKhata = {
       where.push("k.village_id = ?");
       params.push(village_id);
     }
+    if (khata_no) {
+      where.push("k.khata_no = ?");
+      params.push(khata_no);
+    }
 
     const whereSql = where.length ? `WHERE ${where.join(" And ")}` : "";
 
     const dataSql = `
       SELECT
         k.*,
+        COALESCE(NULLIF(k.name_of_ror, ''), pc.plot_name_of_ror) AS name_of_ror,
         v.village_name,
         IFNULL(pc.plot_count, 0) AS plot_count,
+        pc.plot_numbers,
         IFNULL(kdc.khata_document_count, 0) AS khata_document_count,
         IFNULL(kmdc.khata_map_document_count, 0) AS khata_map_document_count
         FROM govt_khata k
@@ -301,8 +327,19 @@ const GovtKhata = {
             project_id,
             type,
             khata_no,
-            COUNT(*) AS plot_count
+            COUNT(*) AS plot_count,
+            GROUP_CONCAT(
+              DISTINCT NULLIF(TRIM(name_of_ror), '')
+              ORDER BY name_of_ror
+              SEPARATOR ', '
+            ) AS plot_name_of_ror,
+            GROUP_CONCAT(
+              DISTINCT NULLIF(TRIM(plot_no), '')
+              ORDER BY CAST(plot_no AS UNSIGNED), plot_no
+              SEPARATOR ', '
+            ) AS plot_numbers
           FROM govt_plots
+          WHERE is_deleted = 0
           GROUP BY project_id, type, khata_no
         ) pc
           ON pc.project_id = k.project_id
@@ -333,10 +370,18 @@ const GovtKhata = {
     `;
 
     const [rows] = await db.query(dataSql, [...params, limit, offset]);
+    const normalizedRows = rows.map((row) => ({
+      ...row,
+      name_of_ror: row.name_of_ror || null,
+      plot_numbers: row.plot_numbers || null,
+      plot_no_list: row.plot_numbers
+        ? row.plot_numbers.split(",").map((n) => n.trim()).filter(Boolean)
+        : [],
+    }));
     const [countRows] = await db.query(countSql, params);
 
     return {
-      data: rows,
+      data: normalizedRows,
       total: countRows[0].total,
     };
   },
