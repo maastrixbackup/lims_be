@@ -8,6 +8,76 @@ const Village = require("../models/villageModel");
 const Khata = require("../models/khataModel");
 const ExcelJS = require("exceljs");
 
+const pad2 = (n) => String(n).padStart(2, "0");
+const normalizeToMysqlDate = (rawValue) => {
+  if (rawValue === null || rawValue === undefined || rawValue === "") {
+    return null;
+  }
+
+  const buildDate = (year, month, day) => {
+    const y = Number(year);
+    const m = Number(month);
+    const d = Number(day);
+    if (!y || !m || !d) return null;
+
+    const dt = new Date(Date.UTC(y, m - 1, d));
+    const isValid =
+      dt.getUTCFullYear() === y &&
+      dt.getUTCMonth() === m - 1 &&
+      dt.getUTCDate() === d;
+
+    if (!isValid) return null;
+    return `${y}-${pad2(m)}-${pad2(d)}`;
+  };
+
+  // Excel serial number (or numeric string)
+  if (
+    typeof rawValue === "number" ||
+    (typeof rawValue === "string" && /^\d+(\.\d+)?$/.test(rawValue.trim()))
+  ) {
+    const serial = Math.floor(Number(rawValue));
+    if (!Number.isFinite(serial) || serial <= 0) return null;
+    const excelBase = new Date(Date.UTC(1899, 11, 30));
+    excelBase.setUTCDate(excelBase.getUTCDate() + serial);
+    return `${excelBase.getUTCFullYear()}-${pad2(
+      excelBase.getUTCMonth() + 1,
+    )}-${pad2(excelBase.getUTCDate())}`;
+  }
+
+  if (rawValue instanceof Date && !Number.isNaN(rawValue.getTime())) {
+    return `${rawValue.getUTCFullYear()}-${pad2(
+      rawValue.getUTCMonth() + 1,
+    )}-${pad2(rawValue.getUTCDate())}`;
+  }
+
+  if (typeof rawValue !== "string") return null;
+  const value = rawValue.trim();
+  if (!value) return null;
+
+  // DD-MM-YYYY / DD/MM/YYYY / DD.MM.YYYY
+  let match = value.match(/^(\d{1,2})[-/.](\d{1,2})[-/.](\d{4})$/);
+  if (match) {
+    const [, d, m, y] = match;
+    return buildDate(y, m, d);
+  }
+
+  // YYYY-MM-DD / YYYY/MM/DD / YYYY.MM.DD
+  match = value.match(/^(\d{4})[-/.](\d{1,2})[-/.](\d{1,2})$/);
+  if (match) {
+    const [, y, m, d] = match;
+    return buildDate(y, m, d);
+  }
+
+  const parsed = new Date(value);
+  if (!Number.isNaN(parsed.getTime())) {
+    return `${parsed.getUTCFullYear()}-${pad2(
+      parsed.getUTCMonth() + 1,
+    )}-${pad2(parsed.getUTCDate())}`;
+  }
+
+  return null;
+};
+
 const uploadPlots = async (req, res) => {
   const userId = req.user.id;
   try {
@@ -590,10 +660,7 @@ const createPlot = async (req, res) => {
 
     dateFields.forEach((f) => {
       if (safeRequestPayload[f]) {
-        const d = new Date(safeRequestPayload[f]);
-        safeRequestPayload[f] = isNaN(d.getTime())
-          ? null
-          : d.toISOString().slice(0, 10);
+        safeRequestPayload[f] = normalizeToMysqlDate(safeRequestPayload[f]);
       }
     });
 
@@ -664,7 +731,7 @@ const createPlot = async (req, res) => {
 const updatePlot = async (req, res) => {
   const userId = req.user.id;
   const id = req.params.id;
-  const safeRequestPayload = req.body;
+  const safeRequestPayload = { ...req.body };
   try {
     const existing = await Plot.findById(id);
     if (!existing) {
@@ -684,6 +751,20 @@ const updatePlot = async (req, res) => {
         });
       }
     }
+
+    const dateFields = [
+      "date_of_award",
+      "grievance_date",
+      "land_case_date",
+      "tribunal_deposit_date",
+    ];
+
+    dateFields.forEach((f) => {
+      if (safeRequestPayload[f] !== undefined) {
+        safeRequestPayload[f] = normalizeToMysqlDate(safeRequestPayload[f]);
+      }
+    });
+
     const updated = await Plot.update(id, safeRequestPayload);
 
     if (updated.khata_no && updated.project_id && updated.type) {
