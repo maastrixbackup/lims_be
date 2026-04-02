@@ -1244,6 +1244,22 @@ const Plot = {
         plot["Date of award"] ??
         null;
       const formattedDate = toMysqlDate(dateValue);
+      const formattedLandCaseDate = toMysqlDate(
+        plot["Land Case - Date (Date)"] ??
+        plot["land case - date (date)"] ??
+        null,
+      );
+      const formattedGrievanceDate = toMysqlDate(
+        plot["Grievance  Date"] ??
+        plot["Grievance Date"] ??
+        plot["grievance date"] ??
+        null,
+      );
+      const formattedTribunalDepositDate = toMysqlDate(
+        plot["Tribunal - Date of Deposit"] ??
+        plot["tribunal - date of deposit"] ??
+        null,
+      );
 
       //Land area conversion logic
       let totalAcres = null;
@@ -1357,7 +1373,7 @@ const Plot = {
         plot["Family with Orphan Members (Y/N)"] || null,
         plot["FD09-Legal Heir Certificate No. (if any)"] || null,
         plot["LG01-Land Case - No. (Number)"] || null,
-        plot["Land Case - Date (Date)"] || null,
+        formattedLandCaseDate || null,
         plot["Land Case Type"] || null,
         plot["Land case - Status"] || null,
         plot["LG05-Land Case - Action"] || null,
@@ -1384,12 +1400,12 @@ const Plot = {
         // plot["RR Assistance (Other) - Ex-Gratia (if any)"] || null,
         // plot["RR Assistance (Other) - Other Benefits (if any)"] || null,
         plot["GR01-Grievance No. "] || null,
-        plot["Grievance  Date"] || null,
+        formattedGrievanceDate || null,
         plot["Grievance - Subject Matter"] || null,
         plot["Grievance - Present Status"] || null,
         plot["GR05-Grievance - Action taken"] || null,
         plot["TR01-Tribunal (Y/N)"] || null,
-        plot["Tribunal - Date of Deposit"] || null,
+        formattedTribunalDepositDate || null,
         plot["TR03-Tribunal - Amount Deposited"] || null,
         plot["GV01-Premium"] || null,
         plot["GV02-Ground Rent"] || null,
