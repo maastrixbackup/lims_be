@@ -577,8 +577,8 @@ const createPlot = async (req, res) => {
       safeRequestPayload[k] = null;
     }
   });
-  // if (!["PDF", "PAF"].includes(safeRequestPayload.displaced_affected_person)) {
-  //   safeRequestPayload.displaced_affected_person = null;
+  // if (!["PDF", "PAF"].includes(safeRequestPayload.displaced_affected_project)) {
+  //   safeRequestPayload.displaced_affected_project = null;
   // }
   try {
     // if (
@@ -635,9 +635,7 @@ const createPlot = async (req, res) => {
     }
 
     const enumMaps = {
-      displaced_affected_person: ["PDF", "PAF"],
-      family_with_orphan_members: ["Y", "N"],
-      tribunal: ["Y", "N"],
+      displaced_affected_project: ["PDF", "PAF"],
       abatement: ["Yes", "No"],
     };
 
@@ -650,6 +648,20 @@ const createPlot = async (req, res) => {
         safeRequestPayload[key] = null;
       }
     });
+
+    if (
+      safeRequestPayload.family_with_orphan_members !== null &&
+      safeRequestPayload.family_with_orphan_members !== undefined
+    ) {
+      const orphanMembers = Number(safeRequestPayload.family_with_orphan_members);
+      if (!Number.isInteger(orphanMembers)) {
+        return res.status(400).json({
+          success: false,
+          message: "family_with_orphan_members must be an integer",
+        });
+      }
+      safeRequestPayload.family_with_orphan_members = orphanMembers;
+    }
 
     const dateFields = [
       "date_of_award",
@@ -750,6 +762,20 @@ const updatePlot = async (req, res) => {
           message: `LA Case File No. '${safeRequestPayload.la_case_file_no}' already exist.`,
         });
       }
+    }
+
+    if (
+      safeRequestPayload.family_with_orphan_members !== undefined &&
+      safeRequestPayload.family_with_orphan_members !== null
+    ) {
+      const orphanMembers = Number(safeRequestPayload.family_with_orphan_members);
+      if (!Number.isInteger(orphanMembers)) {
+        return res.status(400).json({
+          success: false,
+          message: "family_with_orphan_members must be an integer",
+        });
+      }
+      safeRequestPayload.family_with_orphan_members = orphanMembers;
     }
 
     const dateFields = [
@@ -1404,7 +1430,7 @@ const exportPlot = async (req, res) => {
         p.name_of_present_tenant,
         p.present_tenant_count,
         p.present_address,
-        p.displaced_affected_person,
+        p.displaced_affected_project,
         p.village_name,
         p.tahasil_name,
         p.ri_circle_name,
