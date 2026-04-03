@@ -5,7 +5,7 @@ const ExcelJS = require("exceljs");
 const addVillage = async (req, res) => {
   const userId = req.user.id;
   const safeRequestPayload = req.body;
-  const { village_name, tahasil, district, project_id, type, thana_name_no } =
+  const { village_name, tahasil, district, project_id, type, thana_no } =
     req.body;
 
   try {
@@ -37,7 +37,7 @@ const addVillage = async (req, res) => {
       district,
       project_id,
       type,
-      thana_name_no
+      thana_no
     );
 
     await logAction(
@@ -125,7 +125,7 @@ const updateVillage = async (req, res) => {
     project_id,
     type,
     multiplying_factor,
-    thana_name_no
+    thana_no
   } = req.body;
 
   try {
@@ -145,7 +145,7 @@ const updateVillage = async (req, res) => {
       project_id,
       type,
       multiplying_factor,
-      thana_name_no
+      thana_no
     );
     await logAction(
       userId,
