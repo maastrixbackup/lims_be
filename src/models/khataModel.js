@@ -24,7 +24,7 @@ const Khata = {
       name_of_recorded_tenant,
       name_of_present_tenant,
       present_address,
-      displaced_affected_person,
+      displaced_affected_project,
 
       rr_employment,
       rr_cash_in_lieu,
@@ -65,7 +65,7 @@ const Khata = {
         name_of_recorded_tenant,
         name_of_present_tenant,
         present_address,
-        displaced_affected_person,
+        displaced_affected_project,
 
         rr_employment,
         rr_cash_in_lieu,
@@ -105,7 +105,7 @@ const Khata = {
         name_of_recorded_tenant,
         name_of_present_tenant,
         present_address,
-        displaced_affected_person,
+        displaced_affected_project,
 
         rr_employment,
         rr_cash_in_lieu,
@@ -172,7 +172,7 @@ const Khata = {
   //     k.name_of_recorded_tenant,
   //     k.name_of_present_tenant,
   //     k.present_address,
-  //     k.displaced_affected_person,
+  //     k.displaced_affected_project,
 
   //     p.project_name,
   //     v.village_name,
@@ -275,7 +275,7 @@ const Khata = {
   //     k.name_of_recorded_tenant,
   //     k.name_of_present_tenant,
   //     k.present_address,
-  //     k.displaced_affected_person,
+  //     k.displaced_affected_project,
   //     k.full_part,
 
   //     kp.plot_nos AS plot_no,
@@ -411,7 +411,7 @@ const Khata = {
       k.name_of_recorded_tenant,
       k.name_of_present_tenant,
       k.present_address,
-      k.displaced_affected_person,
+      k.displaced_affected_project,
       k.full_part,
 
       k.plot_no,
@@ -589,7 +589,7 @@ const Khata = {
       name_of_recorded_tenant,
       name_of_present_tenant,
       present_address,
-      displaced_affected_person,
+      displaced_affected_project,
 
       rr_employment,
       rr_cash_in_lieu,
@@ -629,7 +629,7 @@ const Khata = {
         name_of_recorded_tenant = ?,
         name_of_present_tenant = ?,
         present_address = ?,
-        displaced_affected_person = ?,
+        displaced_affected_project = ?,
 
         rr_employment = ?,
         rr_cash_in_lieu = ?,
@@ -670,7 +670,7 @@ const Khata = {
         name_of_recorded_tenant,
         name_of_present_tenant,
         present_address,
-        displaced_affected_person,
+        displaced_affected_project,
 
         rr_employment,
         rr_cash_in_lieu,
@@ -781,7 +781,7 @@ const Khata = {
   //     name_of_recorded_tenant,
   //     name_of_present_tenant,
   //     present_address,
-  //     displaced_affected_person
+  //     displaced_affected_project
   //   )
   //   SELECT
   //     CONCAT(
@@ -812,7 +812,7 @@ const Khata = {
   //     GROUP_CONCAT(DISTINCT pl.name_of_recorded_tenant SEPARATOR ', '),
   //     GROUP_CONCAT(DISTINCT pl.name_of_present_tenant SEPARATOR ', '),
   //     GROUP_CONCAT(DISTINCT pl.present_address SEPARATOR ', '),
-  //     GROUP_CONCAT(DISTINCT pl.displaced_affected_person SEPARATOR ', ')
+  //     GROUP_CONCAT(DISTINCT pl.displaced_affected_project SEPARATOR ', ')
   //   FROM plots pl
   //   JOIN villages v
   //     ON v.village_name = pl.village_name
@@ -839,7 +839,7 @@ const Khata = {
   //     name_of_recorded_tenant = VALUES(name_of_recorded_tenant),
   //     name_of_present_tenant = VALUES(name_of_present_tenant),
   //     present_address = VALUES(present_address),
-  //     displaced_affected_person = VALUES(displaced_affected_person),
+  //     displaced_affected_project = VALUES(displaced_affected_project),
   //     updated_at = NOW()
   //   `,
   //     [project_id, type]
@@ -875,7 +875,7 @@ const Khata = {
       name_of_recorded_tenant,
       name_of_present_tenant,
       present_address,
-      displaced_affected_person
+      displaced_affected_project
     )
     SELECT
       CONCAT(
@@ -906,7 +906,7 @@ const Khata = {
       GROUP_CONCAT(DISTINCT pl.name_of_recorded_tenant SEPARATOR ', '),
       GROUP_CONCAT(DISTINCT pl.name_of_present_tenant SEPARATOR ', '),
       GROUP_CONCAT(DISTINCT pl.present_address SEPARATOR ', '),
-      GROUP_CONCAT(DISTINCT pl.displaced_affected_person SEPARATOR ', ')
+      GROUP_CONCAT(DISTINCT pl.displaced_affected_project SEPARATOR ', ')
     FROM plots pl
     JOIN villages v
       ON v.village_name = pl.village_name
@@ -933,7 +933,7 @@ const Khata = {
       name_of_recorded_tenant = VALUES(name_of_recorded_tenant),
       name_of_present_tenant = VALUES(name_of_present_tenant),
       present_address = VALUES(present_address),
-      displaced_affected_person = VALUES(displaced_affected_person),
+      displaced_affected_project = VALUES(displaced_affected_project),
       updated_at = NOW()
     `,
       [project_id, type]
@@ -1130,7 +1130,7 @@ const Khata = {
       name_of_recorded_tenant,
       name_of_present_tenant,
       present_address,
-      displaced_affected_person,
+      displaced_affected_project,
       full_part
     )
     SELECT
@@ -1162,7 +1162,7 @@ const Khata = {
       GROUP_CONCAT(DISTINCT pl.name_of_recorded_tenant SEPARATOR ', '),
       GROUP_CONCAT(DISTINCT pl.name_of_present_tenant SEPARATOR ', '),
       GROUP_CONCAT(DISTINCT pl.present_address SEPARATOR ', '),
-      GROUP_CONCAT(DISTINCT pl.displaced_affected_person SEPARATOR ', '),
+      GROUP_CONCAT(DISTINCT pl.displaced_affected_project SEPARATOR ', '),
       CASE
       WHEN COUNT(DISTINCT pl.full_part) = 1
           AND MIN(pl.full_part) = 'FULL'
@@ -1195,7 +1195,7 @@ const Khata = {
       name_of_recorded_tenant = VALUES(name_of_recorded_tenant),
       name_of_present_tenant = VALUES(name_of_present_tenant),
       present_address = VALUES(present_address),
-      displaced_affected_person = VALUES(displaced_affected_person),
+      displaced_affected_project = VALUES(displaced_affected_project),
       full_part = VALUES(full_part),
       updated_at = NOW()
     `,
