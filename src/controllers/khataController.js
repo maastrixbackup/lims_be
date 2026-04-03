@@ -41,7 +41,7 @@ async function addKhata(req, res) {
     name_of_recorded_tenant,
     name_of_present_tenant,
     present_address,
-    displaced_affected_person,
+    displaced_affected_project,
 
     rr_employment,
     rr_cash_in_lieu,
@@ -117,7 +117,7 @@ async function addKhata(req, res) {
       name_of_recorded_tenant,
       name_of_present_tenant,
       present_address,
-      displaced_affected_person,
+      displaced_affected_project,
 
       rr_employment,
       rr_cash_in_lieu,
@@ -270,7 +270,7 @@ const updateKhata = async (req, res) => {
     name_of_recorded_tenant,
     name_of_present_tenant,
     present_address,
-    displaced_affected_person,
+    displaced_affected_project,
 
     rr_employment,
     rr_cash_in_lieu,
@@ -324,12 +324,12 @@ const updateKhata = async (req, res) => {
     }
 
     if (
-      displaced_affected_person &&
-      !["PDF", "PAF"].includes(displaced_affected_person)
+      displaced_affected_project &&
+      !["PDF", "PAF"].includes(displaced_affected_project)
     ) {
       return res.status(400).json({
         success: false,
-        message: "Invalid displaced_affected_person value",
+        message: "Invalid displaced_affected_project value",
       });
     }
 
@@ -355,7 +355,7 @@ const updateKhata = async (req, res) => {
       name_of_recorded_tenant,
       name_of_present_tenant,
       present_address,
-      displaced_affected_person,
+      displaced_affected_project,
 
       rr_employment,
       rr_cash_in_lieu,
