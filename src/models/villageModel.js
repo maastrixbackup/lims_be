@@ -7,11 +7,11 @@ const Village = {
     district,
     project_id,
     type,
-    thana_name_no
+    thana_no
   ) {
     const [result] = await db.query(
-      "INSERT INTO villages (village_name, tahasil, district, project_id, type, thana_name_no) VALUES (?,?,?,?,?,?)",
-      [village_name, tahasil, district, project_id, type, thana_name_no]
+      "INSERT INTO villages (village_name, tahasil, district, project_id, type, thana_no) VALUES (?,?,?,?,?,?)",
+      [village_name, tahasil, district, project_id, type, thana_no]
     );
     return {
       id: result.insertId,
@@ -20,7 +20,7 @@ const Village = {
       district,
       project_id,
       type,
-      thana_name_no
+      thana_no
     };
   },
 
@@ -120,10 +120,10 @@ const Village = {
     project_id,
     type,
     multiplying_factor,
-    thana_name_no
+    thana_no
   ) {
     await db.query(
-      "UPDATE villages SET village_name = ?, tahasil = ?, district = ?, project_id = ?, type = ?, multiplying_factor = ?, thana_name_no = ?, updated_at = NOW() WHERE id = ?",
+      "UPDATE villages SET village_name = ?, tahasil = ?, district = ?, project_id = ?, type = ?, multiplying_factor = ?, thana_no = ?, updated_at = NOW() WHERE id = ?",
       [
         village_name,
         tahasil,
@@ -131,7 +131,7 @@ const Village = {
         project_id,
         type,
         multiplying_factor,
-        thana_name_no,
+        thana_no,
         id,
       ]
     );
@@ -143,7 +143,7 @@ const Village = {
       project_id,
       type,
       multiplying_factor,
-      thana_name_no
+      thana_no
     };
   },
 
@@ -245,17 +245,17 @@ const Village = {
     if (!data || data.length === 0) return 0;
 
     const [existingVillages] = await db.query(
-      `SELECT village_name, tahasil 
+      `SELECT id, village_name, tahasil, thana_no 
        FROM villages 
        WHERE project_id = ? AND type = ?`,
       [project_id, type]
     );
 
-    const existingSet = new Set(
-      existingVillages.map(
-        (v) =>
-          `${v.village_name?.trim().toLowerCase()}`
-      )
+    const normalize = (val) =>
+      val === null || val === undefined ? "" : val.toString().trim().toLowerCase();
+
+    const existingMap = new Map(
+      existingVillages.map((v) => [normalize(v.village_name), v])
     );
 
     // To track duplicates within current Excel upload
@@ -304,7 +304,22 @@ const Village = {
       // const uniqueKey = `${baseKey}|${thanaNo?.toLowerCase() || ""}`;
 
       // Skip if already exists in DB
-      if (existingSet.has(baseKey)) {
+      const existingVillage = existingMap.get(baseKey);
+      if (existingVillage) {
+        if (
+          existingVillage.id &&
+          thanaNo &&
+          (!existingVillage.thana_no ||
+            existingVillage.thana_no.toString().trim() === "")
+        ) {
+          await db.query(
+            `UPDATE villages 
+             SET thana_no = ?, updated_at = NOW()
+             WHERE id = ?`,
+            [thanaNo, existingVillage.id]
+          );
+          existingVillage.thana_no = thanaNo;
+        }
         continue;
       }
 
@@ -319,10 +334,16 @@ const Village = {
       // Insert into DB
       await db.query(
         `INSERT INTO villages (
-          village_name, tahasil, district, project_id, type
-        ) VALUES (?, ?, ?, ?, ?)`,
-        [villageName, tahasil, district, project_id, type]
+          village_name, tahasil, district, project_id, type, thana_no
+        ) VALUES (?, ?, ?, ?, ?, ?)`,
+        [villageName, tahasil, district, project_id, type, thanaNo]
       );
+      existingMap.set(baseKey, {
+        id: null,
+        village_name: villageName,
+        tahasil,
+        thana_no: thanaNo,
+      });
 
       insertedCount++;
     }
@@ -366,21 +387,31 @@ const Village = {
 
     // Village already exists
     if (existing.length > 0) {
+      if (thanaNo) {
+        await db.query(
+          `UPDATE villages
+           SET thana_no = ?, updated_at = NOW()
+           WHERE id = ?
+             AND (thana_no IS NULL OR TRIM(thana_no) = '')`,
+          [thanaNo, existing[0].id]
+        );
+      }
       return existing[0].id;
     }
 
     // Insert new village
     const [result] = await db.query(
       `INSERT IGNORE INTO villages
-     (village_name, village_code, tahasil, district, project_id, type)
-     VALUES (?, ?, ?, ?, ?, ?)`,
+     (village_name, village_code, tahasil, district, project_id, type, thana_no)
+     VALUES (?, ?, ?, ?, ?, ?, ?)`,
       [
         plot.village_name,
         plot.village_code || null,
         plot.tahasil_name,
-        null,
+        district,
         project_id,
         type,
+        thanaNo,
       ]
     );
 
