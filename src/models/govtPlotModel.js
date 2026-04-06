@@ -575,6 +575,23 @@ const GovtPlot = {
       return null;
     };
 
+    const getCaseDetailsValue = (row) => {
+      if (!row) return null;
+      return (
+        row["case details/ deservation req."] ||
+        row["case details"] ||
+        row["case details/de-reservation req."] ||
+        row["case details/de reservation req."] ||
+        row["case details/ de-reservation req."] ||
+        row["case details/ de reservation req."] ||
+        row["de-reservation req."] ||
+        row["de reservation req."] ||
+        row["de-reservation req"] ||
+        row["de reservation req"] ||
+        null
+      );
+    };
+
     const validRows = rows.filter((r) => {
       const khata = r["khata no"];
       const plot = r["plot no"];
@@ -655,7 +672,7 @@ const GovtPlot = {
       presentStatusMap(r["present status"]),
 
       yesNoToBool(r["ua /idco to tahasildar"]),
-      r["case details/ deservation req."] || null,
+      getCaseDetailsValue(r),
       r["action to be taken"] || null,
 
       enumStatus(r["ri report (1)"]),
