@@ -124,8 +124,8 @@ const uploadForestLandSchedule = async (req, res) => {
         village: pick(row, ["village", "mouza", "mauza"]),
         forest_division: pick(row, ["forest division", "forest_division"]),
         forest_range: pick(row, ["forest range", "forest_range"]),
-        khata_no: pick(row, ["khata no", "khata_no"]),
-        plot_no: pick(row, ["plot no", "plot_no"]),
+        khata_no: pick(row, ["khata no", "khata_no", "khata no."]),
+        plot_no: pick(row, ["plot no", "plot_no", "plot no."]),
         kisam: pick(row, ["kisam", "kissam"]),
         forest_category_id: pick(row, [
           "forest category id",
@@ -133,21 +133,21 @@ const uploadForestLandSchedule = async (req, res) => {
           "forest category",
         ]),
         ownership: pick(row, ["ownership"]),
-        fra_allotted: pick(row, ["fra allotted", "fra_allotted"]),
+        fra_allotted: pick(row, ["fra allotted", "fra_allotted", "land alloted through fra"]),
         total_area_ha: toNumberOrNull(
-          pick(row, ["total area ha", "total_area_ha", "total area"]),
+          pick(row, ["total area (ha)", "total_area_ha", "total area"]),
         ),
         proposed_acquired_area_ha: toNumberOrNull(
           pick(row, [
-            "proposed acquired area ha",
+            "proposed/acquired area (ha)",
             "proposed_acquired_area_ha",
-            "proposed area ha",
+            "proposed area (ha)",
           ]),
         ),
         digital_area_ha: toNumberOrNull(
-          pick(row, ["digital area ha", "digital_area_ha"]),
+          pick(row, ["digital area (ha)", "digital_area_ha"]),
         ),
-        ca_area_ha: toNumberOrNull(pick(row, ["ca area ha", "ca_area_ha"])),
+        ca_area_ha: toNumberOrNull(pick(row, ["ca area (ha", "ca_area_ha"])),
         patch_name: pick(row, ["patch name", "patch_name"]),
         remarks: pick(row, ["remarks", "remark"]),
       }))
