@@ -551,6 +551,14 @@ const GovtPlot = {
   },
 
   async bulkInsertFromExcel(rows, project_id, type) {
+    const normalizeKey = (key) =>
+      key
+        ?.toString()
+        .replace(/\r?\n/g, " ")
+        .replace(/\s+/g, " ")
+        .trim()
+        .toLowerCase();
+
     const yesNoToBool = (val) => {
       if (!val) return 0;
       return String(val).trim().toLowerCase() === "yes" ? 1 : 0;
@@ -575,21 +583,38 @@ const GovtPlot = {
       return null;
     };
 
-    const getCaseDetailsValue = (row) => {
+    const getValueByNormalizedKey = (row, possibleKeys) => {
       if (!row) return null;
-      return (
-        row["case details/ deservation req."] ||
-        row["case details"] ||
-        row["case details/de-reservation req."] ||
-        row["case details/de reservation req."] ||
-        row["case details/ de-reservation req."] ||
-        row["case details/ de reservation req."] ||
-        row["de-reservation req."] ||
-        row["de reservation req."] ||
-        row["de-reservation req"] ||
-        row["de reservation req"] ||
-        null
-      );
+      const normalizedKeys = possibleKeys.map(k => normalizeKey(k));
+      for (const key of Object.keys(row)) {
+        if (normalizedKeys.includes(normalizeKey(key))) {
+          return row[key];
+        }
+      }
+      return null;
+    };
+
+    const getCaseDetailsValue = (row) => {
+      return getValueByNormalizedKey(row, [
+        "case details/ deservation req.",
+        "case details/de-reservation req.",
+        "case details/ de-reservation req.",
+        "case details/ de reservation req.",
+        "case details/de reservation req.",
+        "case details",
+        "de-reservation req.",
+        "de reservation req.",
+        "de-reservation req",
+        "de reservation req"
+      ]);
+    };
+
+    const getFullPartValue = (row) => {
+      return getValueByNormalizedKey(row, [
+        "Full/Part",
+        "Full Part",
+        "full/part"
+      ]);
     };
 
     const validRows = rows.filter((r) => {
@@ -699,6 +724,7 @@ const GovtPlot = {
       null, // lease_to_ua_attachment
 
       r["remarks"] || null,
+      getFullPartValue(r),
     ]);
 
     await db.query(
@@ -720,7 +746,7 @@ const GovtPlot = {
       order_sheet_prep,
       lease_to_idco, lease_to_idco_attachment,
       lease_to_ua, lease_to_ua_attachment,
-      remarks
+      remarks, full_part
     )
     VALUES ?
     ON DUPLICATE KEY UPDATE
@@ -746,6 +772,7 @@ const GovtPlot = {
       lease_to_idco = VALUES(lease_to_idco),
       lease_to_ua = VALUES(lease_to_ua),
       remarks = VALUES(remarks),
+      full_part = VALUES(full_part),
       updated_at = NOW()
     `,
       [values],
