@@ -1,5 +1,18 @@
 const db = require("../config/db");
 
+const getCaseDetailsValue = (row) => {
+  if (!row) return null;
+  return (
+    row["case details/ deservation req."] ||
+    row["case details"] ||
+    row["case details/de-reservation req."] ||
+    row["case details/de reservation req."] ||
+    row["case details/ de-reservation req."] ||
+    row["case details/ de reservation req."] ||
+    null
+  );
+};
+
 const GovtKhata = {
   async upsertFromExcel(rows, villageMap, project_id, type) {
     const khataMap = new Map();
@@ -62,7 +75,7 @@ const GovtKhata = {
         plot_no: r["plot no"] || null,
         lease_case_no: r["lease case no"] || null,
         present_status: presentStatusMap(r["present status"]),
-        case_details: r["case details/ deservation req."] || null,
+        case_details: getCaseDetailsValue(r),
         name_of_ror: rowNameOfRor || existing?.name_of_ror || null,
         land_category: rowLandCategory || existing?.land_category || null,
       });
