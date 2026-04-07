@@ -1238,26 +1238,50 @@ const Plot = {
     };
 
     const values = plots.map((plot) => {
+      const normalizeKey = (key) =>
+        key
+          ?.toString()
+          .replace(/\r?\n/g, " ")
+          .replace(/\s+/g, " ")
+          .trim()
+          .toLowerCase();
+
+      const normalizedPlot = new Proxy(plot, {
+        get(target, prop) {
+          if (typeof prop !== "string") return target[prop];
+          if (Reflect.has(target, prop)) return target[prop];
+          const normalizedProp = normalizeKey(prop);
+          for (const key of Object.keys(target)) {
+            if (normalizeKey(key) === normalizedProp) {
+              return target[key];
+            }
+          }
+          return undefined;
+        },
+      });
+
+      plot = normalizedPlot;
+
       const dateValue =
-        plot["Date of Award"] ??
-        plot["date of award"] ??
-        plot["Date of award"] ??
+        normalizedPlot["Date of Award"] ??
+        normalizedPlot["date of award"] ??
+        normalizedPlot["Date of award"] ??
         null;
       const formattedDate = toMysqlDate(dateValue);
       const formattedLandCaseDate = toMysqlDate(
-        plot["Land Case - Date (Date)"] ??
-        plot["land case - date (date)"] ??
+        normalizedPlot["Land Case - Date (Date)"] ??
+        normalizedPlot["land case - date (date)"] ??
         null,
       );
       const formattedGrievanceDate = toMysqlDate(
-        plot["Grievance  Date"] ??
-        plot["Grievance Date"] ??
-        plot["grievance date"] ??
+        normalizedPlot["Grievance  Date"] ??
+        normalizedPlot["Grievance Date"] ??
+        normalizedPlot["grievance date"] ??
         null,
       );
       const formattedTribunalDepositDate = toMysqlDate(
-        plot["Tribunal - Date of Deposit"] ??
-        plot["tribunal - date of deposit"] ??
+        normalizedPlot["Tribunal - Date of Deposit"] ??
+        normalizedPlot["tribunal - date of deposit"] ??
         null,
       );
 
@@ -1377,28 +1401,7 @@ const Plot = {
         plot["Land Case Type"] || null,
         plot["Land case - Status"] || null,
         plot["LG05-Land Case - Action"] || null,
-        // plot["RR Assistance (Rehab) - Employment in the Project"] || null,
-        // plot["RR Assistance (Rehab) - Cash in lieu of Employment"] || null,
-        // plot["RR Assistance (Rehab) - Training for Skill Upgradation"] || null,
-        // plot["RR Assistance (Rehab) - Assistance for Self Employment"] || null,
-        // plot[
-        //   "RR Assistance (Rehab) - Special Allowance to STs for loss of NTFP"
-        // ] || null,
-        // plot[
-        //   "RR Assistance (Resettle) - Homested Land Alloted/Self Relocation"
-        // ] || null,
-        // plot["RR Assistance (Resettle) - House Building Assistance"] || null,
-        // plot[
-        //   "RR Assistance (Resettle) - Constructed by Project Authority/Self"
-        // ] || null,
-        // plot["RR Assistance (Resettle) - Assistance for Transit Shed"] || null,
-        // plot["RR Assistance (Resettle) - Transportation Allowance"] || null,
-        // plot["RR Assistance (Resettle) - Maintenance Allowance"] || null,
-        // plot[
-        //   "RR Assistance (Other) - Special Allowance for Multiple Displacement"
-        // ] || null,
-        // plot["RR Assistance (Other) - Ex-Gratia (if any)"] || null,
-        // plot["RR Assistance (Other) - Other Benefits (if any)"] || null,
+
         plot["GR01-Grievance No. "] || null,
         formattedGrievanceDate || null,
         plot["Grievance - Subject Matter"] || null,
@@ -1414,6 +1417,7 @@ const Plot = {
         plot["GV05-Total"] || null,
         plot["Abatement"] || null,
         type,
+        plot["Full/Part"] || plot["Full Part"] || null,
       ];
     });
 
@@ -1437,7 +1441,7 @@ const Plot = {
       land_case_no, land_case_date, land_case_type, land_case_status, land_case_action,grievance_no,
       grievance_date, grievance_subject, grievance_status, grievance_action, tribunal,
       tribunal_deposit_date, tribunal_amount, premium, ground_rent, cess,
-      incidental_charges, total, abatement, type
+      incidental_charges, total, abatement, type, full_part
     )
     VALUES ?
     ON DUPLICATE KEY UPDATE
@@ -1524,6 +1528,7 @@ const Plot = {
       total = VALUES(total),
       abatement = VALUES(abatement),
       type = VALUES(type),
+      full_part = VALUES(full_part),
       updated_at = CURRENT_TIMESTAMP
     `,
       [values],
