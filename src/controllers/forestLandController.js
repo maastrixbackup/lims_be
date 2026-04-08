@@ -91,10 +91,13 @@ const uploadForestLandSchedule = async (req, res) => {
       key
         ?.toString()
         .replace(/\r?\n/g, " ")
-        .replace(/[_-]+/g, " ")
+        .replace(/[^a-zA-Z0-9\s]+/g, " ")
         .replace(/\s+/g, " ")
         .trim()
         .toLowerCase();
+
+    const normalizeValue = (value) =>
+      typeof value === "string" ? value.trim() : value;
 
     const toNumberOrNull = (value) => {
       if (value === null || value === undefined || value === "") return null;
@@ -104,14 +107,14 @@ const uploadForestLandSchedule = async (req, res) => {
 
     const normalizedRows = rawRows.map((row) => {
       const obj = {};
-      for (const key in row) obj[normalizeKey(key)] = row[key];
+      for (const key in row) obj[normalizeKey(key)] = normalizeValue(row[key]);
       return obj;
     });
 
     const pick = (row, aliases) => {
       for (const alias of aliases) {
-        const v = row[alias];
-        if (v !== undefined) return v;
+        const normalizedAlias = normalizeKey(alias);
+        if (normalizedAlias in row) return row[normalizedAlias];
       }
       return null;
     };
@@ -131,23 +134,24 @@ const uploadForestLandSchedule = async (req, res) => {
           "forest category id",
           "forest_category_id",
           "forest category",
+          "forest_category",
         ]),
         ownership: pick(row, ["ownership"]),
-        fra_allotted: pick(row, ["fra allotted", "fra_allotted", "land alloted through fra"]),
+        fra_allotted: pick(row, ["fra allotted", "fra_allotted", "Land Allotted Through FRA"]),
         total_area_ha: toNumberOrNull(
-          pick(row, ["total area (ha)", "total_area_ha", "total area"]),
+          pick(row, ["total area (ha)", "total_area_ha", "total area", "TOTAL AREA HA"]),
         ),
         proposed_acquired_area_ha: toNumberOrNull(
           pick(row, [
-            "proposed/acquired area (ha)",
+            "PROPOSED/ ACQUIRED AREA HA",
             "proposed_acquired_area_ha",
             "proposed area (ha)",
           ]),
         ),
         digital_area_ha: toNumberOrNull(
-          pick(row, ["digital area (ha)", "digital_area_ha"]),
+          pick(row, ["digital area (ha)", "digital_area_ha", "digital area ha"]),
         ),
-        ca_area_ha: toNumberOrNull(pick(row, ["ca area (ha", "ca_area_ha"])),
+        ca_area_ha: toNumberOrNull(pick(row, ["ca area (ha)", "ca_area_ha"])),
         patch_name: pick(row, ["patch name", "patch_name"]),
         remarks: pick(row, ["remarks", "remark"]),
       }))
