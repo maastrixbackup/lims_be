@@ -551,6 +551,17 @@ const GovtPlot = {
   },
 
   async bulkInsertFromExcel(rows, project_id, type) {
+    const normalizeKey = (key) =>
+      key
+        ?.toString()
+        .replace(/\r?\n/g, " ")
+        .replace(/\s+/g, " ")
+        .trim()
+        .toLowerCase();
+
+    const normalizeCompareKey = (key) =>
+      normalizeKey(key)?.replace(/[^a-z0-9]+/g, " ").trim();
+
     const yesNoToBool = (val) => {
       if (!val) return 0;
       return String(val).trim().toLowerCase() === "yes" ? 1 : 0;
@@ -575,22 +586,41 @@ const GovtPlot = {
       return null;
     };
 
-    const getCaseDetailsValue = (row) => {
+    const getValueByNormalizedKey = (row, possibleKeys) => {
       if (!row) return null;
-      return (
-        row["case details/ deservation req."] ||
-        row["case details"] ||
-        row["case details/de-reservation req."] ||
-        row["case details/de reservation req."] ||
-        row["case details/ de-reservation req."] ||
-        row["case details/ de reservation req."] ||
-        row["de-reservation req."] ||
-        row["de reservation req."] ||
-        row["de-reservation req"] ||
-        row["de reservation req"] ||
-        null
-      );
+      const normalizedKeys = possibleKeys.map((k) => normalizeCompareKey(k));
+      for (const key of Object.keys(row)) {
+        if (normalizedKeys.includes(normalizeCompareKey(key))) {
+          return row[key];
+        }
+      }
+      return null;
     };
+
+    const getCaseDetailsValue = (row) => {
+      return getValueByNormalizedKey(row, [
+        "case details/ deservation req.",
+        "case details/de-reservation req.",
+        "case details/ de-reservation req.",
+        "Case details/De - reservation Req.",
+      ]);
+    };
+    const getMissingCaseNumber = (row) => {
+      return getValueByNormalizedKey(row, [
+        "mising case prep./ dr case. prep. number",
+        "Missing Case Prep./DR Case Number",
+        "missing case prep / dr case number",
+        "misc_dr_case_prep_number",
+      ]);
+    };
+
+    // const getFullPartValue = (row) => {
+    //   return getValueByNormalizedKey(row, [
+    //     "Full/Part",
+    //     "Full Part",
+    //     "full/part"
+    //   ]);
+    // };
 
     const validRows = rows.filter((r) => {
       const khata = r["khata no"];
@@ -607,14 +637,11 @@ const GovtPlot = {
 
     if (!validRows.length) return 0;
     const processedRows = validRows.map((r) => {
-      const totalAcres =
-        parseFloat(r["total area (in acres)"]) || null;
+      const totalAcres = parseFloat(r["total area (in acres)"]) || null;
 
-      const totalHectares =
-        parseFloat(r["total area (in hectares)"]) || null;
+      const totalHectares = parseFloat(r["total area (in hectares)"]) || null;
 
-      const proposedAcres =
-        parseFloat(r["proposed area (in acres)"]) || null;
+      const proposedAcres = parseFloat(r["proposed area (in acres)"]) || null;
 
       const proposedHectares =
         parseFloat(r["proposed area (in hectares)"]) || null;
@@ -634,10 +661,14 @@ const GovtPlot = {
 
       // Proposed area conversion
       if (finalProposedAcres && !finalProposedHectares)
-        finalProposedHectares = parseFloat((finalProposedAcres / 2.47105).toFixed(4));
+        finalProposedHectares = parseFloat(
+          (finalProposedAcres / 2.47105).toFixed(4),
+        );
 
       if (finalProposedHectares && !finalProposedAcres)
-        finalProposedAcres = parseFloat((finalProposedHectares * 2.47105).toFixed(4));
+        finalProposedAcres = parseFloat(
+          (finalProposedHectares * 2.47105).toFixed(4),
+        );
 
       return {
         ...r,
@@ -671,7 +702,9 @@ const GovtPlot = {
       r["lease case no"] || null,
       presentStatusMap(r["present status"]),
 
-      yesNoToBool(r["ua /idco to tahasildar"]),
+      yesNoToBool(
+        getValueByNormalizedKey(r, ["ua /idco to tahasildar"]),
+      ),
       getCaseDetailsValue(r),
       r["action to be taken"] || null,
 
@@ -684,7 +717,7 @@ const GovtPlot = {
       yesNoToBool(r["modification/revision"]),
 
       yesNoToBool(r["mising case prep./ dr case. prep."]),
-      r["mising case prep./ dr case. prep. number"] || null,
+      getMissingCaseNumber(r),
       r["reason for misc/dr case"] || null,
 
       enumStatus(r["tree enumeration"]),
@@ -698,7 +731,8 @@ const GovtPlot = {
       yesNoToBool(r["lease to ua"]),
       null, // lease_to_ua_attachment
 
-      r["remarks"] || null,
+      getValueByNormalizedKey(r, ["remarks"]) || null,
+      // getFullPartValue(r),
     ]);
 
     await db.query(
@@ -720,8 +754,7 @@ const GovtPlot = {
       order_sheet_prep,
       lease_to_idco, lease_to_idco_attachment,
       lease_to_ua, lease_to_ua_attachment,
-      remarks
-    )
+      remarks)
     VALUES ?
     ON DUPLICATE KEY UPDATE
       total_area_acres = VALUES(total_area_acres),
@@ -892,9 +925,10 @@ const GovtPlot = {
   },
 
   async fetchLandCostById(land_cost_id) {
-    const [rows] = await db.query(`SELECT * FROM plot_payments WHERE id = ? AND type = 2`, [
-      land_cost_id,
-    ]);
+    const [rows] = await db.query(
+      `SELECT * FROM plot_payments WHERE id = ? AND type = 2`,
+      [land_cost_id],
+    );
     return rows[0];
   },
 
@@ -1072,7 +1106,6 @@ const GovtPlot = {
     const [rows] = await db.query(query, params);
     return rows[0].total;
   },
-
 };
 
 module.exports = GovtPlot;
