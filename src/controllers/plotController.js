@@ -320,6 +320,8 @@ const plotDocumentList = async (req, res) => {
       type: r.type,
       name: r.original_filename,
       download_name: r.filename,
+      district: r.district,
+      no_days_interest: r.no_days_interest,
       uploadedAt: r.created_at,
       documentUrl: `${req.protocol}://${req.get("host")}${req.get("host").includes("localhost") ? "" : "/api"
         }/uploads/excels/${r.filename}`,
