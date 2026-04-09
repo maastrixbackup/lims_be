@@ -104,7 +104,9 @@ const uploadPlots = async (req, res) => {
 
     const workbook = xlsx.readFile(req.file.path);
     const sheetName = workbook.SheetNames[0];
-    const data = xlsx.utils.sheet_to_json(workbook.Sheets[sheetName]);
+    const data = xlsx.utils.sheet_to_json(workbook.Sheets[sheetName], {
+      defval: null,
+    });
 
     if (!data.length) {
       fs.unlinkSync(req.file.path);

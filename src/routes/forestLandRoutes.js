@@ -5,6 +5,7 @@ const {
     addForestLand,
     updateForestLand,
     forestLandList,
+    forestLandDocumentList,
     deleteForestLand,
     // addForestProject,
     addForestProjectWithEds,
@@ -41,6 +42,7 @@ router.post(
 router.post("/addForestLand", addForestLand);
 router.put("/updateForestLand/:id", updateForestLand);
 router.get("/forestLandList", forestLandList);
+router.get("/forestLandDocumentList", forestLandDocumentList);
 router.delete("/deleteForestLand/:id", deleteForestLand);
 router.get("/forestLandAbstract", forestLandAbstract);
 
