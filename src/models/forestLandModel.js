@@ -887,6 +887,64 @@ const ForestLand = {
     return rows.length ? rows[0].status : null;
   },
 
+  async insertDocument(data) {
+    const sql = `
+      INSERT IGNORE INTO forest_land_document
+      (project_id, type, filename, original_filename, file_path, uploaded_by)
+      VALUES (?, ?, ?, ?, ?, ?)
+    `;
+
+    const params = [
+      data.project_id,
+      data.type,
+      data.filename,
+      data.original_filename,
+      data.file_path,
+      data.uploaded_by,
+    ];
+
+    const [result] = await db.query(sql, params);
+    return result.insertId;
+  },
+
+  async findAllDocuments({ project_id, type, schedule_type }) {
+    let sql = `
+      SELECT
+        id,
+        project_id,
+        type,
+        original_filename,
+        filename,
+        file_path,
+        created_at
+      FROM forest_land_document
+      WHERE 1 = 1
+    `;
+
+    const params = [];
+
+    if (project_id) {
+      sql += ` AND project_id = ?`;
+      params.push(project_id);
+    }
+
+    if (type && schedule_type) {
+      sql += ` AND (type = ? OR type = ?)`;
+      params.push(type, schedule_type);
+    } else if (type) {
+      sql += ` AND type = ?`;
+      params.push(type);
+    } else if (schedule_type) {
+      sql += ` AND type = ?`;
+      params.push(schedule_type);
+    }
+
+    sql += ` ORDER BY created_at DESC`;
+
+    const [rows] = await db.query(sql, params);
+    return rows;
+  },
+
   async getDashboardSummary() {
 
     // TOTAL PROJECTS
