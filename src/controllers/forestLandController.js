@@ -47,6 +47,11 @@ const buildDocumentValue = (files, field, existingValue = null) => {
 
 const uploadForestLandSchedule = async (req, res) => {
   const userId = req.user?.id || null;
+  const cleanupUploadedFile = () => {
+    if (req.file?.path && fs.existsSync(req.file.path)) {
+      fs.unlinkSync(req.file.path);
+    }
+  };
 
   try {
     const project_master_id = req.body.project_master_id || req.body.project_id;
@@ -69,6 +74,7 @@ const uploadForestLandSchedule = async (req, res) => {
     const workbook = xlsx.readFile(req.file.path);
 
     if (workbook.SheetNames.length !== 1) {
+      cleanupUploadedFile();
       return res.status(400).json({
         success: false,
         message: "Invalid Excel format. Only ONE sheet is allowed inside file.",
@@ -81,6 +87,7 @@ const uploadForestLandSchedule = async (req, res) => {
     });
 
     if (!rawRows.length) {
+      cleanupUploadedFile();
       return res.status(400).json({
         success: false,
         message: "Excel file is empty",
@@ -91,10 +98,13 @@ const uploadForestLandSchedule = async (req, res) => {
       key
         ?.toString()
         .replace(/\r?\n/g, " ")
-        .replace(/[_-]+/g, " ")
+        .replace(/[^a-zA-Z0-9\s]+/g, " ")
         .replace(/\s+/g, " ")
         .trim()
         .toLowerCase();
+
+    const normalizeValue = (value) =>
+      typeof value === "string" ? value.trim() : value;
 
     const toNumberOrNull = (value) => {
       if (value === null || value === undefined || value === "") return null;
@@ -104,14 +114,14 @@ const uploadForestLandSchedule = async (req, res) => {
 
     const normalizedRows = rawRows.map((row) => {
       const obj = {};
-      for (const key in row) obj[normalizeKey(key)] = row[key];
+      for (const key in row) obj[normalizeKey(key)] = normalizeValue(row[key]);
       return obj;
     });
 
     const pick = (row, aliases) => {
       for (const alias of aliases) {
-        const v = row[alias];
-        if (v !== undefined) return v;
+        const normalizedAlias = normalizeKey(alias);
+        if (normalizedAlias in row) return row[normalizedAlias];
       }
       return null;
     };
@@ -131,23 +141,24 @@ const uploadForestLandSchedule = async (req, res) => {
           "forest category id",
           "forest_category_id",
           "forest category",
+          "forest_category",
         ]),
         ownership: pick(row, ["ownership"]),
-        fra_allotted: pick(row, ["fra allotted", "fra_allotted", "land alloted through fra"]),
+        fra_allotted: pick(row, ["fra allotted", "fra_allotted", "Land Allotted Through FRA"]),
         total_area_ha: toNumberOrNull(
-          pick(row, ["total area (ha)", "total_area_ha", "total area"]),
+          pick(row, ["total area (ha)", "total_area_ha", "total area", "TOTAL AREA HA"]),
         ),
         proposed_acquired_area_ha: toNumberOrNull(
           pick(row, [
-            "proposed/acquired area (ha)",
+            "PROPOSED/ ACQUIRED AREA HA",
             "proposed_acquired_area_ha",
             "proposed area (ha)",
           ]),
         ),
         digital_area_ha: toNumberOrNull(
-          pick(row, ["digital area (ha)", "digital_area_ha"]),
+          pick(row, ["digital area (ha)", "digital_area_ha", "digital area ha"]),
         ),
-        ca_area_ha: toNumberOrNull(pick(row, ["ca area (ha", "ca_area_ha"])),
+        ca_area_ha: toNumberOrNull(pick(row, ["ca area (ha)", "ca_area_ha"])),
         patch_name: pick(row, ["patch name", "patch_name"]),
         remarks: pick(row, ["remarks", "remark"]),
       }))
@@ -158,6 +169,7 @@ const uploadForestLandSchedule = async (req, res) => {
       );
 
     if (!parsedRows.length) {
+      cleanupUploadedFile();
       return res.status(400).json({
         success: false,
         message: "No valid rows found in Excel file",
@@ -169,6 +181,15 @@ const uploadForestLandSchedule = async (req, res) => {
       project_master_id,
       schedule_type,
     );
+
+    await ForestLand.insertDocument({
+      project_id: project_master_id,
+      type: schedule_type || req.body.type,
+      filename: req.file.filename,
+      original_filename: req.file.originalname,
+      file_path: `uploads/forest_land_excels/${req.file.filename}`,
+      uploaded_by: userId,
+    });
 
     await logAction(
       userId,
@@ -195,14 +216,11 @@ const uploadForestLandSchedule = async (req, res) => {
     );
 
     console.error("Forest Land Schedule Upload Error:", err);
+    cleanupUploadedFile();
     return res.status(500).json({
       success: false,
       message: "Server error",
     });
-  } finally {
-    if (req.file?.path && fs.existsSync(req.file.path)) {
-      fs.unlinkSync(req.file.path);
-    }
   }
 };
 
@@ -336,6 +354,42 @@ const forestLandList = async (req, res) => {
     res.status(500).json({
       success: false,
       message: "Server error",
+    });
+  }
+};
+
+const forestLandDocumentList = async (req, res) => {
+  try {
+    let { project_id, project_master_id, type, schedule_type } = req.query;
+    project_id = project_id || project_master_id;
+
+    const rows = await ForestLand.findAllDocuments({
+      project_id,
+      schedule_type,
+      type,
+    });
+
+    const files = rows.map((r) => ({
+      id: r.id,
+      project_id: r.project_id,
+      type: r.type,
+      name: r.original_filename,
+      download_name: r.filename,
+      uploadedAt: r.created_at,
+      documentUrl: `${req.protocol}://${req.get("host")}${req.get("host").includes("localhost") ? "" : "/api"
+        }/uploads/forest_land_excels/${r.filename}`,
+    }));
+
+    return res.status(200).json({
+      success: true,
+      total: files.length,
+      files,
+    });
+  } catch (err) {
+    console.error("Forest Land Document List Error:", err);
+    return res.status(500).json({
+      success: false,
+      message: "Failed to fetch forest land documents",
     });
   }
 };
@@ -2653,6 +2707,7 @@ module.exports = {
   addForestLand,
   updateForestLand,
   forestLandList,
+  forestLandDocumentList,
   deleteForestLand,
   forestLandAbstract,
   // addForestProject,
