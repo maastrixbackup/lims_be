@@ -683,7 +683,7 @@ const GovtPlot = {
       type,
       r["mouza"] || null,
       r["tahasil"] || null,
-      r["thana no"] || null,
+      r["Thana no"] || r["thana no"] || r["Thana No"] || null,
       r["ri circle"] || null,
       r["khata no"] || null,
       r["kissam"] || null,
