@@ -1159,11 +1159,11 @@ const Plot = {
 
     // fetch project name
     const [projectRows] = await db.query(
-      "SELECT project_name FROM projects WHERE id = ?",
+      "SELECT client_code FROM projects WHERE id = ?",
       [project_id],
     );
 
-    const projectName = projectRows[0].project_name;
+    const clientCode = projectRows[0].client_code;
 
     const pad2 = (n) => String(n).padStart(2, "0");
     const toMysqlDate = (rawValue) => {
@@ -1261,6 +1261,27 @@ const Plot = {
       });
 
       plot = normalizedPlot;
+      const normalizeHeaderLoose = (value) =>
+        normalizeKey(value).replace(/[^a-z0-9]+/g, "");
+      const getCell = (...headers) => {
+        for (const header of headers) {
+          const value = plot[header];
+          if (value !== undefined && value !== null && value !== "") return value;
+        }
+
+        const rowEntries = Object.entries(plot).map(([k, v]) => [
+          normalizeHeaderLoose(k),
+          v,
+        ]);
+
+        for (const header of headers) {
+          const target = normalizeHeaderLoose(header);
+          const matched = rowEntries.find(([k, v]) => k === target && v !== undefined && v !== null && v !== "");
+          if (matched) return matched[1];
+        }
+
+        return null;
+      };
 
       const dateValue =
         normalizedPlot["Date of Award"] ??
@@ -1322,7 +1343,7 @@ const Plot = {
       const villageName = plot["Name of Village"] || plot["name of village"] || "NA";
 
       const khataNo = plot["Khata No."] || plot["Khata No"] || "NA";
-      const laCaseFileNo = `${projectName}/${villageName}/${khataNo}`;
+      const laCaseFileNo = `${clientCode}/${villageName}/${khataNo}`;
       //Return final row array
       return [
         project_id,
@@ -1336,12 +1357,13 @@ const Plot = {
         plot["LO2-Name of Present Tenant(s)"] || plot["Name of Tenant"] || null,
         plot["Present Address"] || null,
         plot["Displaced/Affected Person"] || null,
+        plot["District"] || plot["district"] || null,
         plot["Name of Village"] || plot["name of village"] || null,
         plot["Village Code"] || null,
         plot["Name of the Tahasil"] || plot["Tahasil/Thana"] || null,
         plot["Name of the R.I. Circle"] || null,
         plot["Tahasil/Thana"] || null,
-        plot["Thana No."] || plot["Thana no"] || null,
+        plot["Thana No."] || plot["Thana no"] || plot["Thana No"] || null,
         plot["Khata No."] || plot["Khata No"] || null,
         plot["Plot No."] || null,
         plot["Kissam of the Land"] || plot["Kissam"] || null,
@@ -1365,6 +1387,14 @@ const Plot = {
         plot["Total Value  (Land-22 + Tree-24 + House-26 + Structures-28)"] ||
         null,
         plot["Solatium @ of (100%)"] || null,
+        getCell(
+          "No. of days of Interest",
+          "No of days of Interest",
+          "No. of Days of Interest",
+          "No of Days of Interest",
+          "No. of days interest",
+          "No of days interest",
+        ),
         plot["12% additional compensation on market value of land area"] ||
         null,
         plot["Total Compensation Amount"] || null,
@@ -1426,12 +1456,12 @@ const Plot = {
     INSERT INTO plots (
       project_id, ses_survey_no, la_case_file_no, date_of_award, name_of_recorded_tenant,
       name_of_present_tenant, present_address, displaced_affected_project,
-      village_name, village_code, tahasil_name, ri_circle_name, thana_name, thana_no, khata_no, plot_no,
+      district, village_name, village_code, tahasil_name, ri_circle_name, thana_name, thana_no, khata_no, plot_no,
       kissam_of_land, land_category, lo13_remarks, land_area_total_acres,
       land_area_total_hectares, land_area_acquired_acres, land_area_acquired_hectares,
       market_value_per_acre, basic_land_value, land_value_with_mf, no_of_trees,
       total_value_of_trees, no_of_house, value_of_house, details_of_other_structures,
-      value_of_other_structures, total_value, solatium_100, additional_12_percent,
+      value_of_other_structures, total_value, solatium_100, no_days_interest, additional_12_percent,
       total_compensation, apportionment_amount, priority_urgency, land_use_plan,
       la21_remarks, bank_account_no, bank_name, branch_ifsc, aadhaar_no, pan_no,
       age, caste, marital_status, education, occupation, annual_income, skill_acquired,
@@ -1453,6 +1483,7 @@ const Plot = {
       name_of_present_tenant = VALUES(name_of_present_tenant),
       present_address = VALUES(present_address),
       displaced_affected_project = VALUES(displaced_affected_project),
+      district = VALUES(district),
       village_name = VALUES(village_name),
       village_code = VALUES(village_code),
       tahasil_name = VALUES(tahasil_name),
@@ -1479,6 +1510,7 @@ const Plot = {
       value_of_other_structures = VALUES(value_of_other_structures),
       total_value = VALUES(total_value),
       solatium_100 = VALUES(solatium_100),
+      no_days_interest = VALUES(no_days_interest),
       additional_12_percent = VALUES(additional_12_percent),
       total_compensation = VALUES(total_compensation),
       apportionment_amount = VALUES(apportionment_amount),
@@ -1611,29 +1643,46 @@ const Plot = {
   async findAllDocuments({ project_id, type }) {
     let sql = `
       SELECT
-        id,
-        project_id,
-        type,
-        original_filename,
-        filename,
-        created_at
-      FROM pvt_plot_documents
+        d.id,
+        d.project_id,
+        d.type,
+        d.original_filename,
+        d.filename,
+        d.created_at,
+        (
+          SELECT GROUP_CONCAT(DISTINCT p.district ORDER BY p.district SEPARATOR ', ')
+          FROM plots p
+          WHERE p.project_id = d.project_id
+            AND p.type = d.type
+            AND p.is_deleted = 0
+            AND p.district IS NOT NULL
+            AND TRIM(p.district) <> ''
+        ) AS district,
+        (
+          SELECT GROUP_CONCAT(DISTINCT CAST(p.no_days_interest AS CHAR) ORDER BY p.no_days_interest SEPARATOR ', ')
+          FROM plots p
+          WHERE p.project_id = d.project_id
+            AND p.type = d.type
+            AND p.is_deleted = 0
+            AND p.no_days_interest IS NOT NULL
+        ) AS no_days_interest
+      FROM pvt_plot_documents d
       WHERE 1 = 1
     `;
 
     const params = [];
 
     if (project_id) {
-      sql += ` AND project_id = ?`;
+      sql += ` AND d.project_id = ?`;
       params.push(project_id);
     }
 
     if (type) {
-      sql += ` AND type = ?`;
+      sql += ` AND d.type = ?`;
       params.push(type);
     }
 
-    sql += ` ORDER BY created_at DESC`;
+    sql += ` ORDER BY d.created_at DESC`;
 
     const [rows] = await db.query(sql, params);
     return rows;

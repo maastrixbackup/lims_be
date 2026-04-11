@@ -63,7 +63,28 @@ const ForestLand = {
     );
     return rows[0];
   },
+  async deleteDocumentByFilename(filename) {
+    await db.query(`DELETE FROM forest_land_document WHERE filename = ?`, [
+      filename,
+    ]);
+    return true;
+  },
 
+  async findDocumentByFilename(filename) {
+    const sql = `
+      SELECT
+        id,
+        filename,
+        original_filename,
+        file_path
+      FROM forest_land_document
+      WHERE filename = ?
+      LIMIT 1
+    `;
+
+    const [rows] = await db.query(sql, [filename]);
+    return rows[0] || null;
+  },
   async bulkInsertFromExcel(rows, project_master_id, schedule_type) {
     if (!rows || rows.length === 0) return 0;
 
