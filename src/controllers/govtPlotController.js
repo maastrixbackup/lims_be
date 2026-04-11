@@ -251,6 +251,7 @@ const addGovtPlot = async (req, res) => {
       {
         mouza: data.mouza,
         tahasil: data.tahasil,
+        "thana no": data.thana_no || null,
         "khata no": data.khata_no,
         "plot no": data.plot_no,
         "kissam of land": data.kissam || null,
