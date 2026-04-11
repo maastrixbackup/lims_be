@@ -1159,11 +1159,11 @@ const Plot = {
 
     // fetch project name
     const [projectRows] = await db.query(
-      "SELECT project_name FROM projects WHERE id = ?",
+      "SELECT client_code FROM projects WHERE id = ?",
       [project_id],
     );
 
-    const projectName = projectRows[0].project_name;
+    const clientCode = projectRows[0].client_code;
 
     const pad2 = (n) => String(n).padStart(2, "0");
     const toMysqlDate = (rawValue) => {
@@ -1343,7 +1343,7 @@ const Plot = {
       const villageName = plot["Name of Village"] || plot["name of village"] || "NA";
 
       const khataNo = plot["Khata No."] || plot["Khata No"] || "NA";
-      const laCaseFileNo = `${projectName}/${villageName}/${khataNo}`;
+      const laCaseFileNo = `${clientCode}/${villageName}/${khataNo}`;
       //Return final row array
       return [
         project_id,
@@ -1363,7 +1363,7 @@ const Plot = {
         plot["Name of the Tahasil"] || plot["Tahasil/Thana"] || null,
         plot["Name of the R.I. Circle"] || null,
         plot["Tahasil/Thana"] || null,
-        plot["Thana No."] || plot["Thana no"] || null,
+        plot["Thana No."] || plot["Thana no"] || plot["Thana No"] || null,
         plot["Khata No."] || plot["Khata No"] || null,
         plot["Plot No."] || null,
         plot["Kissam of the Land"] || plot["Kissam"] || null,

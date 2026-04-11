@@ -2,6 +2,7 @@ const ForestLand = require("../models/forestLandModel");
 const logAction = require("../utils/logger");
 const xlsx = require("xlsx");
 const fs = require("fs");
+const path = require("path");
 
 const normalizeDocumentList = (value) => {
   if (!value) return [];
@@ -393,6 +394,80 @@ const forestLandDocumentList = async (req, res) => {
     });
   }
 };
+
+const forestLandDocumentDelete = async (req, res) => {
+  const userId = req.user?.id || null;
+
+  try {
+    const { fileName } = req.params;
+
+    if (!fileName || fileName.includes("..")) {
+      return res.status(400).json({
+        success: false,
+        message: "Valid file name is required",
+      });
+    }
+
+    // ✅ allow only Excel files
+    // if (!/\.(xls|xlsx)$/i.test(fileName)) {
+    //   return res.status(400).json({
+    //     success: false,
+    //     message: "Invalid file format. Only Excel files can be deleted",
+    //   });
+    // }
+
+    const doc = await ForestLand.findDocumentByFilename(fileName);
+
+    if (!doc) {
+      return res.status(404).json({
+        success: false,
+        message: "Document record not found",
+      });
+    }
+
+    const filePath = path.join(process.cwd(), doc.file_path);
+
+    // delete file if exists
+    if (fs.existsSync(filePath)) {
+      fs.unlinkSync(filePath);
+    }
+
+    // delete DB record
+    await ForestLand.deleteDocumentByFilename(fileName);
+
+    await logAction(
+      userId,
+      "forest land excel delete",
+      "success",
+      "Forest land excel file deleted successfully",
+      { fileName },
+      null,
+    );
+
+    return res.status(200).json({
+      success: true,
+      message: "File deleted successfully",
+      deletedFile: fileName,
+    });
+  } catch (err) {
+    console.error("Forest Land Excel Delete Error:", err);
+
+    await logAction(
+      userId,
+      "forest land excel delete",
+      "failure",
+      "Failed to delete forest land Excel file",
+      null,
+      err.message,
+    );
+
+    return res.status(500).json({
+      success: false,
+      message: "Server error while deleting forest land Excel file",
+    });
+  }
+};
+
 
 const updateForestLand = async (req, res) => {
   const userId = req.user?.id || null;
@@ -2708,6 +2783,7 @@ module.exports = {
   updateForestLand,
   forestLandList,
   forestLandDocumentList,
+  forestLandDocumentDelete,
   deleteForestLand,
   forestLandAbstract,
   // addForestProject,
