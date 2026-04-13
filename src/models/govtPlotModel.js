@@ -577,8 +577,10 @@ const GovtPlot = {
     };
 
     const presentStatusMap = (val) => {
-      if (!val) return null;
+      if (val === null || val === undefined || val === "") return null;
+      if (typeof val === "number" && val >= 1 && val <= 4) return val;
       const v = String(val).trim().toLowerCase();
+      if (/^[1-4]$/.test(v)) return Number(v);
       if (v.includes("sub-collector")) return 1;
       if (v.includes("adm")) return 2;
       if (v.includes("demand")) return 3;
@@ -614,6 +616,26 @@ const GovtPlot = {
       ]);
     };
 
+    const getCodeValue = (row, code) => {
+      const target = normalizeCompareKey(code);
+      for (const key of Object.keys(row || {})) {
+        const normalized = normalizeCompareKey(key);
+        if (normalized === target || normalized.startsWith(`${target} `)) {
+          const value = row[key];
+          if (value !== undefined && value !== null && `${value}`.trim() !== "") {
+            return value;
+          }
+        }
+      }
+      return null;
+    };
+
+    const get = (row, code, ...fallbacks) => {
+      const byCode = getCodeValue(row, code);
+      if (byCode !== null) return byCode;
+      return getValueByNormalizedKey(row, fallbacks);
+    };
+
     // const getFullPartValue = (row) => {
     //   return getValueByNormalizedKey(row, [
     //     "Full/Part",
@@ -623,8 +645,8 @@ const GovtPlot = {
     // };
 
     const validRows = rows.filter((r) => {
-      const khata = r["khata no"];
-      const plot = r["plot no"];
+      const khata = get(r, "LD06", "khata no", "khata_no");
+      const plot = get(r, "LD09", "plot no", "plot_no");
       return (
         khata !== undefined &&
         khata !== null &&
@@ -636,104 +658,121 @@ const GovtPlot = {
     });
 
     if (!validRows.length) return 0;
-    const processedRows = validRows.map((r) => {
-      const totalAcres = parseFloat(r["total area (in acres)"]) || null;
+    const values = validRows.map((r) => {
+      const mouza = get(r, "LD02", "mouza", "village", "name of village");
+      const tahasil = get(r, "LD03", "tahasil");
+      const thanaNo = get(r, "LD04", "thana no", "thana_no", "thana no.");
+      const riCircle = get(r, "LD05", "ri circle", "ri");
+      const khataNo = get(r, "LD06", "khata no", "khata_no");
+      const kissam = get(r, "LD07", "kissam", "kissam of land");
+      const nameOfRor = get(r, "LD08", "name of ror", "name of khata");
+      const plotNo = get(r, "LD09", "plot no", "plot_no");
 
-      const totalHectares = parseFloat(r["total area (in hectares)"]) || null;
+      let totalAcres =
+        parseFloat(get(r, "LA01", "total area (in acres)", "total area (acre)")) ||
+        null;
+      let proposedAcres =
+        parseFloat(
+          get(r, "LA02", "proposed area (in acres)", "proposed area (acre)"),
+        ) || null;
+      let totalHectares =
+        parseFloat(get(r, "LA03", "total area (in hectares)")) || null;
+      let proposedHectares =
+        parseFloat(get(r, "LA04", "proposed area (in hectares)")) || null;
 
-      const proposedAcres = parseFloat(r["proposed area (in acres)"]) || null;
+      if (totalAcres && !totalHectares)
+        totalHectares = parseFloat((totalAcres / 2.47105).toFixed(4));
+      if (totalHectares && !totalAcres)
+        totalAcres = parseFloat((totalHectares * 2.47105).toFixed(4));
+      if (proposedAcres && !proposedHectares)
+        proposedHectares = parseFloat((proposedAcres / 2.47105).toFixed(4));
+      if (proposedHectares && !proposedAcres)
+        proposedAcres = parseFloat((proposedHectares * 2.47105).toFixed(4));
 
-      const proposedHectares =
-        parseFloat(r["proposed area (in hectares)"]) || null;
+      const leaseCaseNo = get(r, "CD01", "lease case no");
+      const presentStatus = presentStatusMap(get(r, "CD02", "present status"));
+      const uaToTahasildar = yesNoToBool(
+        get(r, "CD03", "ua /idco to tahasildar"),
+      );
+      const caseDetails = get(
+        r,
+        "CD04",
+        "case details/ deservation req.",
+        "case details/de-reservation req.",
+        "case details/ de-reservation req.",
+      );
+      const actionToBeTaken = get(r, "CD05", "action to be taken");
+      const riReport = enumStatus(get(r, "CD06", "ri report (1)", "ri report"));
+      const proclamation = yesNoToBool(get(r, "CD07", "proclamation"));
+      const objectionReceived = yesNoToBool(
+        get(r, "CD08", "objection received"),
+      );
+      const others = get(r, "CD09", "others");
+      const modificationRevision = yesNoToBool(
+        get(r, "CD10", "modification/revision"),
+      );
+      const miscDrCasePrep = yesNoToBool(
+        get(r, "CD11", "mising case prep./ dr case. prep."),
+      );
+      const miscDrCasePrepNumber = get(
+        r,
+        "CD12",
+        "mising case prep./ dr case. prep. number",
+        "Missing Case Prep./DR Case Number",
+      );
+      const reasonForMiscDrCase = get(
+        r,
+        "CD13",
+        "reason for misc/dr case",
+      );
 
-      // Conversion logic
-      let finalTotalAcres = totalAcres;
-      let finalTotalHectares = totalHectares;
-      let finalProposedAcres = proposedAcres;
-      let finalProposedHectares = proposedHectares;
+      const treeEnumeration = enumStatus(
+        get(r, "CR01", "tree enumeration"),
+      );
+      const orderSheetPrep = enumStatus(get(r, "CR02", "order sheet prep."));
+      const leaseToIdco = yesNoToBool(get(r, "CR03", "lease to idco"));
+      const leaseToUa = yesNoToBool(get(r, "CR04", "lease to ua"));
+      const remarks = get(r, "CR05", "remarks");
 
-      // Total area conversion
-      if (finalTotalAcres && !finalTotalHectares)
-        finalTotalHectares = parseFloat((finalTotalAcres / 2.47105).toFixed(4));
-
-      if (finalTotalHectares && !finalTotalAcres)
-        finalTotalAcres = parseFloat((finalTotalHectares * 2.47105).toFixed(4));
-
-      // Proposed area conversion
-      if (finalProposedAcres && !finalProposedHectares)
-        finalProposedHectares = parseFloat(
-          (finalProposedAcres / 2.47105).toFixed(4),
-        );
-
-      if (finalProposedHectares && !finalProposedAcres)
-        finalProposedAcres = parseFloat(
-          (finalProposedHectares * 2.47105).toFixed(4),
-        );
-
-      return {
-        ...r,
-        total_acres: finalTotalAcres,
-        total_hectares: finalTotalHectares,
-        proposed_acres: finalProposedAcres,
-        proposed_hectares: finalProposedHectares,
-      };
+      return [
+        project_id,
+        type,
+        mouza || null,
+        tahasil || null,
+        thanaNo || null,
+        riCircle || null,
+        khataNo || null,
+        kissam || null,
+        nameOfRor || null,
+        plotNo || null,
+        totalAcres || null,
+        proposedAcres || null,
+        totalHectares || null,
+        proposedHectares || null,
+        leaseCaseNo || null,
+        presentStatus,
+        uaToTahasildar,
+        caseDetails || null,
+        actionToBeTaken || null,
+        riReport || null,
+        null, // ri_report_attachment
+        proclamation,
+        objectionReceived,
+        others || null,
+        modificationRevision,
+        miscDrCasePrep,
+        miscDrCasePrepNumber || null,
+        reasonForMiscDrCase || null,
+        treeEnumeration || null,
+        null, // tree_enumeration_attachment
+        orderSheetPrep || null,
+        leaseToIdco,
+        null, // lease_to_idco_attachment
+        leaseToUa,
+        null, // lease_to_ua_attachment
+        remarks || null,
+      ];
     });
-    const values = processedRows.map((r) => [
-      project_id,
-      type,
-      r["mouza"] || null,
-      r["tahasil"] || null,
-      r["Thana no"] || r["thana no"] || r["Thana No"] || null,
-      r["ri circle"] || null,
-      r["khata no"] || null,
-      r["kissam"] || null,
-      r["name of ror"] || null,
-      r["plot no"] || null,
-
-      r.total_acres || null,
-      r.proposed_acres || null,
-      r.total_hectares || null,
-      r.proposed_hectares || null,
-      // r["total area (in acres)"] || null,
-      // r["proposed area (in acres)"] || null,
-      // r["total area (in hectares)"] || null,
-      // r["proposed area (in hectares)"] || null,
-
-      r["lease case no"] || null,
-      presentStatusMap(r["present status"]),
-
-      yesNoToBool(
-        getValueByNormalizedKey(r, ["ua /idco to tahasildar"]),
-      ),
-      getCaseDetailsValue(r),
-      r["action to be taken"] || null,
-
-      enumStatus(r["ri report (1)"]),
-      null, // ri_report_attachment
-
-      yesNoToBool(r["proclamation"]),
-      yesNoToBool(r["objection received"]),
-      r["others"] || null,
-      yesNoToBool(r["modification/revision"]),
-
-      yesNoToBool(r["mising case prep./ dr case. prep."]),
-      getMissingCaseNumber(r),
-      r["reason for misc/dr case"] || null,
-
-      enumStatus(r["tree enumeration"]),
-      null, // tree_enumeration_attachment
-
-      enumStatus(r["order sheet prep."]),
-
-      yesNoToBool(r["lease to idco"]),
-      null, // lease_to_idco_attachment
-
-      yesNoToBool(r["lease to ua"]),
-      null, // lease_to_ua_attachment
-
-      getValueByNormalizedKey(r, ["remarks"]) || null,
-      // getFullPartValue(r),
-    ]);
 
     await db.query(
       `
