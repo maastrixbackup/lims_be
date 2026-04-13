@@ -92,10 +92,17 @@ router.delete("/truncate-db", async (req, res) => {
     });
   } catch (error) {
     console.error(error);
-    res.status(500).json({
+     return res.status(500).json({
       success: false,
-      message: "Error truncating database",
+      message: err.sqlMessage || err.message,
+      sqlState: err.sqlState,
+      sqlCode: err.code,
     });
+  
+    // res.status(500).json({
+    //   success: false,
+    //   message: "Error truncating database",
+    // });
   }
 });
 
