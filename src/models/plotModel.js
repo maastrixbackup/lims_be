@@ -1246,6 +1246,13 @@ const Plot = {
           .trim()
           .toLowerCase();
 
+      const normalizeCode = (code) => {
+        const raw = code?.toString().replace(/\s+/g, "").toUpperCase();
+        if (!raw) return "";
+        const match = raw.match(/^([A-Z]+)0*([0-9]+)$/);
+        return match ? `${match[1]}${Number(match[2])}` : raw;
+      };
+
       const normalizedPlot = new Proxy(plot, {
         get(target, prop) {
           if (typeof prop !== "string") return target[prop];
@@ -1276,178 +1283,295 @@ const Plot = {
 
         for (const header of headers) {
           const target = normalizeHeaderLoose(header);
-          const matched = rowEntries.find(([k, v]) => k === target && v !== undefined && v !== null && v !== "");
+          const matched = rowEntries.find(
+            ([k, v]) => k === target && v !== undefined && v !== null && v !== "",
+          );
           if (matched) return matched[1];
         }
 
         return null;
       };
 
-      const dateValue =
-        normalizedPlot["Date of Award"] ??
-        normalizedPlot["date of award"] ??
-        normalizedPlot["Date of award"] ??
-        null;
-      const formattedDate = toMysqlDate(dateValue);
-      const formattedLandCaseDate = toMysqlDate(
-        normalizedPlot["Land Case - Date (Date)"] ??
-        normalizedPlot["land case - date (date)"] ??
-        null,
-      );
-      const formattedGrievanceDate = toMysqlDate(
-        normalizedPlot["Grievance  Date"] ??
-        normalizedPlot["Grievance Date"] ??
-        normalizedPlot["grievance date"] ??
-        null,
-      );
-      const formattedTribunalDepositDate = toMysqlDate(
-        normalizedPlot["Tribunal - Date of Deposit"] ??
-        normalizedPlot["tribunal - date of deposit"] ??
-        null,
-      );
+      const get = (code, ...fallbacks) => {
+        const direct = plot[code];
+        if (direct !== undefined && direct !== null && direct !== "") return direct;
 
-      //Land area conversion logic
-      let totalAcres = null;
-      let totalHectares = null;
-      let acquiredAcres = null;
-      let acquiredHectares = null;
+        const canonicalCode = normalizeCode(code);
+        if (canonicalCode && canonicalCode !== code) {
+          const canonical = plot[canonicalCode];
+          if (canonical !== undefined && canonical !== null && canonical !== "") {
+            return canonical;
+          }
+        }
 
-      if (
-        plot["LA1-Land Area (Total Area in Acres)"] ||
-        plot["LA2-Land Area (Total Area in Ha.)"]
-      ) {
-        totalAcres =
-          parseFloat(plot["LA1-Land Area (Total Area in Acres)"]) || null;
-        totalHectares =
-          parseFloat(plot["LA2-Land Area (Total Area in Ha.)"]) || null;
-        acquiredAcres =
-          parseFloat(plot["Land Area (Total Acquired Area in Acres)"]) || null;
-        acquiredHectares =
-          parseFloat(plot["Land Area (Total Acquired Area in Ha.)"]) || null;
-      } else if (plot["ROR Area In Ha."] || plot["Area occupied in Ha."]) {
-        totalHectares = parseFloat(plot["ROR Area In Ha."]) || null;
-        acquiredHectares = parseFloat(plot["Area occupied in Ha."]) || null;
-      }
+        return getCell(...fallbacks);
+      };
+
+      // LO - Land owner / tenant fields
+      const surveyNo = get("LO05", "SES Survey No.");
+      const recordedTenant = get(
+        "LO01",
+        "LO1-Name of Recorded Tenant (RT)",
+        "Name of Tenant",
+      );
+      const presentTenant = get(
+        "LO02",
+        "LO2-Name of Present Tenant(s)",
+        "Name of Tenant",
+      );
+      const address = get("LO03", "Present Address");
+      const displaced = get("LO04", "Displaced/Affected Person");
+      const awardDate = toMysqlDate(get("LO06", "Date of Award", "Date of award"));
+
+      // LD - Land detail fields
+      const district = get("LD01", "District", "district");
+      const villageName = get("LD02", "Name of Village", "name of village");
+      const tahasil = get("LD03", "Name of the Tahasil", "Tahasil/Thana");
+      const riCircle = get("LD04", "Name of the R.I. Circle");
+      const thanaNo = get("LD05", "Thana No.", "Thana no", "Thana No");
+      const khataNo = get("LD06", "Khata No.", "Khata No");
+      const plotNo = get("LD07", "Plot No.");
+      const kissam = get("LD08", "Kissam of the Land", "Kissam");
+      const landCategory = get("LD09", "LO12-Category of Land");
+      const ldRemarks = get("LD10", "LO13-Remarks");
+      const fullPart = get("LD11", "Full/Part", "Full Part");
+
+      // LA - Land acquisition fields
+      let totalAcres =
+        parseFloat(
+          get(
+            "LA01",
+            "LA1-Land Area (Total Area in Acres)",
+            "Land Area (Total Area in Acres)",
+          ),
+        ) || null;
+      let totalHectares =
+        parseFloat(
+          get(
+            "LA02",
+            "LA2-Land Area (Total Area in Ha.)",
+            "Land Area (Total Area in Ha.)",
+            "ROR Area In Ha.",
+          ),
+        ) || null;
+      let acquiredAcres =
+        parseFloat(
+          get(
+            "LA03",
+            "Land Area (Total Acquired Area in Acres)",
+            "Land Area (Acquired Area in Acres)",
+          ),
+        ) || null;
+      let acquiredHectares =
+        parseFloat(
+          get(
+            "LA04",
+            "Land Area (Total Acquired Area in Ha.)",
+            "Land Area (Acquired Area in Ha.)",
+            "Area occupied in Ha.",
+          ),
+        ) || null;
 
       if (totalAcres && !totalHectares)
         totalHectares = parseFloat((totalAcres / 2.47105).toFixed(4));
       if (totalHectares && !totalAcres)
         totalAcres = parseFloat((totalHectares * 2.47105).toFixed(4));
-
       if (acquiredAcres && !acquiredHectares)
         acquiredHectares = parseFloat((acquiredAcres / 2.47105).toFixed(4));
       if (acquiredHectares && !acquiredAcres)
         acquiredAcres = parseFloat((acquiredHectares * 2.47105).toFixed(4));
 
-      // const villageCode = plot["Village Code"] || plot["village code"] || "NA";
-      const villageName = plot["Name of Village"] || plot["name of village"] || "NA";
+      const benchMarkValue = get(
+        "LA05",
+        "Market Value fixed U/S.26 of RFCTLARR Act 2013 (Per Acre)",
+      );
+      const basicLandValue = get("LA06", "Basic Land value");
+      const landValueWithMF = get(
+        "LA07",
+        "Land value  with multiplication factor (Values from 1 to 2)",
+      );
+      const noOfTrees = get("LA08", "No. of Trees");
+      const totalTreeValue = get("LA09", "Total Value of Trees ");
+      const noOfHouse = get("LA10", "No. of House");
+      const houseValue = get("LA11", "Value of Structure (house)");
+      const otherStructureDetails = get("LA12", "Detail of Structures other than House");
+      const otherStructureValue = get("LA13", "Value of structures other than house");
+      const totalValue = get(
+        "LA14",
+        "Total Value  (Land-22 + Tree-24 + House-26 + Structures-28)",
+      );
+      const solatium = get("LA15", "Solatium @ of (100%)");
+      const noDaysInterest = get(
+        "LA16",
+        "No. of days of Interest",
+        "No of days of Interest",
+        "No. of Days of Interest",
+        "No of Days of Interest",
+        "No. of days interest",
+        "No of days interest",
+      );
+      const additional12 = get(
+        "LA17",
+        "12% additional compensation on market value of land area",
+      );
+      const totalCompensation = get("LA18", "Total Compensation Amount");
+      const apportionment = get(
+        "LA19",
+        "LA18-Apportionment Amount of the Award for the Individual Family Member",
+      );
+      const priority = get("LA20", "LA19-Priority/Urgency");
+      const landUsePlan = get("LA21", "LA20-Land Use Plan");
+      const laRemarks = get("LA22", "LA21-Remarks");
 
-      const khataNo = plot["Khata No."] || plot["Khata No"] || "NA";
-      const laCaseFileNo = `${clientCode}/${villageName}/${khataNo}`;
-      //Return final row array
+      // BK - Bank
+      const bankAccount = get("BK01", "BK01-Bank Account No.");
+      const bankName = get("BK02", "BK02-Name of the Bank");
+      const branchIFSC = get("BK03", "BK03-Name of the Branch with IFSC Code");
+
+      // PD - Personal details
+      const aadhaar = get("PD01", "PD01-Aadhaar No.");
+      const pan = get("PD02", "PAN No.");
+      const age = get("PD03", "Age");
+      const caste = get("PD04", "Caste");
+      const maritalStatus = get("PD05", "Marital Status");
+      const education = get("PD06", "Education");
+      const occupation = get("PD07", "Occupation");
+      const income = get("PD08", "Annual Income");
+      const skill = get("PD09", "PD09- Skill Acquired");
+      const affidavit = get("PD10", "PD10-Affidavit with subject details (if any)");
+
+      // FD - Family details
+      const majorMale = get("FD01", "FD01-No. of Family Members (Major Male)");
+      const majorFemale = get("FD02", "No. of Family Members (Major Female)");
+      const minorMale = get("FD03", "No. of Family Members (Minor Male)");
+      const minorFemale = get("FD04", "No. of Family Members (Minor Female)");
+      const majorTrans = get("FD05", "No. of Family Members (Major Transgender)");
+      const minorTrans = get("FD06", "No. of Family Members (Minor Transgender)");
+      const disability = get("FD07", "No. of Persons with Disability");
+      const orphan = get("FD08", "Family with Orphan Members (Y/N)");
+      const legalHeir = get("FD09", "FD09-Legal Heir Certificate No. (if any)");
+
+      // LG - Legal details
+      const landCaseNo = get("LG01", "LG01-Land Case - No. (Number)");
+      const landCaseDate = toMysqlDate(
+        get("LG02", "Land Case - Date (Date)", "land case - date (date)"),
+      );
+      const landCaseType = get("LG03", "Land Case Type");
+      const landCaseStatus = get("LG04", "Land case - Status");
+      const landCaseAction = get("LG05", "LG05-Land Case - Action");
+
+      // GR/TR/GV
+      const grievanceNo = get("GR01", "GR01-Grievance No. ");
+      const grievanceDate = toMysqlDate(
+        get("GR02", "Grievance  Date", "Grievance Date", "grievance date"),
+      );
+      const grievanceSubject = get("GR03", "Grievance - Subject Matter");
+      const grievanceStatus = get("GR04", "Grievance - Present Status");
+      const grievanceAction = get("GR05", "GR05-Grievance - Action taken");
+
+      const tribunal = get("TR01", "TR01-Tribunal (Y/N)");
+      const tribunalDate = toMysqlDate(
+        get("TR02", "Tribunal - Date of Deposit", "tribunal - date of deposit"),
+      );
+      const tribunalAmount = get("TR03", "TR03-Tribunal - Amount Deposited");
+
+      const premium = get("GV01", "GV01-Premium");
+      const groundRent = get("GV02", "GV02-Ground Rent");
+      const cess = get("GV03", "GV03-Cess");
+      const incidentalCharges = get("GV04", "GV04-Incidental Charges");
+      const total = get("GV05", "GV05-Total");
+      const abatement = get("GV06", "Abatement");
+
+      // LA00 is always auto-generated (not taken from Excel input)
+      const LA00 = `${clientCode}/${villageName || "NA"}/${khataNo || "NA"}`;
+      const laCaseFileNo = LA00;
+
       return [
         project_id,
-        plot["SES Survey No."] || null,
-        // plot["LA Case File No."] || null,
+        surveyNo || null,
         laCaseFileNo,
-        formattedDate || null,
-        plot["LO1-Name of Recorded Tenant (RT)"] ||
-        plot["Name of Tenant"] ||
-        null,
-        plot["LO2-Name of Present Tenant(s)"] || plot["Name of Tenant"] || null,
-        plot["Present Address"] || null,
-        plot["Displaced/Affected Person"] || null,
-        plot["District"] || plot["district"] || null,
-        plot["Name of Village"] || plot["name of village"] || null,
+        awardDate || null,
+        recordedTenant || null,
+        presentTenant || null,
+        address || null,
+        displaced || null,
+        district || null,
+        villageName || null,
         plot["Village Code"] || null,
-        plot["Name of the Tahasil"] || plot["Tahasil/Thana"] || null,
-        plot["Name of the R.I. Circle"] || null,
-        plot["Tahasil/Thana"] || null,
-        plot["Thana No."] || plot["Thana no"] || plot["Thana No"] || null,
-        plot["Khata No."] || plot["Khata No"] || null,
-        plot["Plot No."] || null,
-        plot["Kissam of the Land"] || plot["Kissam"] || null,
-        plot["LO12-Category of Land"] || null,
-        plot["LO13-Remarks"] || null,
+        tahasil || null,
+        riCircle || null,
+        tahasil || null,
+        thanaNo || null,
+        khataNo || null,
+        plotNo || null,
+        kissam || null,
+        landCategory || null,
+        ldRemarks || null,
         totalAcres || null,
         totalHectares || null,
         acquiredAcres || null,
         acquiredHectares || null,
-        plot["Market Value fixed U/S.26 of RFCTLARR Act 2013 (Per Acre)"] ||
-        null,
-        plot["Basic Land value"] || null,
-        plot["Land value  with multiplication factor (Values from 1 to 2)"] ||
-        null,
-        plot["No. of Trees"] || null,
-        plot["Total Value of Trees "] || null,
-        plot["No. of House"] || null,
-        plot["Value of Structure (house)"] || null,
-        plot["Detail of Structures other than House"] || null,
-        plot["Value of structures other than house"] || null,
-        plot["Total Value  (Land-22 + Tree-24 + House-26 + Structures-28)"] ||
-        null,
-        plot["Solatium @ of (100%)"] || null,
-        getCell(
-          "No. of days of Interest",
-          "No of days of Interest",
-          "No. of Days of Interest",
-          "No of Days of Interest",
-          "No. of days interest",
-          "No of days interest",
-        ),
-        plot["12% additional compensation on market value of land area"] ||
-        null,
-        plot["Total Compensation Amount"] || null,
-        plot[
-        "LA18-Apportionment Amount of the Award for the Individual Family Member"
-        ] || null,
-        plot["LA19-Priority/Urgency"] || null,
-        plot["LA20-Land Use Plan"] || null,
-        plot["LA21-Remarks"] || null,
-        plot["BK01-Bank Account No."] || null,
-        plot["BK02-Name of the Bank"] || null,
-        plot["BK03-Name of the Branch with IFSC Code"] || null,
-        plot["PD01-Aadhaar No."] || null,
-        plot["PAN No."] || null,
-        plot["Age"] || null,
-        plot["Caste"] || null,
-        plot["Marital Status"] || null,
-        plot["Education"] || null,
-        plot["Occupation"] || null,
-        plot["Annual Income"] || null,
-        plot["PD09- Skill Acquired"] || null,
-        plot["PD10-Affidavit with subject details (if any)"] || null,
-        plot["FD01-No. of Family Members (Major Male)"] || null,
-        plot["No. of Family Members (Major Female)"] || null,
-        plot["No. of Family Members (Minor Male)"] || null,
-        plot["No. of Family Members (Minor Female)"] || null,
-        plot["No. of Family Members (Major Transgender)"] || null,
-        plot["No. of Family Members (Minor Transgender)"] || null,
-        plot["No. of Persons with Disability"] || null,
-        plot["Family with Orphan Members (Y/N)"] || null,
-        plot["FD09-Legal Heir Certificate No. (if any)"] || null,
-        plot["LG01-Land Case - No. (Number)"] || null,
-        formattedLandCaseDate || null,
-        plot["Land Case Type"] || null,
-        plot["Land case - Status"] || null,
-        plot["LG05-Land Case - Action"] || null,
-
-        plot["GR01-Grievance No. "] || null,
-        formattedGrievanceDate || null,
-        plot["Grievance - Subject Matter"] || null,
-        plot["Grievance - Present Status"] || null,
-        plot["GR05-Grievance - Action taken"] || null,
-        plot["TR01-Tribunal (Y/N)"] || null,
-        formattedTribunalDepositDate || null,
-        plot["TR03-Tribunal - Amount Deposited"] || null,
-        plot["GV01-Premium"] || null,
-        plot["GV02-Ground Rent"] || null,
-        plot["GV03-Cess"] || null,
-        plot["GV04-Incidental Charges"] || null,
-        plot["GV05-Total"] || null,
-        plot["Abatement"] || null,
+        benchMarkValue || null,
+        basicLandValue || null,
+        landValueWithMF || null,
+        noOfTrees || null,
+        totalTreeValue || null,
+        noOfHouse || null,
+        houseValue || null,
+        otherStructureDetails || null,
+        otherStructureValue || null,
+        totalValue || null,
+        solatium || null,
+        noDaysInterest || null,
+        additional12 || null,
+        totalCompensation || null,
+        apportionment || null,
+        priority || null,
+        landUsePlan || null,
+        laRemarks || null,
+        bankAccount || null,
+        bankName || null,
+        branchIFSC || null,
+        aadhaar || null,
+        pan || null,
+        age || null,
+        caste || null,
+        maritalStatus || null,
+        education || null,
+        occupation || null,
+        income || null,
+        skill || null,
+        affidavit || null,
+        majorMale || null,
+        majorFemale || null,
+        minorMale || null,
+        minorFemale || null,
+        majorTrans || null,
+        minorTrans || null,
+        disability || null,
+        orphan || null,
+        legalHeir || null,
+        landCaseNo || null,
+        landCaseDate || null,
+        landCaseType || null,
+        landCaseStatus || null,
+        landCaseAction || null,
+        grievanceNo || null,
+        grievanceDate || null,
+        grievanceSubject || null,
+        grievanceStatus || null,
+        grievanceAction || null,
+        tribunal || null,
+        tribunalDate || null,
+        tribunalAmount || null,
+        premium || null,
+        groundRent || null,
+        cess || null,
+        incidentalCharges || null,
+        total || null,
+        abatement || null,
         type,
-        plot["Full/Part"] || plot["Full Part"] || null,
+        fullPart || null,
       ];
     });
 
