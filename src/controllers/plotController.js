@@ -158,11 +158,11 @@ const uploadPlots = async (req, res) => {
     //   });
     // }
 
-    const insertedVillages = await Village.insertVillagesFromExcel(
-      data,
-      project_id,
-      type,
-    );
+    // const insertedVillages = await Village.insertVillagesFromExcel(
+    //   data,
+    //   project_id,
+    //   type,
+    // );
 
     const insertedPlots = await Plot.bulkInsert(data, project_id, type);
 
