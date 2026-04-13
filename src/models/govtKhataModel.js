@@ -3,6 +3,8 @@ const db = require("../config/db");
 const getCaseDetailsValue = (row) => {
   if (!row) return null;
   return (
+    row["CD04"] ||
+    row["cd04"] ||
     row["case details/ deservation req."] ||
     row["case details"] ||
     row["case details/de-reservation req."] ||
@@ -16,6 +18,41 @@ const getCaseDetailsValue = (row) => {
 const GovtKhata = {
   async upsertFromExcel(rows, villageMap, project_id, type) {
     const khataMap = new Map();
+    const normalizeCompareKey = (key) =>
+      key
+        ?.toString()
+        .replace(/\r?\n/g, " ")
+        .replace(/\s+/g, " ")
+        .trim()
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, " ")
+        .trim();
+
+    const getValue = (row, code, ...fallbacks) => {
+      const codeKey = normalizeCompareKey(code);
+      for (const key of Object.keys(row || {})) {
+        const normalized = normalizeCompareKey(key);
+        if (normalized === codeKey || normalized.startsWith(`${codeKey} `)) {
+          const value = row[key];
+          if (value !== undefined && value !== null && `${value}`.trim() !== "") {
+            return value;
+          }
+        }
+      }
+
+      for (const fb of fallbacks) {
+        const fbKey = normalizeCompareKey(fb);
+        for (const key of Object.keys(row || {})) {
+          if (normalizeCompareKey(key) === fbKey) {
+            const value = row[key];
+            if (value !== undefined && value !== null && `${value}`.trim() !== "") {
+              return value;
+            }
+          }
+        }
+      }
+      return null;
+    };
 
     // const yesNoToBool = (val) => {
     //   if (!val) return 0;
@@ -41,29 +78,28 @@ const GovtKhata = {
     };
 
     rows.forEach((r) => {
-      if (!r["khata no"] || !r["mouza"]) return;
+      const khataRaw = getValue(r, "LD06", "khata no", "khata_no");
+      const mouzaRaw = getValue(r, "LD02", "mouza", "village", "name of village");
+      const tahasilRaw = getValue(r, "LD03", "tahasil");
+      if (!khataRaw || !mouzaRaw) return;
 
-      const khataNo = String(r["khata no"]).trim();
+      const khataNo = String(khataRaw).trim();
       if (!khataNo) return;
 
-      const tahasil = String(r["tahasil"] || "").trim();
+      const tahasil = String(tahasilRaw || "").trim();
       if (!tahasil) return;
 
-      const villageKey = `${String(r["mouza"]).trim()}_${tahasil}`;
+      const villageKey = `${String(mouzaRaw).trim()}_${tahasil}`;
       const villageId = villageMap[villageKey];
       if (!villageId) return;
 
       const key = `${villageId}_${khataNo}`;
       const existing = khataMap.get(key);
       const rowNameOfRor =
-        r["name of ror"] ||
-        r["name_of_ror"] ||
-        r["name of khata"] ||
+        getValue(r, "LD08", "name of ror", "name_of_ror", "name of khata") ||
         null;
       const rowLandCategory =
-        r["land category"] ||
-        r["land_category"] ||
-        r["kissam"] ||
+        getValue(r, "LD07", "land category", "land_category", "kissam") ||
         null;
 
       khataMap.set(key, {
@@ -71,10 +107,10 @@ const GovtKhata = {
         type,
         khata_no: khataNo,
         village_id: villageId,
-        kissam: r["kissam"] || null,
-        plot_no: r["plot no"] || null,
-        lease_case_no: r["lease case no"] || null,
-        present_status: presentStatusMap(r["present status"]),
+        kissam: getValue(r, "LD07", "kissam") || null,
+        plot_no: getValue(r, "LD09", "plot no", "plot_no") || null,
+        lease_case_no: getValue(r, "CD01", "lease case no") || null,
+        present_status: presentStatusMap(getValue(r, "CD02", "present status")),
         case_details: getCaseDetailsValue(r),
         name_of_ror: rowNameOfRor || existing?.name_of_ror || null,
         land_category: rowLandCategory || existing?.land_category || null,

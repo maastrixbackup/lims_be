@@ -4,15 +4,47 @@ const govtVillage = {
   async upsertFromExcel(rows, project_id, type) {
     const normalizeText = (value) =>
       value === undefined || value === null ? "" : String(value).trim();
+    const normalizeCompareKey = (key) =>
+      key
+        ?.toString()
+        .replace(/\r?\n/g, " ")
+        .replace(/\s+/g, " ")
+        .trim()
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, " ")
+        .trim();
+
+    const getValue = (row, code, ...fallbacks) => {
+      const codeKey = normalizeCompareKey(code);
+      for (const key of Object.keys(row || {})) {
+        const normalized = normalizeCompareKey(key);
+        if (normalized === codeKey || normalized.startsWith(`${codeKey} `)) {
+          const value = row[key];
+          if (normalizeText(value)) return value;
+        }
+      }
+      for (const fb of fallbacks) {
+        const fbKey = normalizeCompareKey(fb);
+        for (const key of Object.keys(row || {})) {
+          if (normalizeCompareKey(key) === fbKey) {
+            const value = row[key];
+            if (normalizeText(value)) return value;
+          }
+        }
+      }
+      return null;
+    };
 
     const getThanaNo = (row) => {
-      const thana =
-        row["thana no"] ??
-        row["thana_no"] ??
-        row["Thana No"] ??
-        row["Thana no."] ??
-        row["Thana No."] ??
-        null;
+      const thana = getValue(
+        row,
+        "LD04",
+        "thana no",
+        "thana_no",
+        "Thana No",
+        "Thana no.",
+        "Thana No.",
+      );
 
       const normalized = normalizeText(thana);
       return normalized || null;
@@ -21,10 +53,11 @@ const govtVillage = {
     const villageMap = new Map();
 
     rows.forEach((r) => {
-      if (!r["mouza"]) return;
+      const mouzaRaw = getValue(r, "LD02", "mouza", "village", "name of village");
+      if (!mouzaRaw) return;
 
-      const mouza = normalizeText(r["mouza"]);
-      const tahasil = normalizeText(r["tahasil"]);
+      const mouza = normalizeText(mouzaRaw);
+      const tahasil = normalizeText(getValue(r, "LD03", "tahasil"));
       const thana_no = getThanaNo(r);
 
       if (!mouza || !tahasil) return;
