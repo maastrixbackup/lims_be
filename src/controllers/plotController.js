@@ -103,10 +103,28 @@ const uploadPlots = async (req, res) => {
     // Read Excel file
 
     const workbook = xlsx.readFile(req.file.path);
-    const sheetName = workbook.SheetNames[0];
-    const data = xlsx.utils.sheet_to_json(workbook.Sheets[sheetName], {
-      defval: null,
-    });
+
+    if (!workbook.SheetNames.length) {
+      fs.unlinkSync(req.file.path);
+      return res.status(400).json({
+        success: false,
+        message: "Invalid Excel format. No sheet found inside file.",
+      });
+    }
+
+    if (workbook.SheetNames.length > 2) {
+      fs.unlinkSync(req.file.path);
+      return res.status(400).json({
+        success: false,
+        message: "Invalid Excel format. Maximum 2 sheets are allowed inside file.",
+      });
+    }
+
+    const data = workbook.SheetNames.flatMap((sheetName) =>
+      xlsx.utils.sheet_to_json(workbook.Sheets[sheetName], {
+        defval: null,
+      }),
+    );
 
     if (!data.length) {
       fs.unlinkSync(req.file.path);
