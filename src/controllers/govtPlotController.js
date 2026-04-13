@@ -10,6 +10,103 @@ const logAction = require("../utils/logger");
 // const Khata = require("../models/khataModel");
 const ExcelJS = require("exceljs");
 
+const normalizeHeaderKey = (key) =>
+  key?.toString().replace(/\r?\n/g, " ").replace(/\s+/g, " ").trim().toLowerCase();
+
+const toTrimmedString = (value) =>
+  value === null || value === undefined ? "" : value.toString().trim();
+
+const normalizeHeaderCode = (value) => {
+  const raw = toTrimmedString(value).replace(/\s+/g, "");
+  if (!raw) return "";
+  const match = raw.match(/^([A-Za-z]+)([0-9]+)$/);
+  if (!match) return raw;
+  return `${match[1].toUpperCase()}${match[2]}`;
+};
+
+const isLikelyHeaderCode = (value) =>
+  /^[A-Za-z]{2,}[0-9]{2}$/.test(normalizeHeaderCode(value));
+
+const buildGovtExcelRowsWithFlexibleHeaders = (sheet) => {
+  const rows = xlsx.utils.sheet_to_json(sheet, {
+    header: 1,
+    defval: null,
+    raw: true,
+  });
+
+  if (!rows || rows.length === 0) return [];
+
+  const row1 = rows[0] || [];
+  const row2 = rows[1] || [];
+  const codeCellCount = row1.filter((cell) => isLikelyHeaderCode(cell)).length;
+  const row2TextCount = row2.filter(
+    (cell) => !!toTrimmedString(cell) && !isLikelyHeaderCode(cell),
+  ).length;
+  const hasTwoHeaderRows = codeCellCount >= 3 && row2TextCount >= 3;
+
+  if (!hasTwoHeaderRows) {
+    const singleHeaderRows = xlsx.utils.sheet_to_json(sheet, {
+      defval: null,
+      raw: true,
+    });
+
+    return singleHeaderRows.map((row) => {
+      const normalizedRow = {};
+      for (const key in row) {
+        normalizedRow[key] = row[key];
+        normalizedRow[normalizeHeaderKey(key)] = row[key];
+      }
+      return normalizedRow;
+    });
+  }
+
+  const maxCols = Math.max(row1.length, row2.length);
+  const aliasesByColumn = [];
+
+  for (let i = 0; i < maxCols; i += 1) {
+    const code = normalizeHeaderCode(row1[i]);
+    const title = toTrimmedString(row2[i]).replace(/\r?\n/g, " ");
+    const aliases = new Set();
+
+    if (title) aliases.add(title);
+    if (code) aliases.add(code);
+    if (code && title) aliases.add(`${code}-${title}`);
+
+    aliasesByColumn.push([...aliases]);
+  }
+
+  const parsedRows = [];
+  for (const row of rows.slice(2)) {
+    const obj = {};
+    let hasValue = false;
+
+    for (let i = 0; i < aliasesByColumn.length; i += 1) {
+      const value = row?.[i] ?? null;
+      if (toTrimmedString(value) !== "") hasValue = true;
+
+      for (const alias of aliasesByColumn[i]) {
+        obj[alias] = value;
+        obj[normalizeHeaderKey(alias)] = value;
+      }
+    }
+
+    if (hasValue) parsedRows.push(obj);
+  }
+
+  return parsedRows;
+};
+
+const hasAnyValueByHeader = (row, headers) => {
+  if (!row) return false;
+  for (const header of headers) {
+    const value = row[header] ?? row[normalizeHeaderKey(header)];
+    if (value !== undefined && value !== null && `${value}`.trim() !== "") {
+      return true;
+    }
+  }
+  return false;
+};
+
 // const uploadGovtPlot = async (req, res) => {
 //   try {
 //     const { project_id, type } = req.body;
@@ -81,46 +178,51 @@ const uploadGovtPlot = async (req, res) => {
     }
 
     const workbook = xlsx.readFile(req.file.path);
-    const sheetName = workbook.SheetNames[0];
-
-    if (workbook.SheetNames.length !== 1) {
+    if (!workbook.SheetNames.length) {
       fs.unlinkSync(req.file.path);
       return res.status(400).json({
         success: false,
-        message: "Invalid Excel format. Only ONE sheet is allowed inside file.",
+        message: "Invalid Excel format. No sheet found inside file.",
       });
     }
 
-    const rawRows = xlsx.utils.sheet_to_json(workbook.Sheets[sheetName], {
-      defval: null,
-    });
-
-    const normalizeKey = (key) =>
-      key?.replace(/\r?\n/g, " ").replace(/\s+/g, " ").trim().toLowerCase();
-
-    // normalize headers
-    const rows = rawRows.map((r) => {
-      const obj = {};
-      for (const k in r) {
-        obj[normalizeKey(k)] = r[k];
-      }
-      return obj;
-    });
-
-    const REQUIRED_HEADERS = ["mouza", "tahasil", "khata no", "plot no"];
-    const excelHeaders = Object.keys(rows[0]);
-
-    const missingHeaders = REQUIRED_HEADERS.filter(
-      (h) => !excelHeaders.includes(h),
-    );
-
-    if (missingHeaders.length) {
+    if (workbook.SheetNames.length > 2) {
       fs.unlinkSync(req.file.path);
       return res.status(400).json({
         success: false,
-        message: `Invalid Excel format. Missing columns: ${missingHeaders.join(
-          ", ",
-        )}`,
+        message: "Invalid Excel format. Maximum 2 sheets are allowed inside file.",
+      });
+    }
+
+    const rows = workbook.SheetNames.flatMap((sheetName) =>
+      buildGovtExcelRowsWithFlexibleHeaders(workbook.Sheets[sheetName]),
+    );
+
+    if (!rows.length) {
+      fs.unlinkSync(req.file.path);
+      return res.status(400).json({
+        success: false,
+        message: "Excel file is empty",
+      });
+    }
+
+    const requiredGroups = [
+      ["LD02", "mouza", "village", "name of village"],
+      ["LD03", "tahasil"],
+      ["LD06", "khata no", "khata_no"],
+      ["LD09", "plot no", "plot_no"],
+    ];
+    const missingGroups = requiredGroups.filter(
+      (group) => !rows.some((row) => hasAnyValueByHeader(row, group)),
+    );
+
+    if (missingGroups.length) {
+      fs.unlinkSync(req.file.path);
+      return res.status(400).json({
+        success: false,
+        message: `Invalid Excel format. Missing required columns for: ${missingGroups
+          .map((g) => g[0])
+          .join(", ")}`,
       });
     }
     // console.log("Header name", rows);
