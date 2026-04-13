@@ -42,7 +42,7 @@ router.get("/plotDocumentDownload/:filename", downloadPlotDocument);
 router.post(
   "/landCostPaymentUpload",
   uploadLandCostPayment.single("payment_proof"),
-  landCostPaymentUpload
+  landCostPaymentUpload,
 );
 router.put("/updatePlotPayment/:id", updatePlotPayment);
 
@@ -78,6 +78,11 @@ router.delete("/truncate-db", async (req, res) => {
     await db.query("TRUNCATE TABLE projects");
     await db.query("TRUNCATE TABLE pvt_plot_documents");
     await db.query("TRUNCATE TABLE villages");
+    await db.query("TRUNCATE TABLE forest_category_master");
+    await db.query("TRUNCATE TABLE forest_stage_0");
+    await db.query("TRUNCATE TABLE forest_stage_1");
+    await db.query("TRUNCATE TABLE forest_stage_2");
+    await db.query("TRUNCATE TABLE forest_post_clearance");
 
     await db.query("SET FOREIGN_KEY_CHECKS = 1");
 

@@ -286,22 +286,33 @@ const Village = {
     let insertedCount = 0;
 
     for (const row of data) {
-      const villageNameRaw = getCellValue(row, ["Name of Village", "name of village"]);
+      const villageNameRaw = getCellValue(row, [
+        "LD02",
+        "Name of Village",
+        "name of village",
+      ]);
       const villageName = villageNameRaw ? villageNameRaw.toString().trim() : null;
-      const tahasilRaw = getCellValue(row, ["Name of the Tahasil", "Tahasil/Thana"]);
+      const tahasilRaw = getCellValue(row, [
+        "LD03",
+        "Name of the Tahasil",
+        "Tahasil/Thana",
+      ]);
       const tahasil = tahasilRaw ? tahasilRaw.toString().trim() : null;
-      const thanaNoRaw = getCellValue(row, ["Thana No.", "Thana no"]);
+      const thanaNoRaw = getCellValue(row, ["LD05", "Thana No.", "Thana no"]);
       const thanaNo =
         thanaNoRaw !== undefined && thanaNoRaw !== null
           ? thanaNoRaw.toString().trim()
           : null;
-      const presentAddress = getCellValue(row, ["Present Address"]) || null;
+      const presentAddress =
+        getCellValue(row, ["LO03", "Present Address"]) || null;
 
       // if (!villageName || !tahasil) continue;
       if (!villageName) continue;
 
       let district =
-        getCellValue(row, ["District", "district"])?.toString().trim() || null;
+        getCellValue(row, ["LD01", "District", "district"])
+          ?.toString()
+          .trim() || null;
 
       if (!district && presentAddress) {
         const distMatch = presentAddress.match(/Dist[-: ]+([A-Za-z\s]+)/i);
