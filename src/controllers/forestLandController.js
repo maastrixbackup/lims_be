@@ -233,15 +233,14 @@ const uploadForestLandSchedule = async (req, res) => {
     const parsedRows = rawRows
       .map((row) => {
         const totalAreaHa = toNumberOrNull(
-          get(row, "LA03", "FA01", "NFA02", "CAA01", "total area (ha)", "total area ha"),
+          get(row, "FA01", "NFA02", "CAA01", "total area (ha)", "total area ha"),
         );
         const totalAreaAcre = toNumberOrNull(
-          get(row, "LA01", "total area (in acres)", "total area (acre)"),
+          get(row, "total area (in acres)", "total area (acre)"),
         );
         const proposedAreaHa = toNumberOrNull(
           get(
             row,
-            "LA04",
             "FA02",
             "NFA03",
             "proposed/ acquired area ha",
@@ -254,12 +253,11 @@ const uploadForestLandSchedule = async (req, res) => {
         );
 
         return {
-          district: get(row, "LD01", "FD01", "NFD01", "CAD01", "district"),
-          ri_circle: get(row, "LD05", "FD02", "NFD02", "CAD02", "ri circle", "ri_circle"),
-          tahasil: get(row, "LD03", "NFD03", "CAD03", "tahasil", "tehasil"),
+          district: get(row, "FD01", "NFD01", "CAD01", "district"),
+          ri_circle: get(row,  "FD02", "NFD02", "CAD02", "ri circle", "ri_circle"),
+          tahasil: get(row, "NFD03", "CAD03", "tahasil", "tehasil"),
           village: get(
             row,
-            "LD02",
             "FD05",
             "NFD04",
             "CAD04",
@@ -272,7 +270,6 @@ const uploadForestLandSchedule = async (req, res) => {
           forest_range: get(row, "FD04", "forest range", "forest_range"),
           khata_no: get(
             row,
-            "LD06",
             "FD06",
             "NFD05",
             "CAD05",
@@ -282,7 +279,6 @@ const uploadForestLandSchedule = async (req, res) => {
           ),
           plot_no: get(
             row,
-            "LD09",
             "FD07",
             "NFD06",
             "CAD06",
@@ -290,7 +286,7 @@ const uploadForestLandSchedule = async (req, res) => {
             "plot_no",
             "plot no.",
           ),
-          kisam: get(row, "LD07", "FD08", "NFD07", "CAD07", "kisam", "kissam"),
+          kisam: get(row, "FD08", "NFD07", "CAD07", "kisam", "kissam"),
           forest_category_id: get(
             row,
             "FD09",
@@ -318,7 +314,7 @@ const uploadForestLandSchedule = async (req, res) => {
           ),
           ca_area_ha: toNumberOrNull(get(row, "CA02", "ca area (ha)", "ca_area_ha")),
           patch_name: get(row, "CA03", "patch name", "patch_name"),
-          remarks: get(row, "FA03", "NFA03", "CA05", "remarks", "remark"),
+          remarks: get(row, "FA03", "NFA04", "CA05", "remarks", "remark"),
         };
       })
       .map((row) => ({
