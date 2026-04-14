@@ -424,7 +424,7 @@ const stageZeroStorage = multer.diskStorage({
   },
   filename: (req, file, cb) => {
     const name =
-      Date.now() + "_" + file.originalname.replace(/\s+/g, "_");
+     file.originalname.replace(/\s+/g, "_");
     cb(null, name);
   },
 });
@@ -440,7 +440,7 @@ const stage1Storage = multer.diskStorage({
   },
   filename: (req, file, cb) => {
     const originalname = file.originalname.replace(/\s+/g, "_");
-    cb(null, Date.now() + "_" + originalname);
+    cb(null, originalname);
   },
 });
 
@@ -471,9 +471,7 @@ const stage2Storage = multer.diskStorage({
   },
   filename: (req, file, cb) => {
     const cleanName = file.originalname.replace(/\s+/g, "_");
-    const unique =
-      Date.now() + "_" + Math.round(Math.random() * 1e9);
-    cb(null, unique + "_" + cleanName);
+    cb(null, cleanName);
   },
 });
 
@@ -504,9 +502,7 @@ const storage = multer.diskStorage({
   },
   filename: (req, file, cb) => {
     const clean = file.originalname.replace(/\s+/g, "_");
-    const unique =
-      Date.now() + "_" + Math.round(Math.random() * 1e9);
-    cb(null, unique + "_" + clean);
+    cb(null, clean);
   },
 });
 
