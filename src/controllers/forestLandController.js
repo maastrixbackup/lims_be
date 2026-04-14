@@ -38,6 +38,91 @@ const buildDocumentValue = (files, field, existingValue = null) => {
   return merged.length ? JSON.stringify(merged) : null;
 };
 
+const normalizeHeaderKey = (key) =>
+  key?.toString().replace(/\r?\n/g, " ").replace(/\s+/g, " ").trim().toLowerCase();
+
+const toTrimmedString = (value) =>
+  value === null || value === undefined ? "" : value.toString().trim();
+
+const normalizeHeaderCode = (value) => {
+  const raw = toTrimmedString(value).replace(/\s+/g, "");
+  if (!raw) return "";
+  const match = raw.match(/^([A-Za-z]+)([0-9]+)$/);
+  if (!match) return raw;
+  return `${match[1].toUpperCase()}${match[2]}`;
+};
+
+const isLikelyHeaderCode = (value) =>
+  /^[A-Za-z]{2,}[0-9]{2}$/.test(normalizeHeaderCode(value));
+
+const buildForestExcelRowsWithFlexibleHeaders = (sheet) => {
+  const rows = xlsx.utils.sheet_to_json(sheet, {
+    header: 1,
+    defval: null,
+    raw: true,
+  });
+
+  if (!rows || rows.length === 0) return [];
+
+  const row1 = rows[0] || [];
+  const row2 = rows[1] || [];
+  const codeCellCount = row1.filter((cell) => isLikelyHeaderCode(cell)).length;
+  const row2TextCount = row2.filter(
+    (cell) => !!toTrimmedString(cell) && !isLikelyHeaderCode(cell),
+  ).length;
+  const hasTwoHeaderRows = codeCellCount >= 3 && row2TextCount >= 3;
+
+  if (!hasTwoHeaderRows) {
+    const singleHeaderRows = xlsx.utils.sheet_to_json(sheet, {
+      defval: null,
+      raw: true,
+    });
+
+    return singleHeaderRows.map((row) => {
+      const normalizedRow = {};
+      for (const key in row) {
+        normalizedRow[key] = row[key];
+        normalizedRow[normalizeHeaderKey(key)] = row[key];
+      }
+      return normalizedRow;
+    });
+  }
+
+  const maxCols = Math.max(row1.length, row2.length);
+  const aliasesByColumn = [];
+
+  for (let i = 0; i < maxCols; i += 1) {
+    const code = normalizeHeaderCode(row1[i]);
+    const title = toTrimmedString(row2[i]).replace(/\r?\n/g, " ");
+    const aliases = new Set();
+
+    if (title) aliases.add(title);
+    if (code) aliases.add(code);
+    if (code && title) aliases.add(`${code}-${title}`);
+    aliasesByColumn.push([...aliases]);
+  }
+
+  const parsedRows = [];
+  for (const row of rows.slice(2)) {
+    const obj = {};
+    let hasValue = false;
+
+    for (let i = 0; i < aliasesByColumn.length; i += 1) {
+      const value = row?.[i] ?? null;
+      if (toTrimmedString(value) !== "") hasValue = true;
+
+      for (const alias of aliasesByColumn[i]) {
+        obj[alias] = value;
+        obj[normalizeHeaderKey(alias)] = value;
+      }
+    }
+
+    if (hasValue) parsedRows.push(obj);
+  }
+
+  return parsedRows;
+};
+
 // validation helpers
 // const validateForestArea = (d) =>
 //   d.forest_category_id && d.forest_division && d.forest_range;
@@ -91,9 +176,7 @@ const uploadForestLandSchedule = async (req, res) => {
     }
 
     const rawRows = workbook.SheetNames.flatMap((sheetName) =>
-      xlsx.utils.sheet_to_json(workbook.Sheets[sheetName], {
-        defval: null,
-      }),
+      buildForestExcelRowsWithFlexibleHeaders(workbook.Sheets[sheetName]),
     );
 
     if (!rawRows.length) {
@@ -104,79 +187,155 @@ const uploadForestLandSchedule = async (req, res) => {
       });
     }
 
-    const normalizeKey = (key) =>
-      key
-        ?.toString()
-        .replace(/\r?\n/g, " ")
-        .replace(/[^a-zA-Z0-9\s]+/g, " ")
-        .replace(/\s+/g, " ")
-        .trim()
-        .toLowerCase();
-
-    const normalizeValue = (value) =>
-      typeof value === "string" ? value.trim() : value;
+    const normalizeCompareKey = (key) =>
+      normalizeHeaderKey(key)?.replace(/[^a-z0-9]+/g, " ").trim();
 
     const toNumberOrNull = (value) => {
       if (value === null || value === undefined || value === "") return null;
-      const num = Number(value);
+      const num = Number(String(value).replace(/,/g, "").trim());
       return Number.isFinite(num) ? num : null;
     };
 
-    const normalizedRows = rawRows.map((row) => {
-      const obj = {};
-      for (const key in row) obj[normalizeKey(key)] = normalizeValue(row[key]);
-      return obj;
-    });
-
-    const pick = (row, aliases) => {
-      for (const alias of aliases) {
-        const normalizedAlias = normalizeKey(alias);
-        if (normalizedAlias in row) return row[normalizedAlias];
+    const getValueByNormalizedKey = (row, possibleKeys) => {
+      if (!row) return null;
+      const normalizedKeys = possibleKeys.map((k) => normalizeCompareKey(k));
+      for (const key of Object.keys(row)) {
+        if (normalizedKeys.includes(normalizeCompareKey(key))) {
+          const value = row[key];
+          if (value !== undefined && value !== null && `${value}`.trim() !== "") {
+            return value;
+          }
+        }
       }
       return null;
     };
 
-    const parsedRows = normalizedRows
-      .map((row) => ({
-        district: pick(row, ["district"]),
-        ri_circle: pick(row, ["ri circle", "ri_circle"]),
-        tahasil: pick(row, ["tahasil", "tehasil"]),
-        village: pick(row, ["village", "mouza", "mauza"]),
-        forest_division: pick(row, ["forest division", "forest_division"]),
-        forest_range: pick(row, ["forest range", "forest_range"]),
-        khata_no: pick(row, ["khata no", "khata_no", "khata no."]),
-        plot_no: pick(row, ["plot no", "plot_no", "plot no."]),
-        kisam: pick(row, ["kisam", "kissam"]),
-        forest_category_id: pick(row, [
-          "forest category id",
-          "forest_category_id",
-          "forest category",
-          "forest_category",
-        ]),
-        ownership: pick(row, ["ownership"]),
-        fra_allotted: pick(row, ["fra allotted", "fra_allotted", "Land Allotted Through FRA"]),
-        total_area_ha: toNumberOrNull(
-          pick(row, ["total area (ha)", "total_area_ha", "total area", "TOTAL AREA HA"]),
-        ),
-        proposed_acquired_area_ha: toNumberOrNull(
-          pick(row, [
-            "PROPOSED/ ACQUIRED AREA HA",
+    const getCodeValue = (row, code) => {
+      const target = normalizeCompareKey(code);
+      for (const key of Object.keys(row || {})) {
+        const normalized = normalizeCompareKey(key);
+        if (normalized === target || normalized.startsWith(`${target} `)) {
+          const value = row[key];
+          if (value !== undefined && value !== null && `${value}`.trim() !== "") {
+            return value;
+          }
+        }
+      }
+      return null;
+    };
+
+    const get = (row, code, ...fallbacks) => {
+      const byCode = getCodeValue(row, code);
+      if (byCode !== null) return byCode;
+      return getValueByNormalizedKey(row, fallbacks);
+    };
+
+    const parsedRows = rawRows
+      .map((row) => {
+        const totalAreaHa = toNumberOrNull(
+          get(row, "LA03", "FA01", "NFA02", "CAA01", "total area (ha)", "total area ha"),
+        );
+        const totalAreaAcre = toNumberOrNull(
+          get(row, "LA01", "total area (in acres)", "total area (acre)"),
+        );
+        const proposedAreaHa = toNumberOrNull(
+          get(
+            row,
+            "LA04",
+            "FA02",
+            "NFA03",
+            "proposed/ acquired area ha",
             "proposed_acquired_area_ha",
             "proposed area (ha)",
-          ]),
-        ),
-        digital_area_ha: toNumberOrNull(
-          pick(row, ["digital area (ha)", "digital_area_ha", "digital area ha"]),
-        ),
-        ca_area_ha: toNumberOrNull(pick(row, ["ca area (ha)", "ca_area_ha"])),
-        patch_name: pick(row, ["patch name", "patch_name"]),
-        remarks: pick(row, ["remarks", "remark"]),
+          ),
+        );
+        const proposedAreaAcre = toNumberOrNull(
+          get(row, "LA02", "proposed area (in acres)", "proposed area (acre)"),
+        );
+
+        return {
+          district: get(row, "LD01", "FD01", "NFD01", "CAD01", "district"),
+          ri_circle: get(row, "LD05", "FD02", "NFD02", "CAD02", "ri circle", "ri_circle"),
+          tahasil: get(row, "LD03", "NFD03", "CAD03", "tahasil", "tehasil"),
+          village: get(
+            row,
+            "LD02",
+            "FD05",
+            "NFD04",
+            "CAD04",
+            "village",
+            "mouza",
+            "mauza",
+            "name of village",
+          ),
+          forest_division: get(row, "FD03", "CA04", "forest division", "forest_division"),
+          forest_range: get(row, "FD04", "forest range", "forest_range"),
+          khata_no: get(
+            row,
+            "LD06",
+            "FD06",
+            "NFD05",
+            "CAD05",
+            "khata no",
+            "khata_no",
+            "khata no.",
+          ),
+          plot_no: get(
+            row,
+            "LD09",
+            "FD07",
+            "NFD06",
+            "CAD06",
+            "plot no",
+            "plot_no",
+            "plot no.",
+          ),
+          kisam: get(row, "LD07", "FD08", "NFD07", "CAD07", "kisam", "kissam"),
+          forest_category_id: get(
+            row,
+            "FD09",
+            "forest category id",
+            "forest_category_id",
+            "forest category",
+            "forest_category",
+          ),
+          ownership: get(row, "NFO01", "CAO01", "ownership"),
+          fra_allotted: get(row, "NFA01", "fra allotted", "fra_allotted", "land allotted through fra"),
+          total_area_ha:
+            totalAreaHa !== null
+              ? totalAreaHa
+              : totalAreaAcre !== null
+                ? parseFloat((totalAreaAcre / 2.47105).toFixed(4))
+                : null,
+          proposed_acquired_area_ha:
+            proposedAreaHa !== null
+              ? proposedAreaHa
+              : proposedAreaAcre !== null
+                ? parseFloat((proposedAreaAcre / 2.47105).toFixed(4))
+                : null,
+          digital_area_ha: toNumberOrNull(
+            get(row, "digital area (ha)", "digital_area_ha", "digital area ha"),
+          ),
+          ca_area_ha: toNumberOrNull(get(row, "CA02", "ca area (ha)", "ca_area_ha")),
+          patch_name: get(row, "CA03", "patch name", "patch_name"),
+          remarks: get(row, "FA03", "NFA03", "CA05", "remarks", "remark"),
+        };
+      })
+      .map((row) => ({
+        ...row,
+        district: typeof row.district === "string" ? row.district.trim() : row.district,
+        ri_circle: typeof row.ri_circle === "string" ? row.ri_circle.trim() : row.ri_circle,
+        tahasil: typeof row.tahasil === "string" ? row.tahasil.trim() : row.tahasil,
+        village: typeof row.village === "string" ? row.village.trim() : row.village,
+        khata_no: typeof row.khata_no === "string" ? row.khata_no.trim() : row.khata_no,
+        plot_no: typeof row.plot_no === "string" ? row.plot_no.trim() : row.plot_no,
       }))
       .filter((row) =>
         Object.values(row).some(
           (value) => value !== null && value !== undefined && value !== "",
         ),
-      );
+      )
+      .filter((row) => row.khata_no || row.plot_no || row.village);
 
     if (!parsedRows.length) {
       cleanupUploadedFile();
