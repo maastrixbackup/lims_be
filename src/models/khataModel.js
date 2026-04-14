@@ -911,6 +911,7 @@ const Khata = {
     JOIN villages v
       ON v.village_name = pl.village_name
       AND v.project_id = pl.project_id
+      AND v.type = pl.type
     JOIN projects p ON p.id = pl.project_id
     WHERE pl.project_id = ?
       AND pl.type = ?
@@ -1185,6 +1186,7 @@ const Khata = {
     JOIN villages v
       ON v.village_name = pl.village_name
     AND v.project_id = pl.project_id
+    AND v.type = pl.type
     JOIN projects p
       ON p.id = pl.project_id
     WHERE pl.project_id = ?
