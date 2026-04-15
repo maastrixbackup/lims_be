@@ -90,9 +90,9 @@ router.delete("/truncate-db", async (req, res) => {
       success: true,
       message: "Database truncated successfully",
     });
-  } catch (error) {
-    console.error(error);
-     return res.status(500).json({
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({
       success: false,
       message: err.sqlMessage || err.message,
       sqlState: err.sqlState,

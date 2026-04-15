@@ -1571,6 +1571,7 @@ const Plot = {
         total || null,
         abatement || null,
         type,
+        0,
         fullPart || null,
       ];
     });
@@ -1595,7 +1596,7 @@ const Plot = {
       land_case_no, land_case_date, land_case_type, land_case_status, land_case_action,grievance_no,
       grievance_date, grievance_subject, grievance_status, grievance_action, tribunal,
       tribunal_deposit_date, tribunal_amount, premium, ground_rent, cess,
-      incidental_charges, total, abatement, type, full_part
+	      incidental_charges, total, abatement, type, is_deleted, full_part
     )
     VALUES ?
     ON DUPLICATE KEY UPDATE
@@ -1683,8 +1684,9 @@ const Plot = {
       incidental_charges = VALUES(incidental_charges),
       total = VALUES(total),
       abatement = VALUES(abatement),
-      type = VALUES(type),
-      full_part = VALUES(full_part),
+	      type = VALUES(type),
+	      is_deleted = VALUES(is_deleted),
+	      full_part = VALUES(full_part),
       updated_at = CURRENT_TIMESTAMP
     `,
       [values],
@@ -1708,7 +1710,7 @@ const Plot = {
     SELECT p.*, pr.project_name
     FROM plots p
     LEFT JOIN projects pr ON p.project_id = pr.id
-    WHERE p.is_deleted = 0
+    WHERE COALESCE(p.is_deleted, 0) = 0
     AND p.project_id = ?
   `;
 
@@ -1869,7 +1871,7 @@ const Plot = {
     // );
     let query = `SELECT COUNT(*) AS total
                FROM plots
-               WHERE is_deleted = 0
+               WHERE COALESCE(is_deleted, 0) = 0
                AND project_id = ?`;
 
     const params = [project_id];
