@@ -27,6 +27,13 @@ const GovtKhata = {
         .toLowerCase()
         .replace(/[^a-z0-9]+/g, " ")
         .trim();
+    const isHeaderLikeValue = (value, ...expectedLabels) => {
+      const normalizedValue = normalizeCompareKey(value);
+      if (!normalizedValue) return false;
+      return expectedLabels.some(
+        (label) => normalizedValue === normalizeCompareKey(label),
+      );
+    };
 
     const getValue = (row, code, ...fallbacks) => {
       const codeKey = normalizeCompareKey(code);
@@ -69,11 +76,16 @@ const GovtKhata = {
 
     const presentStatusMap = (val) => {
       if (!val) return null;
-      const v = String(val).trim().toLowerCase();
-      if (v.includes("sub-collector")) return 1;
-      if (v.includes("adm")) return 2;
-      if (v.includes("demand")) return 3;
-      if (v.includes("sanction")) return 4;
+      if (typeof val === "number" && val >= 1 && val <= 4) return val;
+
+      const rawValue = String(val).trim().toLowerCase();
+      if (/^[1-4]$/.test(rawValue)) return Number(rawValue);
+      const normalizedValue = rawValue.replace(/[^a-z0-9]+/g, " ").trim();
+
+      if (normalizedValue.includes("sub collector")) return 1;
+      if (normalizedValue.includes("adm")) return 2;
+      if (normalizedValue.includes("demand")) return 3;
+      if (normalizedValue.includes("sanction")) return 4;
       return null;
     };
 
@@ -88,6 +100,13 @@ const GovtKhata = {
 
       const tahasil = String(tahasilRaw || "").trim();
       if (!tahasil) return;
+      if (
+        isHeaderLikeValue(khataNo, "khata no", "khata_no") ||
+        isHeaderLikeValue(String(mouzaRaw).trim(), "mouza", "village", "name of village") ||
+        isHeaderLikeValue(tahasil, "tahasil")
+      ) {
+        return;
+      }
 
       const villageKey = `${String(mouzaRaw).trim()}_${tahasil}`;
       const villageId = villageMap[villageKey];
