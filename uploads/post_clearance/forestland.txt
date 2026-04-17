@@ -38,78 +38,6 @@ const buildDocumentValue = (files, field, existingValue = null) => {
   return merged.length ? JSON.stringify(merged) : null;
 };
 
-const resolveStageDocumentValue = (req, files, field, existingValue = null) => {
-  let retainedDocs = normalizeDocumentList(existingValue);
-  const incomingExisting = req.body?.[`${field}_existing`];
-
-  if (incomingExisting !== undefined) {
-    try {
-      const parsed = JSON.parse(incomingExisting);
-      retainedDocs = Array.isArray(parsed) ? parsed.filter(Boolean) : [];
-    } catch (e) {
-      retainedDocs = normalizeDocumentList(incomingExisting);
-    }
-  }
-
-  return buildDocumentValue(files, field, retainedDocs);
-};
-
-const normalizeHeaderKey = (key) =>
-  key?.toString().replace(/\r?\n/g, " ").replace(/\s+/g, " ").trim().toLowerCase();
-
-const toTrimmedString = (value) =>
-  value === null || value === undefined ? "" : value.toString().trim();
-
-const normalizeDateInput = (value) => {
-  if (value === null || value === undefined || value === "") return null;
-  if (value instanceof Date && !Number.isNaN(value.getTime())) {
-    return value.toISOString().slice(0, 10);
-  }
-
-  const trimmed = String(value).trim();
-  if (!trimmed) return null;
-
-  const isoDateMatch = trimmed.match(/^(\d{4}-\d{2}-\d{2})/);
-  if (isoDateMatch) return isoDateMatch[1];
-
-  const parsed = new Date(trimmed);
-  if (!Number.isNaN(parsed.getTime())) {
-    return parsed.toISOString().slice(0, 10);
-  }
-
-  return trimmed;
-};
-
-const normalizeHeaderCode = (value) => {
-  const raw = toTrimmedString(value).replace(/\s+/g, "");
-  if (!raw) return "";
-  const match = raw.match(/^([A-Za-z]+)([0-9]+)$/);
-  if (!match) return raw;
-  return `${match[1].toUpperCase()}${match[2]}`;
-};
-
-const isLikelyHeaderCode = (value) =>
-  /^[A-Za-z]{2,}[0-9]{2}$/.test(normalizeHeaderCode(value));
-
-const buildForestExcelRowsWithFlexibleHeaders = (sheet) => {
-  const singleHeaderRows = xlsx.utils.sheet_to_json(sheet, {
-    defval: null,
-    raw: true,
-  });
-
-  if (!singleHeaderRows || singleHeaderRows.length === 0) return [];
-
-  return singleHeaderRows.map((row) => {
-    const normalizedRow = {};
-    for (const key in row) {
-      const normalizedKey = normalizeHeaderKey(key);
-      normalizedRow[key] = row[key];
-      normalizedRow[normalizedKey] = row[key];
-    }
-    return normalizedRow;
-  });
-};
-
 // validation helpers
 // const validateForestArea = (d) =>
 //   d.forest_category_id && d.forest_division && d.forest_range;
@@ -163,7 +91,9 @@ const uploadForestLandSchedule = async (req, res) => {
     }
 
     const rawRows = workbook.SheetNames.flatMap((sheetName) =>
-      buildForestExcelRowsWithFlexibleHeaders(workbook.Sheets[sheetName]),
+      xlsx.utils.sheet_to_json(workbook.Sheets[sheetName], {
+        defval: null,
+      }),
     );
 
     if (!rawRows.length) {
@@ -174,186 +104,82 @@ const uploadForestLandSchedule = async (req, res) => {
       });
     }
 
-    const normalizeCompareKey = (key) =>
-      normalizeHeaderKey(key)?.replace(/[^a-z0-9]+/g, " ").trim();
-    const isHeaderLikeValue = (value, ...expectedLabels) => {
-      const normalizedValue = normalizeCompareKey(value);
-      if (!normalizedValue) return false;
-      return expectedLabels.some(
-        (label) => normalizedValue === normalizeCompareKey(label),
-      );
-    };
+    const normalizeKey = (key) =>
+      key
+        ?.toString()
+        .replace(/\r?\n/g, " ")
+        .replace(/[^a-zA-Z0-9\s]+/g, " ")
+        .replace(/\s+/g, " ")
+        .trim()
+        .toLowerCase();
+
+    const normalizeValue = (value) =>
+      typeof value === "string" ? value.trim() : value;
 
     const toNumberOrNull = (value) => {
       if (value === null || value === undefined || value === "") return null;
-      const num = Number(String(value).replace(/,/g, "").trim());
+      const num = Number(value);
       return Number.isFinite(num) ? num : null;
     };
 
-    const getValueByNormalizedKey = (row, possibleKeys) => {
-      if (!row) return null;
-      const normalizedKeys = possibleKeys.map((k) => normalizeCompareKey(k));
-      for (const key of Object.keys(row)) {
-        if (normalizedKeys.includes(normalizeCompareKey(key))) {
-          const value = row[key];
-          if (value !== undefined && value !== null && `${value}`.trim() !== "") {
-            return value;
-          }
-        }
+    const normalizedRows = rawRows.map((row) => {
+      const obj = {};
+      for (const key in row) obj[normalizeKey(key)] = normalizeValue(row[key]);
+      return obj;
+    });
+
+    const pick = (row, aliases) => {
+      for (const alias of aliases) {
+        const normalizedAlias = normalizeKey(alias);
+        if (normalizedAlias in row) return row[normalizedAlias];
       }
       return null;
     };
 
-    const getCodeValue = (row, code) => {
-      const target = normalizeCompareKey(code);
-      for (const key of Object.keys(row || {})) {
-        const normalized = normalizeCompareKey(key);
-        if (normalized === target || normalized.startsWith(`${target} `)) {
-          const value = row[key];
-          if (value !== undefined && value !== null && `${value}`.trim() !== "") {
-            return value;
-          }
-        }
-      }
-      return null;
-    };
-
-    const get = (row, code, ...fallbacks) => {
-      const byCode = getCodeValue(row, code);
-      if (byCode !== null) return byCode;
-      return getValueByNormalizedKey(row, fallbacks);
-    };
-
-    const parsedRows = rawRows
-      .map((row) => {
-        const totalAreaHa = toNumberOrNull(
-          get(row, "FA01", "NFA02", "CAA01", "total area (ha)", "total area ha"),
-        );
-        const totalAreaAcre = toNumberOrNull(
-          get(row, "total area (in acres)", "total area (acre)"),
-        );
-        const proposedAreaHa = toNumberOrNull(
-          get(
-            row,
+    const parsedRows = normalizedRows
+      .map((row) => ({
+        district: pick(row, ["FD01","NFD01","CAD01","district"]),
+        ri_circle: pick(row, ["FD02","NFD02","CAD02","ri circle", "ri_circle"]),
+        tahasil: pick(row, ["NFD03","CAD03", "tahasil", "tehasil"]),
+        village: pick(row, ["FD05", "NFD04","CAD04", "village", "mouza", "mauza"]),
+        forest_division: pick(row, ["FD03","CA04","forest division", "forest_division"]),
+        forest_range: pick(row, ["FD04", "forest range", "forest_range"]),
+        khata_no: pick(row, ["FD06","NFD05","CAD05","khata no", "khata_no", "khata no."]),
+        plot_no: pick(row, ["FD07","NFD06","CAD06","plot no", "plot_no", "plot no."]),
+        kisam: pick(row, ["FD08","NFD07","CAD07","kisam", "kissam"]),
+        forest_category_id: pick(row, [
+          "FD09",
+          "forest category id",
+          "forest_category_id",
+          "forest category",
+          "forest_category",
+        ]),
+        ownership: pick(row, ["NFO01","CAO01","ownership"]),
+        fra_allotted: pick(row, ["NFA01","fra allotted", "fra_allotted", "Land Allotted Through FRA"]),
+        total_area_ha: toNumberOrNull(
+          pick(row, ["FA01","NFA02","CAA01","total area (ha)", "total_area_ha", "total area", "TOTAL AREA HA"]),
+        ),
+        proposed_acquired_area_ha: toNumberOrNull(
+          pick(row, [
             "FA02",
             "NFA03",
-            "proposed/ acquired area ha",
+            "PROPOSED/ ACQUIRED AREA HA",
             "proposed_acquired_area_ha",
             "proposed area (ha)",
-          ),
-        );
-        const proposedAreaAcre = toNumberOrNull(
-          get(row, "LA02", "proposed area (in acres)", "proposed area (acre)"),
-        );
-
-        return {
-          district: get(row, "FD01", "NFD01", "CAD01", "district"),
-          ri_circle: get(row,  "FD02", "NFD02", "CAD02", "ri circle", "ri_circle"),
-          tahasil: get(row, "NFD03", "CAD03", "tahasil", "tehasil"),
-          village: get(
-            row,
-            "FD05",
-            "NFD04",
-            "CAD04",
-            "village",
-            "mouza",
-            "mauza",
-            "name of village",
-          ),
-          forest_division: get(row, "FD03", "CA04", "forest division", "forest_division"),
-          forest_range: get(row, "FD04", "forest range", "forest_range"),
-          khata_no: get(
-            row,
-            "FD06",
-            "NFD05",
-            "CAD05",
-            "khata no",
-            "khata_no",
-            "khata no.",
-          ),
-          plot_no: get(
-            row,
-            "FD07",
-            "NFD06",
-            "CAD06",
-            "plot no",
-            "plot_no",
-            "plot no.",
-          ),
-          kisam: get(row, "FD08", "NFD07", "CAD07", "kisam", "kissam"),
-          forest_category_id: get(
-            row,
-            "FD09",
-            "forest category id",
-            "forest_category_id",
-            "forest category",
-            "forest_category",
-          ),
-          ownership: get(row, "NFO01", "CAO01", "ownership"),
-          fra_allotted: get(row, "NFA01", "fra allotted", "fra_allotted", "land allotted through fra"),
-          total_area_ha:
-            totalAreaHa !== null
-              ? totalAreaHa
-              : totalAreaAcre !== null
-                ? parseFloat((totalAreaAcre / 2.47105).toFixed(4))
-                : null,
-          proposed_acquired_area_ha:
-            proposedAreaHa !== null
-              ? proposedAreaHa
-              : proposedAreaAcre !== null
-                ? parseFloat((proposedAreaAcre / 2.47105).toFixed(4))
-                : null,
-          digital_area_ha: toNumberOrNull(
-            get(row, "digital area (ha)", "digital_area_ha", "digital area ha"),
-          ),
-          ca_area_ha: toNumberOrNull(get(row, "CA02", "ca area (ha)", "ca_area_ha")),
-          patch_name: get(row, "CA03", "patch name", "patch_name"),
-          remarks: get(row, "FA03", "NFA04", "CA05", "remarks", "remark"),
-        };
-      })
-      .map((row) => ({
-        ...row,
-        district: typeof row.district === "string" ? row.district.trim() : row.district,
-        ri_circle: typeof row.ri_circle === "string" ? row.ri_circle.trim() : row.ri_circle,
-        tahasil: typeof row.tahasil === "string" ? row.tahasil.trim() : row.tahasil,
-        village: typeof row.village === "string" ? row.village.trim() : row.village,
-        khata_no: typeof row.khata_no === "string" ? row.khata_no.trim() : row.khata_no,
-        plot_no: typeof row.plot_no === "string" ? row.plot_no.trim() : row.plot_no,
+          ]),
+        ),
+        digital_area_ha: toNumberOrNull(
+          pick(row, ["digital area (ha)", "digital_area_ha", "digital area ha"]),
+        ),
+        ca_area_ha: toNumberOrNull(pick(row, ["CA02","ca area (ha)", "ca_area_ha"])),
+        patch_name: pick(row, ["CA03","patch name", "patch_name"]),
+        remarks: pick(row, ["FA03", "NFA03", "CA05", "remarks", "remark"]),
       }))
       .filter((row) =>
         Object.values(row).some(
           (value) => value !== null && value !== undefined && value !== "",
         ),
-      )
-      .filter(
-        (row) =>
-          !isHeaderLikeValue(row.district, "district") &&
-          !isHeaderLikeValue(row.ri_circle, "ri circle", "ri_circle") &&
-          !isHeaderLikeValue(row.tahasil, "tahasil", "tehasil") &&
-          !isHeaderLikeValue(row.village, "village", "mouza", "mauza", "name of village") &&
-          !isHeaderLikeValue(row.forest_division, "forest division", "forest_division") &&
-          !isHeaderLikeValue(row.forest_range, "forest range", "forest_range") &&
-          !isHeaderLikeValue(row.khata_no, "khata no", "khata_no", "khata no.") &&
-          !isHeaderLikeValue(row.plot_no, "plot no", "plot_no", "plot no.") &&
-          !isHeaderLikeValue(row.kisam, "kisam", "kissam") &&
-          !isHeaderLikeValue(
-            row.forest_category_id,
-            "forest category id",
-            "forest_category_id",
-            "forest category",
-            "forest_category",
-          ) &&
-          !isHeaderLikeValue(row.ownership, "ownership") &&
-          !isHeaderLikeValue(
-            row.fra_allotted,
-            "fra allotted",
-            "fra_allotted",
-            "land allotted through fra",
-          ) &&
-          !isHeaderLikeValue(row.patch_name, "patch name", "patch_name") &&
-          !isHeaderLikeValue(row.remarks, "remarks", "remark"),
-      )
-      .filter((row) => row.khata_no || row.plot_no || row.village);
+      );
 
     if (!parsedRows.length) {
       cleanupUploadedFile();
@@ -1701,7 +1527,7 @@ const addStage0 = async (req, res) => {
       proposal_document: buildDocumentValue(files, "proposal_document"),
 
       parivesh_proposal_no: body.parivesh_proposal_no || null,
-      submission_date: normalizeDateInput(body.submission_date),
+      submission_date: body.submission_date || null,
 
       stage_0_status: stageStatus,
     };
@@ -2159,19 +1985,8 @@ const updateStage0 = async (req, res) => {
 
     const stageStatus = proposalSubmitted === 1 ? "Ready" : "Ongoing";
 
-   const resolveFile = (field, existingValue) => {
-  let existingDocs = normalizeDocumentList(existingValue);
-
-  const incomingExisting = req.body[`${field}_existing`];
-
-  if (incomingExisting) {
-    try {
-      existingDocs = JSON.parse(incomingExisting);
-    } catch {}
-  }
-
-  return buildDocumentValue(files, field, existingDocs);
-};
+    const resolveFile = (field, existingValue) =>
+      buildDocumentValue(files, field, existingValue);
 
     const requireFile = (condition, fileValue, message) => {
       if (condition && !hasAnyDocuments(fileValue)) {
@@ -2319,7 +2134,7 @@ const updateStage0 = async (req, res) => {
           : existingData.parivesh_proposal_no,
       submission_date:
         body.submission_date !== undefined
-          ? normalizeDateInput(body.submission_date)
+          ? body.submission_date
           : existingData.submission_date,
       stage_0_status: stageStatus,
     };
@@ -2378,7 +2193,7 @@ const updateStage1 = async (req, res) => {
     const stage1Status = stage1Accepted === 1 ? "Completed" : "Pending";
 
     const resolveFile = (field, existingValue) =>
-      resolveStageDocumentValue(req, files, field, existingValue);
+      buildDocumentValue(files, field, existingValue);
 
     const requireFile = (condition, fileValue, message) => {
       if (condition && !hasAnyDocuments(fileValue)) {
@@ -2542,7 +2357,7 @@ const updateStage2 = async (req, res) => {
     const eligiblePostClearance = stage2Status === "Granted" ? 1 : 0;
 
     const resolveFile = (field, existingValue) =>
-      resolveStageDocumentValue(req, files, field, existingValue);
+      buildDocumentValue(files, field, existingValue);
 
     const requireFile = (condition, fileValue, message) => {
       if (condition && !hasAnyDocuments(fileValue)) {
@@ -2614,7 +2429,7 @@ const updateStage2 = async (req, res) => {
       stage2_approval_document: stage2ApprovalDocument,
       stage2_approval_date:
         body.stage2_approval_date !== undefined
-          ? normalizeDateInput(body.stage2_approval_date)
+          ? body.stage2_approval_date
           : existingData.stage2_approval_date,
       approved_forest_area_ha:
         body.approved_forest_area_ha !== undefined
@@ -2691,7 +2506,7 @@ const updatePostClearance = async (req, res) => {
         : Number(existingData.periodic_compliance_submitted || 0);
 
     const resolveFile = (field, existingValue) =>
-      resolveStageDocumentValue(req, files, field, existingValue);
+      buildDocumentValue(files, field, existingValue);
 
     const requireFile = (condition, fileValue, message) => {
       if (condition && !hasAnyDocuments(fileValue)) {

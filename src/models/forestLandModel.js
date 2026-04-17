@@ -85,105 +85,148 @@ const ForestLand = {
     const [rows] = await db.query(sql, [filename]);
     return rows[0] || null;
   },
-  async bulkInsertFromExcel(rows, project_master_id, schedule_type) {
-    if (!rows || rows.length === 0) return 0;
+async bulkInsertFromExcel(
+  rows,
+  project_master_id,
+  schedule_type,
+) {
+  if (!rows || rows.length === 0) return 0;
 
-    const sql = `
-      INSERT INTO forest_land_schedule
-      (
-        project_master_id,
-        schedule_type,
-        district,
-        ri_circle,
-        tahasil,
-        village,
-        forest_division,
-        forest_range,
-        khata_no,
-        plot_no,
-        kisam,
-        forest_category_id,
-        ownership,
-        fra_allotted,
-        total_area_ha,
-        proposed_acquired_area_ha,
-        digital_area_ha,
-        ca_area_ha,
-        patch_name,
-        remarks
-      )
-      VALUES ?
-    `;
-
-    const values = rows.map((data) => [
+  const sql = `
+    INSERT INTO forest_land_schedule
+    (
       project_master_id,
       schedule_type,
-      emptyToNull(data.district),
-      emptyToNull(data.ri_circle),
-      emptyToNull(data.tahasil),
-      emptyToNull(data.village),
-      emptyToNull(data.forest_division),
-      emptyToNull(data.forest_range),
-      emptyToNull(data.khata_no),
-      emptyToNull(data.plot_no),
-      emptyToNull(data.kisam),
-      emptyToNull(data.forest_category_id),
-      emptyToNull(data.ownership),
-      emptyToNull(data.fra_allotted),
-      emptyToNull(data.total_area_ha),
-      emptyToNull(data.proposed_acquired_area_ha),
-      emptyToNull(data.digital_area_ha),
-      emptyToNull(data.ca_area_ha),
-      emptyToNull(data.patch_name),
-      emptyToNull(data.remarks),
-    ]);
+      district,
+      ri_circle,
+      tahasil,
+      village,
+      forest_division,
+      forest_range,
+      khata_no,
+      plot_no,
+      kisam,
+      forest_category_id,
+      ownership,
+      fra_allotted,
+      total_area_ha,
+      proposed_acquired_area_ha,
+      digital_area_ha,
+      ca_area_ha,
+      patch_name,
+      remarks
+    )
+    VALUES ?
+    ON DUPLICATE KEY UPDATE
+      ri_circle = VALUES(ri_circle),
+      tahasil = VALUES(tahasil),
+      forest_division = VALUES(forest_division),
+      forest_range = VALUES(forest_range),
+      plot_no = VALUES(plot_no),
+      kisam = VALUES(kisam),
+      forest_category_id = VALUES(forest_category_id),
+      ownership = VALUES(ownership),
+      fra_allotted = VALUES(fra_allotted),
+      total_area_ha = VALUES(total_area_ha),
+      proposed_acquired_area_ha = VALUES(proposed_acquired_area_ha),
+      digital_area_ha = VALUES(digital_area_ha),
+      ca_area_ha = VALUES(ca_area_ha),
+      patch_name = VALUES(patch_name),
+      remarks = VALUES(remarks),
+      is_deleted = 0
+  `;
 
-    const [result] = await db.query(sql, [values]);
-    return result.affectedRows || 0;
-  },
+  const values = rows.map((data) => [
+    project_master_id,
+    schedule_type,
+    emptyToNull(data.district),
+    emptyToNull(data.ri_circle),
+    emptyToNull(data.tahasil),
+    emptyToNull(data.village),
+    emptyToNull(data.forest_division),
+    emptyToNull(data.forest_range),
+    emptyToNull(data.khata_no),
+    emptyToNull(data.plot_no),
+    emptyToNull(data.kisam),
+    emptyToNull(data.forest_category_id),
+    emptyToNull(data.ownership),
+    emptyToNull(data.fra_allotted),
+    emptyToNull(data.total_area_ha),
+    emptyToNull(data.proposed_acquired_area_ha),
+    emptyToNull(data.digital_area_ha),
+    emptyToNull(data.ca_area_ha),
+    emptyToNull(data.patch_name),
+    emptyToNull(data.remarks),
+  ]);
 
-  async findById(id) {
-    const sql = `
-      SELECT *
-      FROM forest_land_schedule
-      WHERE id = ? AND is_deleted = 0
-      LIMIT 1
+  const [result] = await db.query(sql, [values]);
+
+  return result.affectedRows || 0;
+},
+
+async findById(id) {
+  const sql = `
+    SELECT *
+    FROM forest_land_schedule
+    WHERE id = ?
+      AND is_deleted = 0
+    LIMIT 1
+  `;
+
+  const [rows] = await db.query(sql, [id]);
+
+  return rows[0] || null;
+},
+
+async list({
+  project_master_id,
+  schedule_type,
+  limit,
+  offset,
+}) {
+  let whereClause = `
+    WHERE project_master_id = ?
+      AND is_deleted = 0
+  `;
+
+  const params = [project_master_id];
+
+  if (schedule_type) {
+    whereClause += `
+      AND schedule_type = ?
     `;
-    const [rows] = await db.query(sql, [id]);
-    return rows[0] || null;
-  },
+    params.push(schedule_type);
+  }
 
-  async list({ project_master_id, schedule_type, limit, offset }) {
-    let whereClause = `WHERE project_master_id = ? AND is_deleted = 0`;
-    const params = [project_master_id];
+  const listSql = `
+    SELECT *
+    FROM forest_land_schedule
+    ${whereClause}
+    ORDER BY id DESC
+    LIMIT ? OFFSET ?
+  `;
 
-    if (schedule_type) {
-      whereClause += ` AND schedule_type = ?`;
-      params.push(schedule_type);
-    }
+  const countSql = `
+    SELECT COUNT(*) AS total
+    FROM forest_land_schedule
+    ${whereClause}
+  `;
 
-    const listSql = `
-      SELECT *
-      FROM forest_land_schedule
-      ${whereClause}
-      ORDER BY id DESC
-      LIMIT ? OFFSET ?
-    `;
+  const [rows] = await db.query(
+    listSql,
+    [...params, limit, offset],
+  );
 
-    const countSql = `
-      SELECT COUNT(*) AS total
-      FROM forest_land_schedule
-      ${whereClause}
-    `;
+  const [[count]] = await db.query(
+    countSql,
+    params,
+  );
 
-    const [rows] = await db.query(listSql, [...params, limit, offset]);
-    const [[count]] = await db.query(countSql, params);
-
-    return {
-      data: rows,
-      total: count.total,
-    };
-  },
+  return {
+    data: rows,
+    total: count.total,
+  };
+},
 
   async update(id, data) {
     const sql = `
