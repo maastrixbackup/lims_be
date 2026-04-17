@@ -56,71 +56,22 @@ const isLikelyHeaderCode = (value) =>
   /^[A-Za-z]{2,}[0-9]{2}$/.test(normalizeHeaderCode(value));
 
 const buildForestExcelRowsWithFlexibleHeaders = (sheet) => {
-  const rows = xlsx.utils.sheet_to_json(sheet, {
-    header: 1,
+  const singleHeaderRows = xlsx.utils.sheet_to_json(sheet, {
     defval: null,
     raw: true,
   });
 
-  if (!rows || rows.length === 0) return [];
+  if (!singleHeaderRows || singleHeaderRows.length === 0) return [];
 
-  const row1 = rows[0] || [];
-  const row2 = rows[1] || [];
-  const codeCellCount = row1.filter((cell) => isLikelyHeaderCode(cell)).length;
-  const row2TextCount = row2.filter(
-    (cell) => !!toTrimmedString(cell) && !isLikelyHeaderCode(cell),
-  ).length;
-  const hasTwoHeaderRows = codeCellCount >= 3 && row2TextCount >= 3;
-
-  if (!hasTwoHeaderRows) {
-    const singleHeaderRows = xlsx.utils.sheet_to_json(sheet, {
-      defval: null,
-      raw: true,
-    });
-
-    return singleHeaderRows.map((row) => {
-      const normalizedRow = {};
-      for (const key in row) {
-        normalizedRow[key] = row[key];
-        normalizedRow[normalizeHeaderKey(key)] = row[key];
-      }
-      return normalizedRow;
-    });
-  }
-
-  const maxCols = Math.max(row1.length, row2.length);
-  const aliasesByColumn = [];
-
-  for (let i = 0; i < maxCols; i += 1) {
-    const code = normalizeHeaderCode(row1[i]);
-    const title = toTrimmedString(row2[i]).replace(/\r?\n/g, " ");
-    const aliases = new Set();
-
-    if (title) aliases.add(title);
-    if (code) aliases.add(code);
-    if (code && title) aliases.add(`${code}-${title}`);
-    aliasesByColumn.push([...aliases]);
-  }
-
-  const parsedRows = [];
-  for (const row of rows.slice(2)) {
-    const obj = {};
-    let hasValue = false;
-
-    for (let i = 0; i < aliasesByColumn.length; i += 1) {
-      const value = row?.[i] ?? null;
-      if (toTrimmedString(value) !== "") hasValue = true;
-
-      for (const alias of aliasesByColumn[i]) {
-        obj[alias] = value;
-        obj[normalizeHeaderKey(alias)] = value;
-      }
+  return singleHeaderRows.map((row) => {
+    const normalizedRow = {};
+    for (const key in row) {
+      const normalizedKey = normalizeHeaderKey(key);
+      normalizedRow[key] = row[key];
+      normalizedRow[normalizedKey] = row[key];
     }
-
-    if (hasValue) parsedRows.push(obj);
-  }
-
-  return parsedRows;
+    return normalizedRow;
+  });
 };
 
 // validation helpers
@@ -189,6 +140,13 @@ const uploadForestLandSchedule = async (req, res) => {
 
     const normalizeCompareKey = (key) =>
       normalizeHeaderKey(key)?.replace(/[^a-z0-9]+/g, " ").trim();
+    const isHeaderLikeValue = (value, ...expectedLabels) => {
+      const normalizedValue = normalizeCompareKey(value);
+      if (!normalizedValue) return false;
+      return expectedLabels.some(
+        (label) => normalizedValue === normalizeCompareKey(label),
+      );
+    };
 
     const toNumberOrNull = (value) => {
       if (value === null || value === undefined || value === "") return null;
@@ -330,6 +288,34 @@ const uploadForestLandSchedule = async (req, res) => {
         Object.values(row).some(
           (value) => value !== null && value !== undefined && value !== "",
         ),
+      )
+      .filter(
+        (row) =>
+          !isHeaderLikeValue(row.district, "district") &&
+          !isHeaderLikeValue(row.ri_circle, "ri circle", "ri_circle") &&
+          !isHeaderLikeValue(row.tahasil, "tahasil", "tehasil") &&
+          !isHeaderLikeValue(row.village, "village", "mouza", "mauza", "name of village") &&
+          !isHeaderLikeValue(row.forest_division, "forest division", "forest_division") &&
+          !isHeaderLikeValue(row.forest_range, "forest range", "forest_range") &&
+          !isHeaderLikeValue(row.khata_no, "khata no", "khata_no", "khata no.") &&
+          !isHeaderLikeValue(row.plot_no, "plot no", "plot_no", "plot no.") &&
+          !isHeaderLikeValue(row.kisam, "kisam", "kissam") &&
+          !isHeaderLikeValue(
+            row.forest_category_id,
+            "forest category id",
+            "forest_category_id",
+            "forest category",
+            "forest_category",
+          ) &&
+          !isHeaderLikeValue(row.ownership, "ownership") &&
+          !isHeaderLikeValue(
+            row.fra_allotted,
+            "fra allotted",
+            "fra_allotted",
+            "land allotted through fra",
+          ) &&
+          !isHeaderLikeValue(row.patch_name, "patch name", "patch_name") &&
+          !isHeaderLikeValue(row.remarks, "remarks", "remark"),
       )
       .filter((row) => row.khata_no || row.plot_no || row.village);
 
@@ -2137,8 +2123,19 @@ const updateStage0 = async (req, res) => {
 
     const stageStatus = proposalSubmitted === 1 ? "Ready" : "Ongoing";
 
-    const resolveFile = (field, existingValue) =>
-      buildDocumentValue(files, field, existingValue);
+   const resolveFile = (field, existingValue) => {
+  let existingDocs = normalizeDocumentList(existingValue);
+
+  const incomingExisting = req.body[`${field}_existing`];
+
+  if (incomingExisting) {
+    try {
+      existingDocs = JSON.parse(incomingExisting);
+    } catch {}
+  }
+
+  return buildDocumentValue(files, field, existingDocs);
+};
 
     const requireFile = (condition, fileValue, message) => {
       if (condition && !hasAnyDocuments(fileValue)) {

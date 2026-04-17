@@ -13,6 +13,13 @@ const govtVillage = {
         .toLowerCase()
         .replace(/[^a-z0-9]+/g, " ")
         .trim();
+    const isHeaderLikeValue = (value, ...expectedLabels) => {
+      const normalizedValue = normalizeCompareKey(value);
+      if (!normalizedValue) return false;
+      return expectedLabels.some(
+        (label) => normalizedValue === normalizeCompareKey(label),
+      );
+    };
 
     const getValue = (row, code, ...fallbacks) => {
       const codeKey = normalizeCompareKey(code);
@@ -34,7 +41,19 @@ const govtVillage = {
       }
       return null;
     };
+const getDistrict = (row) => {
+  const district = getValue(
+    row,
+    "LD01", // assuming LD01 is district (adjust if needed)
+    "District",
+    "district name",
+    "District",
+    "DISTRICT"
+  );
 
+  const normalized = normalizeText(district);
+  return normalized || null;
+};
     const getThanaNo = (row) => {
       const thana = getValue(
         row,
@@ -55,19 +74,28 @@ const govtVillage = {
     rows.forEach((r) => {
       const mouzaRaw = getValue(r, "LD02", "mouza", "village", "name of village");
       if (!mouzaRaw) return;
-
+      
       const mouza = normalizeText(mouzaRaw);
       const tahasil = normalizeText(getValue(r, "LD03", "tahasil"));
       const thana_no = getThanaNo(r);
+      const district = getDistrict(r);
 
       if (!mouza || !tahasil) return;
+      if (
+        isHeaderLikeValue(mouza, "village", "mouza", "name of village") ||
+        isHeaderLikeValue(tahasil, "tahasil") ||
+        isHeaderLikeValue(district, "district")
+      ) {
+        return;
+      }
 
-      const key = `${mouza}_${tahasil}`;
+      const key = `${mouza}_${tahasil}_${district}`;
       const existing = villageMap.get(key);
 
       villageMap.set(key, {
         village_name: mouza,
         tahasil,
+         district,
         // Keep a non-empty thana number if present in any matching row.
         thana_no: thana_no || existing?.thana_no || null,
       });
@@ -79,6 +107,7 @@ const govtVillage = {
       v.village_name,
       v.village_name.replace(/\s+/g, "_").toUpperCase(), // auto village_code
       v.tahasil,
+      v.district, 
       project_id,
       type,
       v.thana_no,
@@ -87,10 +116,11 @@ const govtVillage = {
     await db.query(
       `
     INSERT INTO villages
-      (village_name, village_code, tahasil, project_id, type, thana_no)
+      (village_name, village_code, tahasil, district, project_id, type, thana_no)
     VALUES ?
     ON DUPLICATE KEY UPDATE
       tahasil = VALUES(tahasil),
+      district = VALUES(district),
       thana_no = COALESCE(NULLIF(VALUES(thana_no), ''), thana_no),
       updated_at = NOW()
     `,
