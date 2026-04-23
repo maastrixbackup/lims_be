@@ -54,6 +54,243 @@ const resolveStageDocumentValue = (req, files, field, existingValue = null) => {
   return buildDocumentValue(files, field, retainedDocs);
 };
 
+const stageDocumentMimeTypes = {
+  ".pdf": "application/pdf",
+  ".doc": "application/msword",
+  ".docx":
+    "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+  ".xls": "application/vnd.ms-excel",
+  ".xlsx":
+    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+  ".jpg": "image/jpeg",
+  ".jpeg": "image/jpeg",
+  ".png": "image/png",
+};
+
+const STAGE_DOCUMENT_CONFIG = {
+  stage0: {
+    folder: "stage0",
+    getter: (forestProjectId) => ForestLand.getStage0ByProjectId(forestProjectId),
+    fields: [
+      "dgps_document",
+      "orsac_document",
+      "tree_enumeration_document",
+      "administrative_document",
+      "legal_lease_document",
+      "technical_document",
+      "forest_land_details_document",
+      "ca_ca_document",
+      "fra_document",
+      "environmental_document",
+      "wildlife_document",
+      "maps_document",
+      "financial_document",
+      "proposal_document",
+    ],
+  },
+  stage1: {
+    folder: "stage1",
+    getter: (forestProjectId) => ForestLand.getStage1ByProjectId(forestProjectId),
+    fields: [
+      "stage1_approval_document",
+      "stage1_conditions_document",
+      "ca_land_document",
+      "fra_document",
+      "npv_document",
+      "ca_payment_document",
+      "aca_payment_document",
+      "wildlife_payment_document",
+      "technical_document",
+      "stage1_acceptance_document",
+    ],
+  },
+  stage2: {
+    folder: "stage2",
+    getter: (forestProjectId) => ForestLand.getStage2ByProjectId(forestProjectId),
+    fields: [
+      "environmental_document",
+      "nbwl_document",
+      "final_ca_document",
+      "final_maps_document",
+      "final_technical_document",
+      "stage2_approval_document",
+    ],
+  },
+  postclearance: {
+    folder: "post_clearance",
+    getter: (forestProjectId) =>
+      ForestLand.getPostClearanceByProjectId(forestProjectId),
+    fields: [
+      "ca_plantation_started_document",
+      "ca_plantation_completed_document",
+      "survival_report_document",
+      "wildlife_mitigation_document",
+      "safety_zone_document",
+    ],
+  },
+};
+
+const resolveStageKey = (value = "") =>
+  value.toString().toLowerCase().replace(/[^a-z0-9]/g, "");
+
+const getBaseUrl = (req) => `${req.protocol}://${req.get("host")}`;
+
+const buildStageDocumentUrls = (req, stage, forestProjectId, field, fileName) => {
+  const encodedFileName = encodeURIComponent(fileName);
+  const basePath = `${getBaseUrl(req)}/api/forestland/stage-document/${stage}/${forestProjectId}/${field}/${encodedFileName}`;
+
+  return {
+    viewUrl: `${basePath}?mode=view`,
+    downloadUrl: `${basePath}?mode=download`,
+  };
+};
+
+const attachStageDocumentLinks = (req, stage, forestProjectId, data) => {
+  const config = STAGE_DOCUMENT_CONFIG[stage];
+  if (!config || !data) return data;
+
+  const enriched = { ...data };
+
+  for (const field of config.fields) {
+    const files = normalizeDocumentList(data[field]);
+    enriched[`${field}_files`] = files.map((fileName) => ({
+      fileName,
+      ...buildStageDocumentUrls(req, stage, forestProjectId, field, fileName),
+    }));
+  }
+
+  return enriched;
+};
+
+const serveForestStageDocument = async (req, res) => {
+  try {
+    const stageKey = resolveStageKey(req.params.stage);
+    const { forest_project_id, field } = req.params;
+    const fileName = decodeURIComponent(req.params.fileName || "");
+    const mode = (req.query.mode || "view").toString().toLowerCase();
+
+    if (!forest_project_id || !field || !fileName || fileName.includes("..")) {
+      return res.status(400).json({
+        success: false,
+        message: "Valid stage, forest_project_id, field, and fileName are required",
+      });
+    }
+
+    const config = STAGE_DOCUMENT_CONFIG[stageKey];
+    if (!config) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid forest stage",
+      });
+    }
+
+    if (!config.fields.includes(field)) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid document field for this stage",
+      });
+    }
+
+    const record = await config.getter(forest_project_id);
+    if (!record) {
+      return res.status(404).json({
+        success: false,
+        message: "Stage data not found",
+      });
+    }
+
+    const savedFiles = normalizeDocumentList(record[field]);
+    if (!savedFiles.includes(fileName)) {
+      return res.status(404).json({
+        success: false,
+        message: "Document not found for this stage field",
+      });
+    }
+
+    const filePath = path.join(process.cwd(), "uploads", config.folder, fileName);
+    if (!fs.existsSync(filePath)) {
+      return res.status(404).json({
+        success: false,
+        message: "File missing on server",
+      });
+    }
+
+    const ext = path.extname(fileName).toLowerCase();
+    const contentDisposition = mode === "download" ? "attachment" : "inline";
+
+    res.setHeader(
+      "Content-Type",
+      stageDocumentMimeTypes[ext] || "application/octet-stream",
+    );
+    res.setHeader(
+      "Content-Disposition",
+      `${contentDisposition}; filename="${fileName}"`,
+    );
+
+    return fs.createReadStream(filePath).pipe(res);
+  } catch (err) {
+    console.error("Forest stage document error:", err);
+    return res.status(500).json({
+      success: false,
+      message: "Error while serving forest stage document",
+    });
+  }
+};
+
+const streamForestStageFileByFolder = async (req, res, disposition) => {
+  try {
+    const stageKey = resolveStageKey(req.params.stage);
+    const fileName = decodeURIComponent(req.params.filename || "");
+
+    if (!fileName || fileName.includes("..")) {
+      return res.status(400).json({
+        success: false,
+        message: "Valid file name is required",
+      });
+    }
+
+    const config = STAGE_DOCUMENT_CONFIG[stageKey];
+    if (!config) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid forest stage",
+      });
+    }
+
+    const filePath = path.join(process.cwd(), "uploads", config.folder, fileName);
+    if (!fs.existsSync(filePath)) {
+      return res.status(404).json({
+        success: false,
+        message: "File missing on server",
+      });
+    }
+
+    const ext = path.extname(fileName).toLowerCase();
+    res.setHeader(
+      "Content-Type",
+      stageDocumentMimeTypes[ext] || "application/octet-stream"
+    );
+    res.setHeader(
+      "Content-Disposition",
+      `${disposition}; filename="${fileName}"`
+    );
+
+    return fs.createReadStream(filePath).pipe(res);
+  } catch (err) {
+    console.error("Forest stage file stream error:", err);
+    return res.status(500).json({
+      success: false,
+      message: `Error while ${disposition === "attachment" ? "downloading" : "viewing"} forest stage document`,
+    });
+  }
+};
+
+const downloadForestStageDocument = async (req, res) =>
+  streamForestStageFileByFolder(req, res, "attachment");
+
+const viewForestStageDocument = async (req, res) =>
+  streamForestStageFileByFolder(req, res, "inline");
+
 const normalizeHeaderKey = (key) =>
   key?.toString().replace(/\r?\n/g, " ").replace(/\s+/g, " ").trim().toLowerCase();
 
@@ -2859,10 +3096,17 @@ const getStage0 = async (req, res) => {
       });
     }
 
+    const responseData = attachStageDocumentLinks(
+      req,
+      "stage0",
+      forest_project_id,
+      data
+    );
+
     return res.status(200).json({
       success: true,
       message: "Stage-0 data fetched successfully",
-      data,
+      data: responseData,
     });
   } catch (err) {
     console.error("Get Stage0 Error:", err);
@@ -2892,10 +3136,17 @@ const getStage1 = async (req, res) => {
       });
     }
 
+    const responseData = attachStageDocumentLinks(
+      req,
+      "stage1",
+      forest_project_id,
+      data
+    );
+
     return res.status(200).json({
       success: true,
       message: "Stage-1 data fetched successfully",
-      data,
+      data: responseData,
     });
   } catch (err) {
     console.error("Get Stage1 Error:", err);
@@ -2925,10 +3176,17 @@ const getStage2 = async (req, res) => {
       });
     }
 
+    const responseData = attachStageDocumentLinks(
+      req,
+      "stage2",
+      forest_project_id,
+      data
+    );
+
     return res.status(200).json({
       success: true,
       message: "Stage-2 data fetched successfully",
-      data,
+      data: responseData,
     });
   } catch (err) {
     console.error("Get Stage2 Error:", err);
@@ -2960,10 +3218,17 @@ const getPostClearance = async (req, res) => {
       });
     }
 
+    const responseData = attachStageDocumentLinks(
+      req,
+      "postclearance",
+      forest_project_id,
+      data
+    );
+
     return res.status(200).json({
       success: true,
       message: "Post-clearance data fetched successfully",
-      data,
+      data: responseData,
     });
   } catch (err) {
     console.error("Get PostClearance Error:", err);
@@ -3005,4 +3270,7 @@ module.exports = {
   getStage1,
   getStage2,
   getPostClearance,
+  serveForestStageDocument,
+  downloadForestStageDocument,
+  viewForestStageDocument,
 };
