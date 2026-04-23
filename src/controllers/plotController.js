@@ -681,16 +681,22 @@ const createPlot = async (req, res) => {
       }
     });
 
-    const existingPlot = await Plot.findByCaseFileNo(
+    const existingPlot = await Plot.findByCaseAndPlot(
+      safeRequestPayload.project_id,
+      safeRequestPayload.type,
       safeRequestPayload.la_case_file_no,
+      safeRequestPayload.plot_no,
     );
     let plot, message;
     if (existingPlot) {
-      plot = await Plot.updateByCaseFileNo(
+      plot = await Plot.updateByCaseAndPlot(
+        safeRequestPayload.project_id,
+        safeRequestPayload.type,
         safeRequestPayload.la_case_file_no,
+        safeRequestPayload.plot_no,
         safeRequestPayload,
       );
-      message = "Plot updated successfully (existing LA Case File No.)";
+      message = "Plot updated successfully (existing LA Case File No. and Plot No.)";
       await logAction(
         userId,
         "update plot (via create)",
@@ -757,14 +763,24 @@ const updatePlot = async (req, res) => {
         message: "Plot not found",
       });
     }
-    if (safeRequestPayload.la_case_file_no) {
-      const duplicate = await Plot.findByCaseFileNo(
-        safeRequestPayload.la_case_file_no,
+    const nextProjectId =
+      safeRequestPayload.project_id ?? existing.project_id;
+    const nextType = safeRequestPayload.type ?? existing.type;
+    const nextCaseFileNo =
+      safeRequestPayload.la_case_file_no ?? existing.la_case_file_no;
+    const nextPlotNo = safeRequestPayload.plot_no ?? existing.plot_no;
+
+    if (nextCaseFileNo && nextPlotNo) {
+      const duplicate = await Plot.findByCaseAndPlot(
+        nextProjectId,
+        nextType,
+        nextCaseFileNo,
+        nextPlotNo,
       );
       if (duplicate && duplicate.id !== Number(id)) {
         return res.status(400).json({
           success: false,
-          message: `LA Case File No. '${safeRequestPayload.la_case_file_no}' already exist.`,
+          message: `Plot already exists for LA Case File No. '${nextCaseFileNo}' and Plot No. '${nextPlotNo}'.`,
         });
       }
     }

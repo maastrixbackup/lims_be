@@ -2175,17 +2175,23 @@ const Plot = {
     return rows[0];
   },
 
-  async findByCaseFileNo(la_case_file_no) {
+  async findByCaseAndPlot(project_id, type, la_case_file_no, plot_no) {
     const [rows] = await db.query(
-      "SELECT * FROM plots WHERE la_case_file_no = ? AND is_deleted = 0 LIMIT 1",
-      [la_case_file_no],
+      `SELECT * FROM plots
+       WHERE project_id = ?
+         AND type = ?
+         AND la_case_file_no = ?
+         AND plot_no = ?
+         AND is_deleted = 0
+       LIMIT 1`,
+      [project_id, type, la_case_file_no, plot_no],
     );
     return rows.length ? rows[0] : null;
   },
 
-  async updateByCaseFileNo(la_case_file_no, plotData) {
+  async updateByCaseAndPlot(project_id, type, la_case_file_no, plot_no, plotData) {
     const {
-      project_id,
+      project_id: nextProjectId,
       ses_survey_no,
       date_of_award,
       name_of_recorded_tenant,
@@ -2198,7 +2204,7 @@ const Plot = {
       ri_circle_name,
       thana_no,
       khata_no,
-      plot_no,
+      plot_no: nextPlotNo,
       kissam_of_land,
       land_category,
       lo13_remarks,
@@ -2371,9 +2377,13 @@ const Plot = {
       abatement = ?,
       full_part = ?,
       updated_at = CURRENT_TIMESTAMP
-    WHERE la_case_file_no = ? AND is_deleted = 0`,
+    WHERE project_id = ?
+      AND type = ?
+      AND la_case_file_no = ?
+      AND plot_no = ?
+      AND is_deleted = 0`,
       [
-        project_id,
+        nextProjectId,
         ses_survey_no,
         date_of_award,
         name_of_recorded_tenant,
@@ -2471,7 +2481,10 @@ const Plot = {
         total_cost,
         abatement,
         full_part,
+        project_id,
+        type,
         la_case_file_no, // condition
+        nextPlotNo,
       ],
     );
 
