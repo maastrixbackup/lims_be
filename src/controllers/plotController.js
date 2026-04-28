@@ -78,6 +78,35 @@ const normalizeToMysqlDate = (rawValue) => {
   return null;
 };
 
+const syncKhataFromPlot = async (plotData, previousPlot = null) => {
+  if (!plotData?.project_id || !plotData?.type) return;
+
+  await Village.insertVillageForManualPlot(
+    plotData,
+    plotData.project_id,
+    plotData.type,
+  );
+
+  const khatasToSync = new Set();
+  if (previousPlot?.khata_no) {
+    khatasToSync.add(
+      `${previousPlot.project_id}::${previousPlot.type}::${previousPlot.khata_no}`,
+    );
+  }
+  if (plotData.khata_no) {
+    khatasToSync.add(`${plotData.project_id}::${plotData.type}::${plotData.khata_no}`);
+  }
+
+  for (const item of khatasToSync) {
+    const [project_id, type, khata_no] = item.split("::");
+    await Khata.insertKhataFromManualPlot({
+      project_id,
+      type,
+      khata_no,
+    });
+  }
+};
+
 const uploadPlots = async (req, res) => {
   const userId = req.user.id;
   try {
@@ -733,19 +762,7 @@ const createPlot = async (req, res) => {
       );
     }
 
-    await Village.insertVillageForManualPlot(
-      safeRequestPayload,
-      safeRequestPayload.project_id,
-      safeRequestPayload.type,
-    );
-
-    if (safeRequestPayload.khata_no) {
-      await Khata.insertKhataFromManualPlot({
-        project_id: safeRequestPayload.project_id,
-        type: safeRequestPayload.type,
-        khata_no: safeRequestPayload.khata_no,
-      });
-    }
+    await syncKhataFromPlot(plot);
 
     return res.status(existingPlot ? 200 : 201).json({
       success: true,
@@ -828,13 +845,7 @@ const updatePlot = async (req, res) => {
 
     const updated = await Plot.update(id, safeRequestPayload);
 
-    if (updated.khata_no && updated.project_id && updated.type) {
-      await Khata.insertKhataFromManualPlot({
-        project_id: updated.project_id,
-        type: updated.type,
-        khata_no: updated.khata_no,
-      });
-    }
+    await syncKhataFromPlot(updated, existing);
 
     await logAction(
       userId,
