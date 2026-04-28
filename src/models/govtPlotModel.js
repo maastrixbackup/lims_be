@@ -1,5 +1,77 @@
 const db = require("../config/db");
 
+let govtPlotIndexInitializationPromise = null;
+
+const ensureGovtPlotProjectScopedUniqueKey = async () => {
+  if (!govtPlotIndexInitializationPromise) {
+    govtPlotIndexInitializationPromise = (async () => {
+      const [indexRows] = await db.query(
+        `
+          SELECT
+            INDEX_NAME,
+            NON_UNIQUE,
+            SEQ_IN_INDEX,
+            COLUMN_NAME
+          FROM information_schema.STATISTICS
+          WHERE TABLE_SCHEMA = DATABASE()
+            AND TABLE_NAME = 'govt_plots'
+          ORDER BY INDEX_NAME, SEQ_IN_INDEX
+        `,
+      );
+
+      const groupedIndexes = new Map();
+      for (const row of indexRows) {
+        if (!groupedIndexes.has(row.INDEX_NAME)) {
+          groupedIndexes.set(row.INDEX_NAME, {
+            nonUnique: row.NON_UNIQUE,
+            columns: [],
+          });
+        }
+
+        groupedIndexes.get(row.INDEX_NAME).columns.push(row.COLUMN_NAME);
+      }
+
+      const strayPlotNoIndexes = [...groupedIndexes.entries()]
+        .filter(([indexName, definition]) => {
+          if (indexName === "PRIMARY" || definition.nonUnique !== 0) {
+            return false;
+          }
+
+          return (
+            definition.columns.length === 1 && definition.columns[0] === "plot_no"
+          );
+        })
+        .map(([indexName]) => indexName);
+
+      for (const indexName of strayPlotNoIndexes) {
+        await db.query(`ALTER TABLE govt_plots DROP INDEX \`${indexName}\``);
+      }
+
+      const hasProjectScopedUniqueKey = [...groupedIndexes.values()].some(
+        (definition) =>
+          definition.nonUnique === 0 &&
+          definition.columns.length === 3 &&
+          definition.columns[0] === "project_id" &&
+          definition.columns[1] === "khata_no" &&
+          definition.columns[2] === "plot_no",
+      );
+
+      if (!hasProjectScopedUniqueKey) {
+        await db.query(`
+          ALTER TABLE govt_plots
+          ADD UNIQUE INDEX uq_govt_plots_project_khata_plot
+          (project_id, khata_no, plot_no)
+        `);
+      }
+    })().catch((error) => {
+      govtPlotIndexInitializationPromise = null;
+      throw error;
+    });
+  }
+
+  return govtPlotIndexInitializationPromise;
+};
+
 const GOVT_PLOT_COLUMNS = [
   "project_id",
   "type",
@@ -42,6 +114,8 @@ const GOVT_PLOT_COLUMNS = [
 
 const GovtPlot = {
 async create(data) {
+  await ensureGovtPlotProjectScopedUniqueKey();
+
   const sql = `
     INSERT INTO govt_plots (
       project_id,
@@ -547,6 +621,8 @@ async create(data) {
   },
 
   async bulkInsertFromExcel(rows, project_id, type) {
+    await ensureGovtPlotProjectScopedUniqueKey();
+
     const normalizeKey = (key) =>
       key
         ?.toString()
@@ -914,6 +990,8 @@ async govtPlotDelete(id) {
   },
 
   async updateById(id, data) {
+    await ensureGovtPlotProjectScopedUniqueKey();
+
     const fields = [];
     const values = [];
 
