@@ -208,7 +208,7 @@ const govtPlotStorage = multer.diskStorage({
     const originalname = file.originalname.replace(/\s+/g, "_");
     // cb(null, originalname);
     // OR if you want unique name:
-    cb(null, Date.now() + "_" + originalname);
+    cb(null, originalname);
   },
 });
 
