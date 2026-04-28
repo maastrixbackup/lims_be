@@ -404,7 +404,21 @@ const uploadGovtPlot = async (req, res) => {
       null,
       null,
     );
-    console.error("Govt Plot Excel Upload Error:", err);
+    console.error("Govt Plot Excel Upload Error:", {
+      message: err.message,
+      stack: err.stack,
+      code: err.code || null,
+      sqlMessage: err.sqlMessage || null,
+      project_id: req.body?.project_id || null,
+      type: req.body?.type || null,
+      file: req.file
+        ? {
+          originalname: req.file.originalname,
+          filename: req.file.filename,
+          path: req.file.path,
+        }
+        : null,
+    });
     return res.status(500).json({
       success: false,
       message: "Server error",

@@ -1166,6 +1166,15 @@ const Plot = {
     const clientCode = projectRows[0].client_code;
 
     const pad2 = (n) => String(n).padStart(2, "0");
+    const normalizeDisplacedAffectedProject = (rawValue) => {
+      if (rawValue === null || rawValue === undefined || rawValue === "") {
+        return null;
+      }
+
+      const normalized = String(rawValue).trim();
+      return normalized || null;
+    };
+
     const toMysqlDate = (rawValue) => {
       if (rawValue === null || rawValue === undefined || rawValue === "") {
         return null;
@@ -1320,7 +1329,9 @@ const Plot = {
         "Name of Tenant",
       );
       const address = get("LO03", "Present Address");
-      const displaced = get("LO04", "Displaced/Affected Person");
+      const displaced = normalizeDisplacedAffectedProject(
+        get("LO04", "Displaced/Affected Person"),
+      );
       const awardDate = toMysqlDate(get("LO06", "Date of Award", "Date of award"));
 
       // LD - Land detail fields

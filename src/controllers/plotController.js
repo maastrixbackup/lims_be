@@ -201,14 +201,29 @@ const uploadPlots = async (req, res) => {
       null,
       null,
     );
-    console.error("Upload Plots Error:", err);
-    return res.status(500).json({ success: false, message: "Server error" });
-    // return res.status(500).json({
-    //   success: false,
-    //   message: err.sqlMessage || err.message,
-    //   sqlState: err.sqlState,
-    //   sqlCode: err.code,
-    // });
+    console.error("Upload Plots Error:", {
+      message: err.message,
+      stack: err.stack,
+      code: err.code || null,
+      sqlMessage: err.sqlMessage || null,
+      sqlState: err.sqlState || null,
+      project_id: req.body?.project_id || null,
+      type: req.body?.type || null,
+      file: req.file
+        ? {
+          originalname: req.file.originalname,
+          filename: req.file.filename,
+          path: req.file.path,
+        }
+        : null,
+    });
+    // return res.status(500).json({ success: false, message: "Server error" });
+    return res.status(500).json({
+      success: false,
+      message: err.sqlMessage || err.message,
+      sqlState: err.sqlState,
+      sqlCode: err.code,
+    });
   }
 };
 
@@ -640,7 +655,6 @@ const createPlot = async (req, res) => {
     }
 
     const enumMaps = {
-      displaced_affected_project: ["PDF", "PAF"],
       abatement: ["Yes", "No"],
     };
 
