@@ -653,7 +653,15 @@ async create(data) {
 
     const validRows = rows.filter((r) => {
       const khata = get(r, "LD06", "khata no", "khata_no");
-      const plot = get(r, "LD09");
+      const plot = get(
+        r,
+        "LD09",
+        "plot no",
+        "plot_no",
+        "plot",
+        "plot number",
+        "plot no.",
+      );
       const district = get(r, "LD01", "district");
       const mouza = get(r, "LD02", "mouza", "village", "name of village");
       const tahasil = get(r, "LD03", "tahasil");
@@ -686,6 +694,7 @@ const values = validRows.map((r) => {
     r,
     "LD09",
     "plot no",
+    "plot_no",
     "plot",
     "plot number",
     "plot no."
