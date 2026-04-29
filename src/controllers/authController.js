@@ -1,4 +1,4 @@
-const bcrypt = require("bcrypt");
+const bcrypt = require("bcryptjs");
 const User = require("../models/userModel");
 const UserProject = require("../models/userProjectModel");
 const Role = require("../models/roleModel");
@@ -169,14 +169,16 @@ const updateUserByAdmin = async (req, res) => {
       }
     }
 
+    const nextProfilePic = profile_pic || existingUser.profile_pic;
+
     await User.update(
       getUserId,
-      name,
-      username,
-      email,
-      phone_number,
-      role_id,
-      profile_pic
+      name || existingUser.name,
+      username || existingUser.username,
+      email || existingUser.email,
+      phone_number || existingUser.phone_number,
+      role_id || existingUser.role_id,
+      nextProfilePic
     );
     await UserProject.deleteByUserId(getUserId);
 

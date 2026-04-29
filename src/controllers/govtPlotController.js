@@ -236,6 +236,51 @@ const normalizeGovtPlotPayload = (
   return data;
 };
 
+const syncGovtKhataFromPlot = async (plotData) => {
+  const rows = [
+    {
+      district: plotData.district || null,
+      mouza: plotData.mouza,
+      tahasil: plotData.tahasil,
+      "thana no": plotData.thana_no || null,
+      "ri circle": plotData.ri_circle || null,
+      "khata no": plotData.khata_no,
+      "plot no": plotData.plot_no,
+      kissam: plotData.kissam || null,
+      "name of ror": plotData.name_of_ror || null,
+      "lease case no": plotData.lease_case_no || null,
+      "present status": plotData.present_status || null,
+      "case details/ deservation req.": plotData.case_details || null,
+    },
+  ];
+
+  const villageMap = await GovtVillage.upsertFromExcel(
+    rows,
+    plotData.project_id,
+    plotData.type,
+  );
+
+  const villageKey = `${plotData.mouza}_${plotData.tahasil}`;
+  const villageId = villageMap[villageKey];
+
+  if (!villageId) {
+    throw new Error("Unable to create/find village");
+  }
+
+  const khataMap = await GovtKhata.upsertFromExcel(
+    rows,
+    villageMap,
+    plotData.project_id,
+    plotData.type,
+  );
+
+  const khataKey = `${villageId}_${plotData.khata_no}`;
+  return {
+    villageId,
+    khataId: khataMap[khataKey] || null,
+  };
+};
+
 // const uploadGovtPlot = async (req, res) => {
 //   try {
 //     const { project_id, type } = req.body;
@@ -404,7 +449,21 @@ const uploadGovtPlot = async (req, res) => {
       null,
       null,
     );
-    console.error("Govt Plot Excel Upload Error:", err);
+    console.error("Govt Plot Excel Upload Error:", {
+      message: err.message,
+      stack: err.stack,
+      code: err.code || null,
+      sqlMessage: err.sqlMessage || null,
+      project_id: req.body?.project_id || null,
+      type: req.body?.type || null,
+      file: req.file
+        ? {
+          originalname: req.file.originalname,
+          filename: req.file.filename,
+          path: req.file.path,
+        }
+        : null,
+    });
     return res.status(500).json({
       success: false,
       message: "Server error",
@@ -472,49 +531,7 @@ const addGovtPlot = async (req, res) => {
     data.lease_to_ua_attachment =
       files?.lease_to_ua_attachment?.[0]?.filename || null;
 
-    const rows = [
-      {
-        district: data.district || null,
-        mouza: data.mouza,
-        tahasil: data.tahasil,
-        "thana no": data.thana_no || null,
-        "ri circle": data.ri_circle || null,
-        "khata no": data.khata_no,
-        "plot no": data.plot_no,
-        kissam: data.kissam || null,
-        "name of ror": data.name_of_ror || null,
-        "lease case no": data.lease_case_no || null,
-        "present status": data.present_status || null,
-        "case details/ deservation req.": data.case_details || null,
-      },
-    ];
-    // Village upsert
-    const villageMap = await GovtVillage.upsertFromExcel(
-      rows,
-      data.project_id,
-      data.type,
-    );
-
-    const villageKey = `${data.mouza}_${data.tahasil}`;
-    const villageId = villageMap[villageKey];
-
-    if (!villageId) {
-      return res.status(400).json({
-        success: false,
-        message: "Unable to create/find village",
-      });
-    }
-
-    // Khata upsert
-    const khataMap = await GovtKhata.upsertFromExcel(
-      rows,
-      villageMap,
-      data.project_id,
-      data.type,
-    );
-
-    const khataKey = `${villageId}_${data.khata_no}`;
-    const khataId = khataMap[khataKey] || null;
+    const { villageId, khataId } = await syncGovtKhataFromPlot(data);
 
     // data.village_id = villageId;
     // data.khata_id = khataId;
@@ -1046,6 +1063,7 @@ const updateGovtPlot = async (req, res) => {
 
     // update
     const updatedPlot = await GovtPlot.updateById(id, data);
+    await syncGovtKhataFromPlot(updatedPlot);
 
     await logAction(
       userId,
