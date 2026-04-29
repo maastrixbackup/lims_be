@@ -1,5 +1,14 @@
 const db = require("../config/db");
 
+const normalizeNullableText = (value) => {
+  if (value === null || value === undefined || value === "") {
+    return null;
+  }
+
+  const normalized = value.toString().trim();
+  return normalized || null;
+};
+
 const Plot = {
   // async bulkInsert(plots, project_id) {
   //   if (!plots || plots.length === 0) return;
@@ -1320,7 +1329,9 @@ const Plot = {
         "Name of Tenant",
       );
       const address = get("LO03", "Present Address");
-      const displaced = get("LO04", "Displaced/Affected Person");
+      const displaced = normalizeNullableText(
+        get("LO04", "Displaced/Affected Person"),
+      );
       const awardDate = toMysqlDate(get("LO06", "Date of Award", "Date of award"));
 
       // LD - Land detail fields
