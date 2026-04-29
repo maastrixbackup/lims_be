@@ -208,7 +208,7 @@ const govtPlotStorage = multer.diskStorage({
     const originalname = file.originalname.replace(/\s+/g, "_");
     // cb(null, originalname);
     // OR if you want unique name:
-    cb(null, Date.now() + "_" + originalname);
+    cb(null, originalname);
   },
 });
 
@@ -398,19 +398,46 @@ const edsStorage = multer.diskStorage({
   },
 });
 
-const edsFileFilter = (req, file, cb) => {
-  const allowedMimeTypes = [
-    "application/pdf",
-    "image/png",
-    "image/jpeg",
-    "image/jpg",
-  ];
+const stageDocumentMimeTypes = [
+  "application/pdf",
+  "application/msword",
+  "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+  "application/vnd.ms-excel",
+  "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+  "image/png",
+  "image/jpeg",
+  "image/jpg",
+];
 
-  if (allowedMimeTypes.includes(file.mimetype)) {
+const stageDocumentExtensions = new Set([
+  ".pdf",
+  ".doc",
+  ".docx",
+  ".xls",
+  ".xlsx",
+  ".png",
+  ".jpg",
+  ".jpeg",
+  ".txt"
+]);
+
+const stageDocumentFileFilter = (req, file, cb) => {
+  const ext = path.extname(file.originalname).toLowerCase();
+  if (
+    stageDocumentMimeTypes.includes(file.mimetype) ||
+    stageDocumentExtensions.has(ext)
+  ) {
     cb(null, true);
   } else {
-    cb(new Error("Only PDF/JPG/PNG files allowed"), false);
+    cb(
+      new Error("Only PDF, DOC, DOCX, XLS, XLSX, JPG, JPEG, PNG files are allowed"),
+      false
+    );
   }
+};
+
+const edsFileFilter = (req, file, cb) => {
+  stageDocumentFileFilter(req, file, cb);
 };
 
 const uploadEdsDocuments = multer({
@@ -424,13 +451,14 @@ const stageZeroStorage = multer.diskStorage({
   },
   filename: (req, file, cb) => {
     const name =
-      Date.now() + "_" + file.originalname.replace(/\s+/g, "_");
+     file.originalname.replace(/\s+/g, "_");
     cb(null, name);
   },
 });
 
 const uploadStage0 = multer({
   storage: stageZeroStorage,
+  fileFilter: stageDocumentFileFilter,
   limits: { fileSize: 10 * 1024 * 1024 },
 });
 
@@ -440,28 +468,13 @@ const stage1Storage = multer.diskStorage({
   },
   filename: (req, file, cb) => {
     const originalname = file.originalname.replace(/\s+/g, "_");
-    cb(null, Date.now() + "_" + originalname);
+    cb(null, originalname);
   },
 });
 
-const stage1FileFilter = (req, file, cb) => {
-  const allowedMimeTypes = [
-    "application/pdf",
-    "application/zip",
-    "image/png",
-    "image/jpeg",
-  ];
-
-  if (allowedMimeTypes.includes(file.mimetype)) {
-    cb(null, true);
-  } else {
-    cb(new Error("Invalid file type"), false);
-  }
-};
-
 const uploadStage1 = multer({
   storage: stage1Storage,
-  fileFilter: stage1FileFilter,
+  fileFilter: stageDocumentFileFilter,
   limits: { fileSize: 20 * 1024 * 1024 }, // 20MB
 });
 
@@ -471,30 +484,13 @@ const stage2Storage = multer.diskStorage({
   },
   filename: (req, file, cb) => {
     const cleanName = file.originalname.replace(/\s+/g, "_");
-    const unique =
-      Date.now() + "_" + Math.round(Math.random() * 1e9);
-    cb(null, unique + "_" + cleanName);
+    cb(null, cleanName);
   },
 });
 
-const stage2FileFilter = (req, file, cb) => {
-  const allowedMimeTypes = [
-    "application/pdf",
-    "image/jpeg",
-    "image/png",
-    "application/zip",
-  ];
-
-  if (allowedMimeTypes.includes(file.mimetype)) {
-    cb(null, true);
-  } else {
-    cb(new Error("Invalid file type"), false);
-  }
-};
-
 const uploadStage2 = multer({
   storage: stage2Storage,
-  fileFilter: stage2FileFilter,
+  fileFilter: stageDocumentFileFilter,
   limits: { fileSize: 20 * 1024 * 1024 }, // 20MB
 });
 
@@ -504,26 +500,13 @@ const storage = multer.diskStorage({
   },
   filename: (req, file, cb) => {
     const clean = file.originalname.replace(/\s+/g, "_");
-    const unique =
-      Date.now() + "_" + Math.round(Math.random() * 1e9);
-    cb(null, unique + "_" + clean);
+    cb(null, clean);
   },
 });
 
-const fileFilter = (req, file, cb) => {
-  const allowed = [
-    "application/pdf",
-    "image/jpeg",
-    "image/png",
-  ];
-
-  if (allowed.includes(file.mimetype)) cb(null, true);
-  else cb(new Error("Invalid file type"), false);
-};
-
 const uploadPostClearance = multer({
   storage,
-  fileFilter,
+  fileFilter: stageDocumentFileFilter,
   limits: { fileSize: 20 * 1024 * 1024 },
 });
 

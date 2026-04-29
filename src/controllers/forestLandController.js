@@ -2,6 +2,7 @@ const ForestLand = require("../models/forestLandModel");
 const logAction = require("../utils/logger");
 const xlsx = require("xlsx");
 const fs = require("fs");
+const path = require("path");
 
 const normalizeDocumentList = (value) => {
   if (!value) return [];
@@ -37,6 +38,315 @@ const buildDocumentValue = (files, field, existingValue = null) => {
   return merged.length ? JSON.stringify(merged) : null;
 };
 
+const resolveStageDocumentValue = (req, files, field, existingValue = null) => {
+  let retainedDocs = normalizeDocumentList(existingValue);
+  const incomingExisting = req.body?.[`${field}_existing`];
+
+  if (incomingExisting !== undefined) {
+    try {
+      const parsed = JSON.parse(incomingExisting);
+      retainedDocs = Array.isArray(parsed) ? parsed.filter(Boolean) : [];
+    } catch (e) {
+      retainedDocs = normalizeDocumentList(incomingExisting);
+    }
+  }
+
+  return buildDocumentValue(files, field, retainedDocs);
+};
+
+const stageDocumentMimeTypes = {
+  ".pdf": "application/pdf",
+  ".doc": "application/msword",
+  ".docx":
+    "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+  ".xls": "application/vnd.ms-excel",
+  ".xlsx":
+    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+  ".jpg": "image/jpeg",
+  ".jpeg": "image/jpeg",
+  ".png": "image/png",
+};
+
+const STAGE_DOCUMENT_CONFIG = {
+  stage0: {
+    folder: "stage0",
+    getter: (forestProjectId) => ForestLand.getStage0ByProjectId(forestProjectId),
+    fields: [
+      "dgps_document",
+      "orsac_document",
+      "tree_enumeration_document",
+      "administrative_document",
+      "legal_lease_document",
+      "technical_document",
+      "forest_land_details_document",
+      "ca_ca_document",
+      "fra_document",
+      "environmental_document",
+      "wildlife_document",
+      "maps_document",
+      "financial_document",
+      "proposal_document",
+    ],
+  },
+  stage1: {
+    folder: "stage1",
+    getter: (forestProjectId) => ForestLand.getStage1ByProjectId(forestProjectId),
+    fields: [
+      "stage1_approval_document",
+      "stage1_conditions_document",
+      "ca_land_document",
+      "fra_document",
+      "npv_document",
+      "ca_payment_document",
+      "aca_payment_document",
+      "wildlife_payment_document",
+      "technical_document",
+      "stage1_acceptance_document",
+    ],
+  },
+  stage2: {
+    folder: "stage2",
+    getter: (forestProjectId) => ForestLand.getStage2ByProjectId(forestProjectId),
+    fields: [
+      "environmental_document",
+      "nbwl_document",
+      "final_ca_document",
+      "final_maps_document",
+      "final_technical_document",
+      "stage2_approval_document",
+    ],
+  },
+  postclearance: {
+    folder: "post_clearance",
+    getter: (forestProjectId) =>
+      ForestLand.getPostClearanceByProjectId(forestProjectId),
+    fields: [
+      "ca_plantation_started_document",
+      "ca_plantation_completed_document",
+      "survival_report_document",
+      "wildlife_mitigation_document",
+      "safety_zone_document",
+    ],
+  },
+};
+
+const resolveStageKey = (value = "") =>
+  value.toString().toLowerCase().replace(/[^a-z0-9]/g, "");
+
+const getBaseUrl = (req) => `${req.protocol}://${req.get("host")}`;
+
+const buildStageDocumentUrls = (req, stage, forestProjectId, field, fileName) => {
+  const encodedFileName = encodeURIComponent(fileName);
+  const basePath = `${getBaseUrl(req)}/api/forestland/stage-document/${stage}/${forestProjectId}/${field}/${encodedFileName}`;
+
+  return {
+    viewUrl: `${basePath}?mode=view`,
+    downloadUrl: `${basePath}?mode=download`,
+  };
+};
+
+const attachStageDocumentLinks = (req, stage, forestProjectId, data) => {
+  const config = STAGE_DOCUMENT_CONFIG[stage];
+  if (!config || !data) return data;
+
+  const enriched = { ...data };
+
+  for (const field of config.fields) {
+    const files = normalizeDocumentList(data[field]);
+    enriched[`${field}_files`] = files.map((fileName) => ({
+      fileName,
+      ...buildStageDocumentUrls(req, stage, forestProjectId, field, fileName),
+    }));
+  }
+
+  return enriched;
+};
+
+const serveForestStageDocument = async (req, res) => {
+  try {
+    const stageKey = resolveStageKey(req.params.stage);
+    const { forest_project_id, field } = req.params;
+    const fileName = decodeURIComponent(req.params.fileName || "");
+    const mode = (req.query.mode || "view").toString().toLowerCase();
+
+    if (!forest_project_id || !field || !fileName || fileName.includes("..")) {
+      return res.status(400).json({
+        success: false,
+        message: "Valid stage, forest_project_id, field, and fileName are required",
+      });
+    }
+
+    const config = STAGE_DOCUMENT_CONFIG[stageKey];
+    if (!config) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid forest stage",
+      });
+    }
+
+    if (!config.fields.includes(field)) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid document field for this stage",
+      });
+    }
+
+    const record = await config.getter(forest_project_id);
+    if (!record) {
+      return res.status(404).json({
+        success: false,
+        message: "Stage data not found",
+      });
+    }
+
+    const savedFiles = normalizeDocumentList(record[field]);
+    if (!savedFiles.includes(fileName)) {
+      return res.status(404).json({
+        success: false,
+        message: "Document not found for this stage field",
+      });
+    }
+
+    const filePath = path.join(process.cwd(), "uploads", config.folder, fileName);
+    if (!fs.existsSync(filePath)) {
+      return res.status(404).json({
+        success: false,
+        message: "File missing on server",
+      });
+    }
+
+    const ext = path.extname(fileName).toLowerCase();
+    const contentDisposition = mode === "download" ? "attachment" : "inline";
+
+    res.setHeader(
+      "Content-Type",
+      stageDocumentMimeTypes[ext] || "application/octet-stream",
+    );
+    res.setHeader(
+      "Content-Disposition",
+      `${contentDisposition}; filename="${fileName}"`,
+    );
+
+    return fs.createReadStream(filePath).pipe(res);
+  } catch (err) {
+    console.error("Forest stage document error:", err);
+    return res.status(500).json({
+      success: false,
+      message: "Error while serving forest stage document",
+    });
+  }
+};
+
+const streamForestStageFileByFolder = async (req, res, disposition) => {
+  try {
+    const stageKey = resolveStageKey(req.params.stage);
+    const fileName = decodeURIComponent(req.params.filename || "");
+
+    if (!fileName || fileName.includes("..")) {
+      return res.status(400).json({
+        success: false,
+        message: "Valid file name is required",
+      });
+    }
+
+    const config = STAGE_DOCUMENT_CONFIG[stageKey];
+    if (!config) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid forest stage",
+      });
+    }
+
+    const filePath = path.join(process.cwd(), "uploads", config.folder, fileName);
+    if (!fs.existsSync(filePath)) {
+      return res.status(404).json({
+        success: false,
+        message: "File missing on server",
+      });
+    }
+
+    const ext = path.extname(fileName).toLowerCase();
+    res.setHeader(
+      "Content-Type",
+      stageDocumentMimeTypes[ext] || "application/octet-stream"
+    );
+    res.setHeader(
+      "Content-Disposition",
+      `${disposition}; filename="${fileName}"`
+    );
+
+    return fs.createReadStream(filePath).pipe(res);
+  } catch (err) {
+    console.error("Forest stage file stream error:", err);
+    return res.status(500).json({
+      success: false,
+      message: `Error while ${disposition === "attachment" ? "downloading" : "viewing"} forest stage document`,
+    });
+  }
+};
+
+const downloadForestStageDocument = async (req, res) =>
+  streamForestStageFileByFolder(req, res, "attachment");
+
+const viewForestStageDocument = async (req, res) =>
+  streamForestStageFileByFolder(req, res, "inline");
+
+const normalizeHeaderKey = (key) =>
+  key?.toString().replace(/\r?\n/g, " ").replace(/\s+/g, " ").trim().toLowerCase();
+
+const toTrimmedString = (value) =>
+  value === null || value === undefined ? "" : value.toString().trim();
+
+const normalizeDateInput = (value) => {
+  if (value === null || value === undefined || value === "") return null;
+  if (value instanceof Date && !Number.isNaN(value.getTime())) {
+    return value.toISOString().slice(0, 10);
+  }
+
+  const trimmed = String(value).trim();
+  if (!trimmed) return null;
+
+  const isoDateMatch = trimmed.match(/^(\d{4}-\d{2}-\d{2})/);
+  if (isoDateMatch) return isoDateMatch[1];
+
+  const parsed = new Date(trimmed);
+  if (!Number.isNaN(parsed.getTime())) {
+    return parsed.toISOString().slice(0, 10);
+  }
+
+  return trimmed;
+};
+
+const normalizeHeaderCode = (value) => {
+  const raw = toTrimmedString(value).replace(/\s+/g, "");
+  if (!raw) return "";
+  const match = raw.match(/^([A-Za-z]+)([0-9]+)$/);
+  if (!match) return raw;
+  return `${match[1].toUpperCase()}${match[2]}`;
+};
+
+const isLikelyHeaderCode = (value) =>
+  /^[A-Za-z]{2,}[0-9]{2}$/.test(normalizeHeaderCode(value));
+
+const buildForestExcelRowsWithFlexibleHeaders = (sheet) => {
+  const singleHeaderRows = xlsx.utils.sheet_to_json(sheet, {
+    defval: null,
+    raw: true,
+  });
+
+  if (!singleHeaderRows || singleHeaderRows.length === 0) return [];
+
+  return singleHeaderRows.map((row) => {
+    const normalizedRow = {};
+    for (const key in row) {
+      const normalizedKey = normalizeHeaderKey(key);
+      normalizedRow[key] = row[key];
+      normalizedRow[normalizedKey] = row[key];
+    }
+    return normalizedRow;
+  });
+};
+
 // validation helpers
 // const validateForestArea = (d) =>
 //   d.forest_category_id && d.forest_division && d.forest_range;
@@ -47,6 +357,11 @@ const buildDocumentValue = (files, field, existingValue = null) => {
 
 const uploadForestLandSchedule = async (req, res) => {
   const userId = req.user?.id || null;
+  const cleanupUploadedFile = () => {
+    if (req.file?.path && fs.existsSync(req.file.path)) {
+      fs.unlinkSync(req.file.path);
+    }
+  };
 
   try {
     const project_master_id = req.body.project_master_id || req.body.project_id;
@@ -68,96 +383,217 @@ const uploadForestLandSchedule = async (req, res) => {
 
     const workbook = xlsx.readFile(req.file.path);
 
-    if (workbook.SheetNames.length !== 1) {
+    if (!workbook.SheetNames.length) {
+      cleanupUploadedFile();
       return res.status(400).json({
         success: false,
-        message: "Invalid Excel format. Only ONE sheet is allowed inside file.",
+        message: "Invalid Excel format. No sheet found inside file.",
       });
     }
 
-    const sheetName = workbook.SheetNames[0];
-    const rawRows = xlsx.utils.sheet_to_json(workbook.Sheets[sheetName], {
-      defval: null,
-    });
+    if (workbook.SheetNames.length > 2) {
+      cleanupUploadedFile();
+      return res.status(400).json({
+        success: false,
+        message: "Invalid Excel format. Maximum 2 sheets are allowed inside file.",
+      });
+    }
+
+    const rawRows = workbook.SheetNames.flatMap((sheetName) =>
+      buildForestExcelRowsWithFlexibleHeaders(workbook.Sheets[sheetName]),
+    );
 
     if (!rawRows.length) {
+      cleanupUploadedFile();
       return res.status(400).json({
         success: false,
         message: "Excel file is empty",
       });
     }
 
-    const normalizeKey = (key) =>
-      key
-        ?.toString()
-        .replace(/\r?\n/g, " ")
-        .replace(/[_-]+/g, " ")
-        .replace(/\s+/g, " ")
-        .trim()
-        .toLowerCase();
+    const normalizeCompareKey = (key) =>
+      normalizeHeaderKey(key)?.replace(/[^a-z0-9]+/g, " ").trim();
+    const isHeaderLikeValue = (value, ...expectedLabels) => {
+      const normalizedValue = normalizeCompareKey(value);
+      if (!normalizedValue) return false;
+      return expectedLabels.some(
+        (label) => normalizedValue === normalizeCompareKey(label),
+      );
+    };
 
     const toNumberOrNull = (value) => {
       if (value === null || value === undefined || value === "") return null;
-      const num = Number(value);
+      const num = Number(String(value).replace(/,/g, "").trim());
       return Number.isFinite(num) ? num : null;
     };
 
-    const normalizedRows = rawRows.map((row) => {
-      const obj = {};
-      for (const key in row) obj[normalizeKey(key)] = row[key];
-      return obj;
-    });
-
-    const pick = (row, aliases) => {
-      for (const alias of aliases) {
-        const v = row[alias];
-        if (v !== undefined) return v;
+    const getValueByNormalizedKey = (row, possibleKeys) => {
+      if (!row) return null;
+      const normalizedKeys = possibleKeys.map((k) => normalizeCompareKey(k));
+      for (const key of Object.keys(row)) {
+        if (normalizedKeys.includes(normalizeCompareKey(key))) {
+          const value = row[key];
+          if (value !== undefined && value !== null && `${value}`.trim() !== "") {
+            return value;
+          }
+        }
       }
       return null;
     };
 
-    const parsedRows = normalizedRows
-      .map((row) => ({
-        district: pick(row, ["district"]),
-        ri_circle: pick(row, ["ri circle", "ri_circle"]),
-        tahasil: pick(row, ["tahasil", "tehasil"]),
-        village: pick(row, ["village", "mouza", "mauza"]),
-        forest_division: pick(row, ["forest division", "forest_division"]),
-        forest_range: pick(row, ["forest range", "forest_range"]),
-        khata_no: pick(row, ["khata no", "khata_no", "khata no."]),
-        plot_no: pick(row, ["plot no", "plot_no", "plot no."]),
-        kisam: pick(row, ["kisam", "kissam"]),
-        forest_category_id: pick(row, [
-          "forest category id",
-          "forest_category_id",
-          "forest category",
-        ]),
-        ownership: pick(row, ["ownership"]),
-        fra_allotted: pick(row, ["fra allotted", "fra_allotted", "land alloted through fra"]),
-        total_area_ha: toNumberOrNull(
-          pick(row, ["total area (ha)", "total_area_ha", "total area"]),
-        ),
-        proposed_acquired_area_ha: toNumberOrNull(
-          pick(row, [
-            "proposed/acquired area (ha)",
+    const getCodeValue = (row, code) => {
+      const target = normalizeCompareKey(code);
+      for (const key of Object.keys(row || {})) {
+        const normalized = normalizeCompareKey(key);
+        if (normalized === target || normalized.startsWith(`${target} `)) {
+          const value = row[key];
+          if (value !== undefined && value !== null && `${value}`.trim() !== "") {
+            return value;
+          }
+        }
+      }
+      return null;
+    };
+
+    const get = (row, code, ...fallbacks) => {
+      const byCode = getCodeValue(row, code);
+      if (byCode !== null) return byCode;
+      return getValueByNormalizedKey(row, fallbacks);
+    };
+
+    const parsedRows = rawRows
+      .map((row) => {
+        const totalAreaHa = toNumberOrNull(
+          get(row, "FA01", "NFA02", "CAA01", "total area (ha)", "total area ha"),
+        );
+        const totalAreaAcre = toNumberOrNull(
+          get(row, "total area (in acres)", "total area (acre)"),
+        );
+        const proposedAreaHa = toNumberOrNull(
+          get(
+            row,
+            "FA02",
+            "NFA03",
+            "proposed/ acquired area ha",
             "proposed_acquired_area_ha",
             "proposed area (ha)",
-          ]),
-        ),
-        digital_area_ha: toNumberOrNull(
-          pick(row, ["digital area (ha)", "digital_area_ha"]),
-        ),
-        ca_area_ha: toNumberOrNull(pick(row, ["ca area (ha", "ca_area_ha"])),
-        patch_name: pick(row, ["patch name", "patch_name"]),
-        remarks: pick(row, ["remarks", "remark"]),
+          ),
+        );
+        const proposedAreaAcre = toNumberOrNull(
+          get(row, "LA02", "proposed area (in acres)", "proposed area (acre)"),
+        );
+
+        return {
+          district: get(row, "FD01", "NFD01", "CAD01", "district"),
+          ri_circle: get(row,  "FD02", "NFD02", "CAD02", "ri circle", "ri_circle"),
+          tahasil: get(row, "NFD03", "CAD03", "tahasil", "tehasil"),
+          village: get(
+            row,
+            "FD05",
+            "NFD04",
+            "CAD04",
+            "village",
+            "mouza",
+            "mauza",
+            "name of village",
+          ),
+          forest_division: get(row, "FD03", "CA04", "forest division", "forest_division"),
+          forest_range: get(row, "FD04", "forest range", "forest_range"),
+          khata_no: get(
+            row,
+            "FD06",
+            "NFD05",
+            "CAD05",
+            "khata no",
+            "khata_no",
+            "khata no.",
+          ),
+          plot_no: get(
+            row,
+            "FD07",
+            "NFD06",
+            "CAD06",
+            "plot no",
+            "plot_no",
+            "plot no.",
+          ),
+          kisam: get(row, "FD08", "NFD07", "CAD07", "kisam", "kissam"),
+          forest_category_id: get(
+            row,
+            "FD09",
+            "forest category id",
+            "forest_category_id",
+            "forest category",
+            "forest_category",
+          ),
+          ownership: get(row, "NFO01", "CAO01", "ownership"),
+          fra_allotted: get(row, "NFA01", "fra allotted", "fra_allotted", "land allotted through fra"),
+          total_area_ha:
+            totalAreaHa !== null
+              ? totalAreaHa
+              : totalAreaAcre !== null
+                ? parseFloat((totalAreaAcre / 2.47105).toFixed(4))
+                : null,
+          proposed_acquired_area_ha:
+            proposedAreaHa !== null
+              ? proposedAreaHa
+              : proposedAreaAcre !== null
+                ? parseFloat((proposedAreaAcre / 2.47105).toFixed(4))
+                : null,
+          digital_area_ha: toNumberOrNull(
+            get(row, "digital area (ha)", "digital_area_ha", "digital area ha"),
+          ),
+          ca_area_ha: toNumberOrNull(get(row, "CA02", "ca area (ha)", "ca_area_ha")),
+          patch_name: get(row, "CA03", "patch name", "patch_name"),
+          remarks: get(row, "FA03", "NFA04", "CA05", "remarks", "remark"),
+        };
+      })
+      .map((row) => ({
+        ...row,
+        district: typeof row.district === "string" ? row.district.trim() : row.district,
+        ri_circle: typeof row.ri_circle === "string" ? row.ri_circle.trim() : row.ri_circle,
+        tahasil: typeof row.tahasil === "string" ? row.tahasil.trim() : row.tahasil,
+        village: typeof row.village === "string" ? row.village.trim() : row.village,
+        khata_no: typeof row.khata_no === "string" ? row.khata_no.trim() : row.khata_no,
+        plot_no: typeof row.plot_no === "string" ? row.plot_no.trim() : row.plot_no,
       }))
       .filter((row) =>
         Object.values(row).some(
           (value) => value !== null && value !== undefined && value !== "",
         ),
-      );
+      )
+      .filter(
+        (row) =>
+          !isHeaderLikeValue(row.district, "district") &&
+          !isHeaderLikeValue(row.ri_circle, "ri circle", "ri_circle") &&
+          !isHeaderLikeValue(row.tahasil, "tahasil", "tehasil") &&
+          !isHeaderLikeValue(row.village, "village", "mouza", "mauza", "name of village") &&
+          !isHeaderLikeValue(row.forest_division, "forest division", "forest_division") &&
+          !isHeaderLikeValue(row.forest_range, "forest range", "forest_range") &&
+          !isHeaderLikeValue(row.khata_no, "khata no", "khata_no", "khata no.") &&
+          !isHeaderLikeValue(row.plot_no, "plot no", "plot_no", "plot no.") &&
+          !isHeaderLikeValue(row.kisam, "kisam", "kissam") &&
+          !isHeaderLikeValue(
+            row.forest_category_id,
+            "forest category id",
+            "forest_category_id",
+            "forest category",
+            "forest_category",
+          ) &&
+          !isHeaderLikeValue(row.ownership, "ownership") &&
+          !isHeaderLikeValue(
+            row.fra_allotted,
+            "fra allotted",
+            "fra_allotted",
+            "land allotted through fra",
+          ) &&
+          !isHeaderLikeValue(row.patch_name, "patch name", "patch_name") &&
+          !isHeaderLikeValue(row.remarks, "remarks", "remark"),
+      )
+      .filter((row) => row.khata_no || row.plot_no || row.village);
 
     if (!parsedRows.length) {
+      cleanupUploadedFile();
       return res.status(400).json({
         success: false,
         message: "No valid rows found in Excel file",
@@ -169,6 +605,15 @@ const uploadForestLandSchedule = async (req, res) => {
       project_master_id,
       schedule_type,
     );
+
+    await ForestLand.insertDocument({
+      project_id: project_master_id,
+      type: schedule_type || req.body.type,
+      filename: req.file.filename,
+      original_filename: req.file.originalname,
+      file_path: `uploads/forest_land_excels/${req.file.filename}`,
+      uploaded_by: userId,
+    });
 
     await logAction(
       userId,
@@ -195,14 +640,11 @@ const uploadForestLandSchedule = async (req, res) => {
     );
 
     console.error("Forest Land Schedule Upload Error:", err);
+    cleanupUploadedFile();
     return res.status(500).json({
       success: false,
       message: "Server error",
     });
-  } finally {
-    if (req.file?.path && fs.existsSync(req.file.path)) {
-      fs.unlinkSync(req.file.path);
-    }
   }
 };
 
@@ -339,6 +781,116 @@ const forestLandList = async (req, res) => {
     });
   }
 };
+
+const forestLandDocumentList = async (req, res) => {
+  try {
+    let { project_id, project_master_id, type, schedule_type } = req.query;
+    project_id = project_id || project_master_id;
+
+    const rows = await ForestLand.findAllDocuments({
+      project_id,
+      schedule_type,
+      type,
+    });
+
+    const files = rows.map((r) => ({
+      id: r.id,
+      project_id: r.project_id,
+      type: r.type,
+      name: r.original_filename,
+      download_name: r.filename,
+      uploadedAt: r.created_at,
+      documentUrl: `${req.protocol}://${req.get("host")}${req.get("host").includes("localhost") ? "" : "/api"
+        }/uploads/forest_land_excels/${r.filename}`,
+    }));
+
+    return res.status(200).json({
+      success: true,
+      total: files.length,
+      files,
+    });
+  } catch (err) {
+    console.error("Forest Land Document List Error:", err);
+    return res.status(500).json({
+      success: false,
+      message: "Failed to fetch forest land documents",
+    });
+  }
+};
+
+const forestLandDocumentDelete = async (req, res) => {
+  const userId = req.user?.id || null;
+
+  try {
+    const { fileName } = req.params;
+
+    if (!fileName || fileName.includes("..")) {
+      return res.status(400).json({
+        success: false,
+        message: "Valid file name is required",
+      });
+    }
+
+    // ✅ allow only Excel files
+    // if (!/\.(xls|xlsx)$/i.test(fileName)) {
+    //   return res.status(400).json({
+    //     success: false,
+    //     message: "Invalid file format. Only Excel files can be deleted",
+    //   });
+    // }
+
+    const doc = await ForestLand.findDocumentByFilename(fileName);
+
+    if (!doc) {
+      return res.status(404).json({
+        success: false,
+        message: "Document record not found",
+      });
+    }
+
+    const filePath = path.join(process.cwd(), doc.file_path);
+
+    // delete file if exists
+    if (fs.existsSync(filePath)) {
+      fs.unlinkSync(filePath);
+    }
+
+    // delete DB record
+    await ForestLand.deleteDocumentByFilename(fileName);
+
+    await logAction(
+      userId,
+      "forest land excel delete",
+      "success",
+      "Forest land excel file deleted successfully",
+      { fileName },
+      null,
+    );
+
+    return res.status(200).json({
+      success: true,
+      message: "File deleted successfully",
+      deletedFile: fileName,
+    });
+  } catch (err) {
+    console.error("Forest Land Excel Delete Error:", err);
+
+    await logAction(
+      userId,
+      "forest land excel delete",
+      "failure",
+      "Failed to delete forest land Excel file",
+      null,
+      err.message,
+    );
+
+    return res.status(500).json({
+      success: false,
+      message: "Server error while deleting forest land Excel file",
+    });
+  }
+};
+
 
 const updateForestLand = async (req, res) => {
   const userId = req.user?.id || null;
@@ -1386,7 +1938,7 @@ const addStage0 = async (req, res) => {
       proposal_document: buildDocumentValue(files, "proposal_document"),
 
       parivesh_proposal_no: body.parivesh_proposal_no || null,
-      submission_date: body.submission_date || null,
+      submission_date: normalizeDateInput(body.submission_date),
 
       stage_0_status: stageStatus,
     };
@@ -1844,8 +2396,19 @@ const updateStage0 = async (req, res) => {
 
     const stageStatus = proposalSubmitted === 1 ? "Ready" : "Ongoing";
 
-    const resolveFile = (field, existingValue) =>
-      buildDocumentValue(files, field, existingValue);
+   const resolveFile = (field, existingValue) => {
+  let existingDocs = normalizeDocumentList(existingValue);
+
+  const incomingExisting = req.body[`${field}_existing`];
+
+  if (incomingExisting) {
+    try {
+      existingDocs = JSON.parse(incomingExisting);
+    } catch {}
+  }
+
+  return buildDocumentValue(files, field, existingDocs);
+};
 
     const requireFile = (condition, fileValue, message) => {
       if (condition && !hasAnyDocuments(fileValue)) {
@@ -1993,7 +2556,7 @@ const updateStage0 = async (req, res) => {
           : existingData.parivesh_proposal_no,
       submission_date:
         body.submission_date !== undefined
-          ? body.submission_date
+          ? normalizeDateInput(body.submission_date)
           : existingData.submission_date,
       stage_0_status: stageStatus,
     };
@@ -2052,7 +2615,7 @@ const updateStage1 = async (req, res) => {
     const stage1Status = stage1Accepted === 1 ? "Completed" : "Pending";
 
     const resolveFile = (field, existingValue) =>
-      buildDocumentValue(files, field, existingValue);
+      resolveStageDocumentValue(req, files, field, existingValue);
 
     const requireFile = (condition, fileValue, message) => {
       if (condition && !hasAnyDocuments(fileValue)) {
@@ -2216,7 +2779,7 @@ const updateStage2 = async (req, res) => {
     const eligiblePostClearance = stage2Status === "Granted" ? 1 : 0;
 
     const resolveFile = (field, existingValue) =>
-      buildDocumentValue(files, field, existingValue);
+      resolveStageDocumentValue(req, files, field, existingValue);
 
     const requireFile = (condition, fileValue, message) => {
       if (condition && !hasAnyDocuments(fileValue)) {
@@ -2288,7 +2851,7 @@ const updateStage2 = async (req, res) => {
       stage2_approval_document: stage2ApprovalDocument,
       stage2_approval_date:
         body.stage2_approval_date !== undefined
-          ? body.stage2_approval_date
+          ? normalizeDateInput(body.stage2_approval_date)
           : existingData.stage2_approval_date,
       approved_forest_area_ha:
         body.approved_forest_area_ha !== undefined
@@ -2365,7 +2928,7 @@ const updatePostClearance = async (req, res) => {
         : Number(existingData.periodic_compliance_submitted || 0);
 
     const resolveFile = (field, existingValue) =>
-      buildDocumentValue(files, field, existingValue);
+      resolveStageDocumentValue(req, files, field, existingValue);
 
     const requireFile = (condition, fileValue, message) => {
       if (condition && !hasAnyDocuments(fileValue)) {
@@ -2533,10 +3096,17 @@ const getStage0 = async (req, res) => {
       });
     }
 
+    const responseData = attachStageDocumentLinks(
+      req,
+      "stage0",
+      forest_project_id,
+      data
+    );
+
     return res.status(200).json({
       success: true,
       message: "Stage-0 data fetched successfully",
-      data,
+      data: responseData,
     });
   } catch (err) {
     console.error("Get Stage0 Error:", err);
@@ -2566,10 +3136,17 @@ const getStage1 = async (req, res) => {
       });
     }
 
+    const responseData = attachStageDocumentLinks(
+      req,
+      "stage1",
+      forest_project_id,
+      data
+    );
+
     return res.status(200).json({
       success: true,
       message: "Stage-1 data fetched successfully",
-      data,
+      data: responseData,
     });
   } catch (err) {
     console.error("Get Stage1 Error:", err);
@@ -2599,10 +3176,17 @@ const getStage2 = async (req, res) => {
       });
     }
 
+    const responseData = attachStageDocumentLinks(
+      req,
+      "stage2",
+      forest_project_id,
+      data
+    );
+
     return res.status(200).json({
       success: true,
       message: "Stage-2 data fetched successfully",
-      data,
+      data: responseData,
     });
   } catch (err) {
     console.error("Get Stage2 Error:", err);
@@ -2634,10 +3218,17 @@ const getPostClearance = async (req, res) => {
       });
     }
 
+    const responseData = attachStageDocumentLinks(
+      req,
+      "postclearance",
+      forest_project_id,
+      data
+    );
+
     return res.status(200).json({
       success: true,
       message: "Post-clearance data fetched successfully",
-      data,
+      data: responseData,
     });
   } catch (err) {
     console.error("Get PostClearance Error:", err);
@@ -2653,6 +3244,8 @@ module.exports = {
   addForestLand,
   updateForestLand,
   forestLandList,
+  forestLandDocumentList,
+  forestLandDocumentDelete,
   deleteForestLand,
   forestLandAbstract,
   // addForestProject,
@@ -2677,4 +3270,7 @@ module.exports = {
   getStage1,
   getStage2,
   getPostClearance,
+  serveForestStageDocument,
+  downloadForestStageDocument,
+  viewForestStageDocument,
 };

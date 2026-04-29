@@ -911,6 +911,7 @@ const Khata = {
     JOIN villages v
       ON v.village_name = pl.village_name
       AND v.project_id = pl.project_id
+      AND v.type = pl.type
     JOIN projects p ON p.id = pl.project_id
     WHERE pl.project_id = ?
       AND pl.type = ?
@@ -959,7 +960,7 @@ const Khata = {
         normalizedRow[normalize(key)] = row[key];
       }
 
-      const khataNo = row["Khata No."] || row["Khata No"] || null;
+      const khataNo = row["LD06"] || row["Khata No."] || row["Khata No"] || null;
       if (!khataNo) continue;
 
       if (!rrByKhata[khataNo]) {
@@ -984,74 +985,86 @@ const Khata = {
       const r = rrByKhata[khataNo];
       addIfValid(
         r.rr_employment,
-        normalizedRow["RR Assistance (Rehab) - Employment in the Project"]
+        row["RR01"] ||
+          normalizedRow["RR Assistance (Rehab) - Employment in the Project"]
       );
 
       addIfValid(
         r.rr_cash_in_lieu,
-        row["RR Assistance (Rehab) - Cash in lieu of Employment"]
+        row["RR02"] ||
+          row["RR Assistance (Rehab) - Cash in lieu of Employment"]
       );
 
       addIfValid(
         r.rr_training_skill_upgradation,
-        row["RR Assistance (Rehab) - Training for Skill Upgradation"]
+        row["RR03"] ||
+          row["RR Assistance (Rehab) - Training for Skill Upgradation"]
       );
 
       addIfValid(
         r.rr_self_employment,
-        row["RR Assistance (Rehab) - Assistance for Self Employment"]
+        row["RR04"] ||
+          row["RR Assistance (Rehab) - Assistance for Self Employment"]
       );
 
       addIfValid(
         r.rr_special_allowance_st_ntfp,
-        row["RR Assistance (Rehab) - Special Allowance to STs for loss of NTFP"]
+        row["RR05"] ||
+          row["RR Assistance (Rehab) - Special Allowance to STs for loss of NTFP"]
       );
 
       addIfValid(
         r.rr_homestead_allotment,
-        row["RR Assistance (Resettle) - Homested Land Alloted/Self Relocation"]
+        row["RR06"] ||
+          row["RR Assistance (Resettle) - Homested Land Alloted/Self Relocation"]
       );
 
       addIfValid(
         r.rr_house_building_assistance,
-        row["RR Assistance (Resettle) - House Building Assistance"]
+        row["RR07"] ||
+          row["RR Assistance (Resettle) - House Building Assistance"]
       );
 
       addIfValid(
         r.rr_constructed_by,
-        row["RR Assistance (Resettle) - Constructed by Project Authority/Self"]
+        row["RR08"] ||
+          row["RR Assistance (Resettle) - Constructed by Project Authority/Self"]
       );
 
       addIfValid(
         r.rr_transit_shed,
-        row["RR Assistance (Resettle) - Assistance for Transit Shed"]
+        row["RR09"] ||
+          row["RR Assistance (Resettle) - Assistance for Transit Shed"]
       );
 
       addIfValid(
         r.rr_transport_allowance,
-        row["RR Assistance (Resettle) - Transportation Allowance"]
+        row["RR10"] ||
+          row["RR Assistance (Resettle) - Transportation Allowance"]
       );
 
       addIfValid(
         r.rr_maintenance_allowance,
-        row["RR Assistance (Resettle) - Maintenance Allowance"]
+        row["RR11"] ||
+          row["RR Assistance (Resettle) - Maintenance Allowance"]
       );
 
       addIfValid(
         r.rr_multiple_displacement_allowance,
-        row[
-        "RR Assistance (Other) - Special Allowance for Multiple Displacement"
-        ]
+        row["RR12"] ||
+          row[
+            "RR Assistance (Other) - Special Allowance for Multiple Displacement"
+          ]
       );
 
       addIfValid(
         r.rr_exgratia,
-        row["RR Assistance (Other) - Ex-Gratia (if any)"]
+        row["RR13"] || row["RR Assistance (Other) - Ex-Gratia (if any)"]
       );
 
       addIfValid(
         r.rr_other_benefits,
-        row["RR Assistance (Other) - Other Benefits (if any)"]
+        row["RR14"] || row["RR Assistance (Other) - Other Benefits (if any)"]
       );
     }
 
@@ -1173,6 +1186,7 @@ const Khata = {
     JOIN villages v
       ON v.village_name = pl.village_name
     AND v.project_id = pl.project_id
+    AND v.type = pl.type
     JOIN projects p
       ON p.id = pl.project_id
     WHERE pl.project_id = ?

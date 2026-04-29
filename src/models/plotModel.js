@@ -1159,11 +1159,11 @@ const Plot = {
 
     // fetch project name
     const [projectRows] = await db.query(
-      "SELECT project_name FROM projects WHERE id = ?",
+      "SELECT client_code FROM projects WHERE id = ?",
       [project_id],
     );
 
-    const projectName = projectRows[0].project_name;
+    const clientCode = projectRows[0].client_code;
 
     const pad2 = (n) => String(n).padStart(2, "0");
     const toMysqlDate = (rawValue) => {
@@ -1238,182 +1238,341 @@ const Plot = {
     };
 
     const values = plots.map((plot) => {
-      const dateValue =
-        plot["Date of Award"] ??
-        plot["date of award"] ??
-        plot["Date of award"] ??
-        null;
-      const formattedDate = toMysqlDate(dateValue);
-      const formattedLandCaseDate = toMysqlDate(
-        plot["Land Case - Date (Date)"] ??
-        plot["land case - date (date)"] ??
-        null,
-      );
-      const formattedGrievanceDate = toMysqlDate(
-        plot["Grievance  Date"] ??
-        plot["Grievance Date"] ??
-        plot["grievance date"] ??
-        null,
-      );
-      const formattedTribunalDepositDate = toMysqlDate(
-        plot["Tribunal - Date of Deposit"] ??
-        plot["tribunal - date of deposit"] ??
-        null,
-      );
+      const normalizeKey = (key) =>
+        key
+          ?.toString()
+          .replace(/\r?\n/g, " ")
+          .replace(/\s+/g, " ")
+          .trim()
+          .toLowerCase();
 
-      //Land area conversion logic
-      let totalAcres = null;
-      let totalHectares = null;
-      let acquiredAcres = null;
-      let acquiredHectares = null;
+      const normalizeCode = (code) => {
+        const raw = code?.toString().replace(/\s+/g, "").toUpperCase();
+        if (!raw) return "";
+        const match = raw.match(/^([A-Z]+)0*([0-9]+)$/);
+        return match ? `${match[1]}${Number(match[2])}` : raw;
+      };
 
-      if (
-        plot["LA1-Land Area (Total Area in Acres)"] ||
-        plot["LA2-Land Area (Total Area in Ha.)"]
-      ) {
-        totalAcres =
-          parseFloat(plot["LA1-Land Area (Total Area in Acres)"]) || null;
-        totalHectares =
-          parseFloat(plot["LA2-Land Area (Total Area in Ha.)"]) || null;
-        acquiredAcres =
-          parseFloat(plot["Land Area (Total Acquired Area in Acres)"]) || null;
-        acquiredHectares =
-          parseFloat(plot["Land Area (Total Acquired Area in Ha.)"]) || null;
-      } else if (plot["ROR Area In Ha."] || plot["Area occupied in Ha."]) {
-        totalHectares = parseFloat(plot["ROR Area In Ha."]) || null;
-        acquiredHectares = parseFloat(plot["Area occupied in Ha."]) || null;
-      }
+      const normalizedPlot = new Proxy(plot, {
+        get(target, prop) {
+          if (typeof prop !== "string") return target[prop];
+          if (Reflect.has(target, prop)) return target[prop];
+          const normalizedProp = normalizeKey(prop);
+          for (const key of Object.keys(target)) {
+            if (normalizeKey(key) === normalizedProp) {
+              return target[key];
+            }
+          }
+          return undefined;
+        },
+      });
+
+      plot = normalizedPlot;
+      const normalizeHeaderLoose = (value) =>
+        normalizeKey(value).replace(/[^a-z0-9]+/g, "");
+      const getCell = (...headers) => {
+        for (const header of headers) {
+          const value = plot[header];
+          if (value !== undefined && value !== null && value !== "") return value;
+        }
+
+        const rowEntries = Object.entries(plot).map(([k, v]) => [
+          normalizeHeaderLoose(k),
+          v,
+        ]);
+
+        for (const header of headers) {
+          const target = normalizeHeaderLoose(header);
+          const matched = rowEntries.find(
+            ([k, v]) => k === target && v !== undefined && v !== null && v !== "",
+          );
+          if (matched) return matched[1];
+        }
+
+        return null;
+      };
+
+      const get = (code, ...fallbacks) => {
+        const direct = plot[code];
+        if (direct !== undefined && direct !== null && direct !== "") return direct;
+
+        const canonicalCode = normalizeCode(code);
+        if (canonicalCode && canonicalCode !== code) {
+          const canonical = plot[canonicalCode];
+          if (canonical !== undefined && canonical !== null && canonical !== "") {
+            return canonical;
+          }
+        }
+
+        return getCell(...fallbacks);
+      };
+
+      // LO - Land owner / tenant fields
+      const surveyNo = get("LO05", "SES Survey No.");
+      const recordedTenant = get(
+        "LO01",
+        "LO1-Name of Recorded Tenant (RT)",
+        "Name of Tenant",
+      );
+      const presentTenant = get(
+        "LO02",
+        "LO2-Name of Present Tenant(s)",
+        "Name of Tenant",
+      );
+      const address = get("LO03", "Present Address");
+      const displaced = get("LO04", "Displaced/Affected Person");
+      const awardDate = toMysqlDate(get("LO06", "Date of Award", "Date of award"));
+
+      // LD - Land detail fields
+      const district = get("LD01", "District", "district");
+      const villageName = get("LD02", "Name of Village", "name of village");
+      const tahasil = get("LD03", "Name of the Tahasil", "Tahasil/Thana");
+      const riCircle = get("LD04", "Name of the R.I. Circle");
+      const thanaNo = get("LD05", "Thana No.", "Thana no", "Thana No");
+      const khataNo = get("LD06", "Khata No.", "Khata No");
+      const plotNo = get("LD07", "Plot No.");
+      const kissam = get("LD08", "Kissam of the Land", "Kissam");
+      const landCategory = get("LD09", "LO12-Category of Land");
+      const ldRemarks = get("LD10", "LO13-Remarks");
+      const fullPart = get("LD11", "Full/Part", "Full Part");
+
+      // LA - Land acquisition fields
+      let totalAcres =
+        parseFloat(
+          get(
+            "LA01",
+            "LA1-Land Area (Total Area in Acres)",
+            "Land Area (Total Area in Acres)",
+          ),
+        ) || null;
+      let totalHectares =
+        parseFloat(
+          get(
+            "LA02",
+            "LA2-Land Area (Total Area in Ha.)",
+            "Land Area (Total Area in Ha.)",
+            "ROR Area In Ha.",
+          ),
+        ) || null;
+      let acquiredAcres =
+        parseFloat(
+          get(
+            "LA03",
+            "Land Area (Total Acquired Area in Acres)",
+            "Land Area (Acquired Area in Acres)",
+          ),
+        ) || null;
+      let acquiredHectares =
+        parseFloat(
+          get(
+            "LA04",
+            "Land Area (Total Acquired Area in Ha.)",
+            "Land Area (Acquired Area in Ha.)",
+            "Area occupied in Ha.",
+          ),
+        ) || null;
 
       if (totalAcres && !totalHectares)
         totalHectares = parseFloat((totalAcres / 2.47105).toFixed(4));
       if (totalHectares && !totalAcres)
         totalAcres = parseFloat((totalHectares * 2.47105).toFixed(4));
-
       if (acquiredAcres && !acquiredHectares)
         acquiredHectares = parseFloat((acquiredAcres / 2.47105).toFixed(4));
       if (acquiredHectares && !acquiredAcres)
         acquiredAcres = parseFloat((acquiredHectares * 2.47105).toFixed(4));
 
-      // const villageCode = plot["Village Code"] || plot["village code"] || "NA";
-      const villageName = plot["Name of Village"] || plot["name of village"] || "NA";
+      const benchMarkValue = get(
+        "LA05",
+        "Market Value fixed U/S.26 of RFCTLARR Act 2013 (Per Acre)",
+      );
+      const basicLandValue = get("LA06", "Basic Land value");
+      const landValueWithMF = get(
+        "LA07",
+        "Land value  with multiplication factor (Values from 1 to 2)",
+      );
+      const noOfTrees = get("LA08", "No. of Trees");
+      const totalTreeValue = get("LA09", "Total Value of Trees ");
+      const noOfHouse = get("LA10", "No. of House");
+      const houseValue = get("LA11", "Value of Structure (house)");
+      const otherStructureDetails = get("LA12", "Detail of Structures other than House");
+      const otherStructureValue = get("LA13", "Value of structures other than house");
+      const totalValue = get(
+        "LA14",
+        "Total Value  (Land-22 + Tree-24 + House-26 + Structures-28)",
+      );
+      const solatium = get("LA15", "Solatium @ of (100%)");
+      const noDaysInterest = get(
+        "LA16",
+        "No. of days of Interest",
+        "No of days of Interest",
+        "No. of Days of Interest",
+        "No of Days of Interest",
+        "No. of days interest",
+        "No of days interest",
+      );
+      const additional12 = get(
+        "LA17",
+        "12% additional compensation on market value of land area",
+      );
+      const totalCompensation = get("LA18", "Total Compensation Amount");
+      const apportionment = get(
+        "LA19",
+        "LA18-Apportionment Amount of the Award for the Individual Family Member",
+      );
+      const priority = get("LA20", "LA19-Priority/Urgency");
+      const landUsePlan = get("LA21", "LA20-Land Use Plan");
+      const laRemarks = get("LA22", "LA21-Remarks");
 
-      const khataNo = plot["Khata No."] || plot["Khata No"] || "NA";
-      const laCaseFileNo = `${projectName}/${villageName}/${khataNo}`;
-      //Return final row array
+      // BK - Bank
+      const bankAccount = get("BK01", "BK01-Bank Account No.");
+      const bankName = get("BK02", "BK02-Name of the Bank");
+      const branchIFSC = get("BK03", "BK03-Name of the Branch with IFSC Code");
+
+      // PD - Personal details
+      const aadhaar = get("PD01", "PD01-Aadhaar No.");
+      const pan = get("PD02", "PAN No.");
+      const age = get("PD03", "Age");
+      const caste = get("PD04", "Caste");
+      const maritalStatus = get("PD05", "Marital Status");
+      const education = get("PD06", "Education");
+      const occupation = get("PD07", "Occupation");
+      const income = get("PD08", "Annual Income");
+      const skill = get("PD09", "PD09- Skill Acquired");
+      const affidavit = get("PD10", "PD10-Affidavit with subject details (if any)");
+
+      // FD - Family details
+      const majorMale = get("FD01", "FD01-No. of Family Members (Major Male)");
+      const majorFemale = get("FD02", "No. of Family Members (Major Female)");
+      const minorMale = get("FD03", "No. of Family Members (Minor Male)");
+      const minorFemale = get("FD04", "No. of Family Members (Minor Female)");
+      const majorTrans = get("FD05", "No. of Family Members (Major Transgender)");
+      const minorTrans = get("FD06", "No. of Family Members (Minor Transgender)");
+      const disability = get("FD07", "No. of Persons with Disability");
+      const orphan = get("FD08", "Family with Orphan Members (Y/N)");
+      const legalHeir = get("FD09", "FD09-Legal Heir Certificate No. (if any)");
+
+      // LG - Legal details
+      const landCaseNo = get("LG01", "LG01-Land Case - No. (Number)");
+      const landCaseDate = toMysqlDate(
+        get("LG02", "Land Case - Date (Date)", "land case - date (date)"),
+      );
+      const landCaseType = get("LG03", "Land Case Type");
+      const landCaseStatus = get("LG04", "Land case - Status");
+      const landCaseAction = get("LG05", "LG05-Land Case - Action");
+
+      // GR/TR/GV
+      const grievanceNo = get("GR01", "GR01-Grievance No. ");
+      const grievanceDate = toMysqlDate(
+        get("GR02", "Grievance  Date", "Grievance Date", "grievance date"),
+      );
+      const grievanceSubject = get("GR03", "Grievance - Subject Matter");
+      const grievanceStatus = get("GR04", "Grievance - Present Status");
+      const grievanceAction = get("GR05", "GR05-Grievance - Action taken");
+
+      const tribunal = get("TR01", "TR01-Tribunal (Y/N)");
+      const tribunalDate = toMysqlDate(
+        get("TR02", "Tribunal - Date of Deposit", "tribunal - date of deposit"),
+      );
+      const tribunalAmount = get("TR03", "TR03-Tribunal - Amount Deposited");
+
+      const premium = get("GV01", "GV01-Premium");
+      const groundRent = get("GV02", "GV02-Ground Rent");
+      const cess = get("GV03", "GV03-Cess");
+      const incidentalCharges = get("GV04", "GV04-Incidental Charges");
+      const total = get("GV05", "GV05-Total");
+      const abatement = get("GV06", "Abatement");
+
+      // LA00 is always auto-generated (not taken from Excel input)
+      const LA00 = `${clientCode}/${villageName || "NA"}/${khataNo || "NA"}`;
+      const laCaseFileNo = LA00;
+
       return [
         project_id,
-        plot["SES Survey No."] || null,
-        // plot["LA Case File No."] || null,
+        surveyNo || null,
         laCaseFileNo,
-        formattedDate || null,
-        plot["LO1-Name of Recorded Tenant (RT)"] ||
-        plot["Name of Tenant"] ||
-        null,
-        plot["LO2-Name of Present Tenant(s)"] || plot["Name of Tenant"] || null,
-        plot["Present Address"] || null,
-        plot["Displaced/Affected Person"] || null,
-        plot["Name of Village"] || plot["name of village"] || null,
+        awardDate || null,
+        recordedTenant || null,
+        presentTenant || null,
+        address || null,
+        displaced || null,
+        district || null,
+        villageName || null,
         plot["Village Code"] || null,
-        plot["Name of the Tahasil"] || plot["Tahasil/Thana"] || null,
-        plot["Name of the R.I. Circle"] || null,
-        plot["Tahasil/Thana"] || null,
-        plot["Thana No."] || plot["Thana no"] || null,
-        plot["Khata No."] || plot["Khata No"] || null,
-        plot["Plot No."] || null,
-        plot["Kissam of the Land"] || plot["Kissam"] || null,
-        plot["LO12-Category of Land"] || null,
-        plot["LO13-Remarks"] || null,
+        tahasil || null,
+        riCircle || null,
+        tahasil || null,
+        thanaNo || null,
+        khataNo || null,
+        plotNo || null,
+        kissam || null,
+        landCategory || null,
+        ldRemarks || null,
         totalAcres || null,
         totalHectares || null,
         acquiredAcres || null,
         acquiredHectares || null,
-        plot["Market Value fixed U/S.26 of RFCTLARR Act 2013 (Per Acre)"] ||
-        null,
-        plot["Basic Land value"] || null,
-        plot["Land value  with multiplication factor (Values from 1 to 2)"] ||
-        null,
-        plot["No. of Trees"] || null,
-        plot["Total Value of Trees "] || null,
-        plot["No. of House"] || null,
-        plot["Value of Structure (house)"] || null,
-        plot["Detail of Structures other than House"] || null,
-        plot["Value of structures other than house"] || null,
-        plot["Total Value  (Land-22 + Tree-24 + House-26 + Structures-28)"] ||
-        null,
-        plot["Solatium @ of (100%)"] || null,
-        plot["12% additional compensation on market value of land area"] ||
-        null,
-        plot["Total Compensation Amount"] || null,
-        plot[
-        "LA18-Apportionment Amount of the Award for the Individual Family Member"
-        ] || null,
-        plot["LA19-Priority/Urgency"] || null,
-        plot["LA20-Land Use Plan"] || null,
-        plot["LA21-Remarks"] || null,
-        plot["BK01-Bank Account No."] || null,
-        plot["BK02-Name of the Bank"] || null,
-        plot["BK03-Name of the Branch with IFSC Code"] || null,
-        plot["PD01-Aadhaar No."] || null,
-        plot["PAN No."] || null,
-        plot["Age"] || null,
-        plot["Caste"] || null,
-        plot["Marital Status"] || null,
-        plot["Education"] || null,
-        plot["Occupation"] || null,
-        plot["Annual Income"] || null,
-        plot["PD09- Skill Acquired"] || null,
-        plot["PD10-Affidavit with subject details (if any)"] || null,
-        plot["FD01-No. of Family Members (Major Male)"] || null,
-        plot["No. of Family Members (Major Female)"] || null,
-        plot["No. of Family Members (Minor Male)"] || null,
-        plot["No. of Family Members (Minor Female)"] || null,
-        plot["No. of Family Members (Major Transgender)"] || null,
-        plot["No. of Family Members (Minor Transgender)"] || null,
-        plot["No. of Persons with Disability"] || null,
-        plot["Family with Orphan Members (Y/N)"] || null,
-        plot["FD09-Legal Heir Certificate No. (if any)"] || null,
-        plot["LG01-Land Case - No. (Number)"] || null,
-        formattedLandCaseDate || null,
-        plot["Land Case Type"] || null,
-        plot["Land case - Status"] || null,
-        plot["LG05-Land Case - Action"] || null,
-        // plot["RR Assistance (Rehab) - Employment in the Project"] || null,
-        // plot["RR Assistance (Rehab) - Cash in lieu of Employment"] || null,
-        // plot["RR Assistance (Rehab) - Training for Skill Upgradation"] || null,
-        // plot["RR Assistance (Rehab) - Assistance for Self Employment"] || null,
-        // plot[
-        //   "RR Assistance (Rehab) - Special Allowance to STs for loss of NTFP"
-        // ] || null,
-        // plot[
-        //   "RR Assistance (Resettle) - Homested Land Alloted/Self Relocation"
-        // ] || null,
-        // plot["RR Assistance (Resettle) - House Building Assistance"] || null,
-        // plot[
-        //   "RR Assistance (Resettle) - Constructed by Project Authority/Self"
-        // ] || null,
-        // plot["RR Assistance (Resettle) - Assistance for Transit Shed"] || null,
-        // plot["RR Assistance (Resettle) - Transportation Allowance"] || null,
-        // plot["RR Assistance (Resettle) - Maintenance Allowance"] || null,
-        // plot[
-        //   "RR Assistance (Other) - Special Allowance for Multiple Displacement"
-        // ] || null,
-        // plot["RR Assistance (Other) - Ex-Gratia (if any)"] || null,
-        // plot["RR Assistance (Other) - Other Benefits (if any)"] || null,
-        plot["GR01-Grievance No. "] || null,
-        formattedGrievanceDate || null,
-        plot["Grievance - Subject Matter"] || null,
-        plot["Grievance - Present Status"] || null,
-        plot["GR05-Grievance - Action taken"] || null,
-        plot["TR01-Tribunal (Y/N)"] || null,
-        formattedTribunalDepositDate || null,
-        plot["TR03-Tribunal - Amount Deposited"] || null,
-        plot["GV01-Premium"] || null,
-        plot["GV02-Ground Rent"] || null,
-        plot["GV03-Cess"] || null,
-        plot["GV04-Incidental Charges"] || null,
-        plot["GV05-Total"] || null,
-        plot["Abatement"] || null,
+        benchMarkValue || null,
+        basicLandValue || null,
+        landValueWithMF || null,
+        noOfTrees || null,
+        totalTreeValue || null,
+        noOfHouse || null,
+        houseValue || null,
+        otherStructureDetails || null,
+        otherStructureValue || null,
+        totalValue || null,
+        solatium || null,
+        noDaysInterest || null,
+        additional12 || null,
+        totalCompensation || null,
+        apportionment || null,
+        priority || null,
+        landUsePlan || null,
+        laRemarks || null,
+        bankAccount || null,
+        bankName || null,
+        branchIFSC || null,
+        aadhaar || null,
+        pan || null,
+        age || null,
+        caste || null,
+        maritalStatus || null,
+        education || null,
+        occupation || null,
+        income || null,
+        skill || null,
+        affidavit || null,
+        majorMale || null,
+        majorFemale || null,
+        minorMale || null,
+        minorFemale || null,
+        majorTrans || null,
+        minorTrans || null,
+        disability || null,
+        orphan || null,
+        legalHeir || null,
+        landCaseNo || null,
+        landCaseDate || null,
+        landCaseType || null,
+        landCaseStatus || null,
+        landCaseAction || null,
+        grievanceNo || null,
+        grievanceDate || null,
+        grievanceSubject || null,
+        grievanceStatus || null,
+        grievanceAction || null,
+        tribunal || null,
+        tribunalDate || null,
+        tribunalAmount || null,
+        premium || null,
+        groundRent || null,
+        cess || null,
+        incidentalCharges || null,
+        total || null,
+        abatement || null,
         type,
+        0,
+        fullPart || null,
       ];
     });
 
@@ -1422,12 +1581,12 @@ const Plot = {
     INSERT INTO plots (
       project_id, ses_survey_no, la_case_file_no, date_of_award, name_of_recorded_tenant,
       name_of_present_tenant, present_address, displaced_affected_project,
-      village_name, village_code, tahasil_name, ri_circle_name, thana_name, thana_no, khata_no, plot_no,
+      district, village_name, village_code, tahasil_name, ri_circle_name, thana_name, thana_no, khata_no, plot_no,
       kissam_of_land, land_category, lo13_remarks, land_area_total_acres,
       land_area_total_hectares, land_area_acquired_acres, land_area_acquired_hectares,
       market_value_per_acre, basic_land_value, land_value_with_mf, no_of_trees,
       total_value_of_trees, no_of_house, value_of_house, details_of_other_structures,
-      value_of_other_structures, total_value, solatium_100, additional_12_percent,
+      value_of_other_structures, total_value, solatium_100, no_days_interest, additional_12_percent,
       total_compensation, apportionment_amount, priority_urgency, land_use_plan,
       la21_remarks, bank_account_no, bank_name, branch_ifsc, aadhaar_no, pan_no,
       age, caste, marital_status, education, occupation, annual_income, skill_acquired,
@@ -1437,7 +1596,7 @@ const Plot = {
       land_case_no, land_case_date, land_case_type, land_case_status, land_case_action,grievance_no,
       grievance_date, grievance_subject, grievance_status, grievance_action, tribunal,
       tribunal_deposit_date, tribunal_amount, premium, ground_rent, cess,
-      incidental_charges, total, abatement, type
+	      incidental_charges, total, abatement, type, is_deleted, full_part
     )
     VALUES ?
     ON DUPLICATE KEY UPDATE
@@ -1449,6 +1608,7 @@ const Plot = {
       name_of_present_tenant = VALUES(name_of_present_tenant),
       present_address = VALUES(present_address),
       displaced_affected_project = VALUES(displaced_affected_project),
+      district = VALUES(district),
       village_name = VALUES(village_name),
       village_code = VALUES(village_code),
       tahasil_name = VALUES(tahasil_name),
@@ -1475,6 +1635,7 @@ const Plot = {
       value_of_other_structures = VALUES(value_of_other_structures),
       total_value = VALUES(total_value),
       solatium_100 = VALUES(solatium_100),
+      no_days_interest = VALUES(no_days_interest),
       additional_12_percent = VALUES(additional_12_percent),
       total_compensation = VALUES(total_compensation),
       apportionment_amount = VALUES(apportionment_amount),
@@ -1523,7 +1684,9 @@ const Plot = {
       incidental_charges = VALUES(incidental_charges),
       total = VALUES(total),
       abatement = VALUES(abatement),
-      type = VALUES(type),
+	      type = VALUES(type),
+	      is_deleted = VALUES(is_deleted),
+	      full_part = VALUES(full_part),
       updated_at = CURRENT_TIMESTAMP
     `,
       [values],
@@ -1547,7 +1710,7 @@ const Plot = {
     SELECT p.*, pr.project_name
     FROM plots p
     LEFT JOIN projects pr ON p.project_id = pr.id
-    WHERE p.is_deleted = 0
+    WHERE COALESCE(p.is_deleted, 0) = 0
     AND p.project_id = ?
   `;
 
@@ -1606,29 +1769,46 @@ const Plot = {
   async findAllDocuments({ project_id, type }) {
     let sql = `
       SELECT
-        id,
-        project_id,
-        type,
-        original_filename,
-        filename,
-        created_at
-      FROM pvt_plot_documents
+        d.id,
+        d.project_id,
+        d.type,
+        d.original_filename,
+        d.filename,
+        d.created_at,
+        (
+          SELECT GROUP_CONCAT(DISTINCT p.district ORDER BY p.district SEPARATOR ', ')
+          FROM plots p
+          WHERE p.project_id = d.project_id
+            AND p.type = d.type
+            AND p.is_deleted = 0
+            AND p.district IS NOT NULL
+            AND TRIM(p.district) <> ''
+        ) AS district,
+        (
+          SELECT GROUP_CONCAT(DISTINCT CAST(p.no_days_interest AS CHAR) ORDER BY p.no_days_interest SEPARATOR ', ')
+          FROM plots p
+          WHERE p.project_id = d.project_id
+            AND p.type = d.type
+            AND p.is_deleted = 0
+            AND p.no_days_interest IS NOT NULL
+        ) AS no_days_interest
+      FROM pvt_plot_documents d
       WHERE 1 = 1
     `;
 
     const params = [];
 
     if (project_id) {
-      sql += ` AND project_id = ?`;
+      sql += ` AND d.project_id = ?`;
       params.push(project_id);
     }
 
     if (type) {
-      sql += ` AND type = ?`;
+      sql += ` AND d.type = ?`;
       params.push(type);
     }
 
-    sql += ` ORDER BY created_at DESC`;
+    sql += ` ORDER BY d.created_at DESC`;
 
     const [rows] = await db.query(sql, params);
     return rows;
@@ -1691,7 +1871,7 @@ const Plot = {
     // );
     let query = `SELECT COUNT(*) AS total
                FROM plots
-               WHERE is_deleted = 0
+               WHERE COALESCE(is_deleted, 0) = 0
                AND project_id = ?`;
 
     const params = [project_id];
@@ -1995,17 +2175,23 @@ const Plot = {
     return rows[0];
   },
 
-  async findByCaseFileNo(la_case_file_no) {
+  async findByCaseAndPlot(project_id, type, la_case_file_no, plot_no) {
     const [rows] = await db.query(
-      "SELECT * FROM plots WHERE la_case_file_no = ? AND is_deleted = 0 LIMIT 1",
-      [la_case_file_no],
+      `SELECT * FROM plots
+       WHERE project_id = ?
+         AND type = ?
+         AND la_case_file_no = ?
+         AND plot_no = ?
+         AND is_deleted = 0
+       LIMIT 1`,
+      [project_id, type, la_case_file_no, plot_no],
     );
     return rows.length ? rows[0] : null;
   },
 
-  async updateByCaseFileNo(la_case_file_no, plotData) {
+  async updateByCaseAndPlot(project_id, type, la_case_file_no, plot_no, plotData) {
     const {
-      project_id,
+      project_id: nextProjectId,
       ses_survey_no,
       date_of_award,
       name_of_recorded_tenant,
@@ -2018,7 +2204,7 @@ const Plot = {
       ri_circle_name,
       thana_no,
       khata_no,
-      plot_no,
+      plot_no: nextPlotNo,
       kissam_of_land,
       land_category,
       lo13_remarks,
@@ -2191,9 +2377,13 @@ const Plot = {
       abatement = ?,
       full_part = ?,
       updated_at = CURRENT_TIMESTAMP
-    WHERE la_case_file_no = ? AND is_deleted = 0`,
+    WHERE project_id = ?
+      AND type = ?
+      AND la_case_file_no = ?
+      AND plot_no = ?
+      AND is_deleted = 0`,
       [
-        project_id,
+        nextProjectId,
         ses_survey_no,
         date_of_award,
         name_of_recorded_tenant,
@@ -2291,7 +2481,10 @@ const Plot = {
         total_cost,
         abatement,
         full_part,
+        project_id,
+        type,
         la_case_file_no, // condition
+        nextPlotNo,
       ],
     );
 

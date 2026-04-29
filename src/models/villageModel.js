@@ -245,7 +245,7 @@ const Village = {
     if (!data || data.length === 0) return 0;
 
     const [existingVillages] = await db.query(
-      `SELECT id, village_name, tahasil, thana_no 
+      `SELECT id, village_name, tahasil, district, thana_no 
        FROM villages 
        WHERE project_id = ? AND type = ?`,
       [project_id, type]
@@ -253,6 +253,28 @@ const Village = {
 
     const normalize = (val) =>
       val === null || val === undefined ? "" : val.toString().trim().toLowerCase();
+    const normalizeHeader = (val) =>
+      normalize(val).replace(/[^a-z0-9]+/g, "");
+    const getCellValue = (row, headers = []) => {
+      for (const header of headers) {
+        if (row[header] !== undefined && row[header] !== null && row[header] !== "") {
+          return row[header];
+        }
+      }
+
+      const normalizedRowEntries = Object.entries(row).map(([k, v]) => [
+        normalizeHeader(k),
+        v,
+      ]);
+
+      for (const header of headers) {
+        const target = normalizeHeader(header);
+        const matched = normalizedRowEntries.find(([k, v]) => k === target && v !== undefined && v !== null && v !== "");
+        if (matched) return matched[1];
+      }
+
+      return null;
+    };
 
     const existingMap = new Map(
       existingVillages.map((v) => [normalize(v.village_name), v])
@@ -264,37 +286,39 @@ const Village = {
     let insertedCount = 0;
 
     for (const row of data) {
-      // const villageName = row["Name of Village"]?.trim();
-      const villageName =
-        row["Name of Village"]?.trim() ||
-        row["name of village"]?.trim() ||
-        null;
-      // const villageCode = row["Village Code"]?.trim();
-      // const tahasil = row["Name of the Tahasil"]?.trim();
-      const tahasil =
-        row["Name of the Tahasil"]?.trim() ||
-        row["Tahasil/Thana"]?.trim() ||
-        null;
-      // const thanaNo =
-      //   row["Thana No."]?.trim() || row["Thana no"]?.trim() || null;
-      const thanaNoRaw = row["Thana No."] ?? row["Thana no"];
+      const villageNameRaw = getCellValue(row, [
+        "LD02",
+        "Name of Village",
+        "name of village",
+      ]);
+      const villageName = villageNameRaw ? villageNameRaw.toString().trim() : null;
+      const tahasilRaw = getCellValue(row, [
+        "LD03",
+        "Name of the Tahasil",
+        "Tahasil/Thana",
+      ]);
+      const tahasil = tahasilRaw ? tahasilRaw.toString().trim() : null;
+      const thanaNoRaw = getCellValue(row, ["LD05", "Thana No.", "Thana no"]);
       const thanaNo =
         thanaNoRaw !== undefined && thanaNoRaw !== null
           ? thanaNoRaw.toString().trim()
           : null;
-      const presentAddress = row["Present Address"] || null;
+      const presentAddress =
+        getCellValue(row, ["LO03", "Present Address"]) || null;
 
       // if (!villageName || !tahasil) continue;
       if (!villageName) continue;
 
-      let district = null;
-      if (presentAddress) {
+      let district =
+        getCellValue(row, ["LD01", "District", "district"])
+          ?.toString()
+          .trim() || null;
+
+      if (!district && presentAddress) {
         const distMatch = presentAddress.match(/Dist[-: ]+([A-Za-z\s]+)/i);
         if (distMatch && distMatch[1]) {
           district = distMatch[1].trim() || null;
         }
-      } else {
-        district = null;
       }
 
       // Key for matching existing data
@@ -306,19 +330,31 @@ const Village = {
       // Skip if already exists in DB
       const existingVillage = existingMap.get(baseKey);
       if (existingVillage) {
-        if (
-          existingVillage.id &&
-          thanaNo &&
-          (!existingVillage.thana_no ||
-            existingVillage.thana_no.toString().trim() === "")
-        ) {
+        if (existingVillage.id) {
+          const shouldUpdateThana =
+            thanaNo &&
+            (!existingVillage.thana_no ||
+              existingVillage.thana_no.toString().trim() === "");
+          const shouldUpdateDistrict =
+            district &&
+            (!existingVillage.district ||
+              existingVillage.district.toString().trim() === "");
+
+          if (!shouldUpdateThana && !shouldUpdateDistrict) {
+            continue;
+          }
+
           await db.query(
             `UPDATE villages 
-             SET thana_no = ?, updated_at = NOW()
+             SET thana_no = COALESCE(?, thana_no),
+                 district = COALESCE(?, district),
+                 updated_at = NOW()
              WHERE id = ?`,
-            [thanaNo, existingVillage.id]
+            [shouldUpdateThana ? thanaNo : null, shouldUpdateDistrict ? district : null, existingVillage.id]
           );
-          existingVillage.thana_no = thanaNo;
+
+          if (shouldUpdateThana) existingVillage.thana_no = thanaNo;
+          if (shouldUpdateDistrict) existingVillage.district = district;
         }
         continue;
       }
@@ -342,6 +378,7 @@ const Village = {
         id: null,
         village_name: villageName,
         tahasil,
+        district,
         thana_no: thanaNo,
       });
 

@@ -10,6 +10,277 @@ const logAction = require("../utils/logger");
 // const Khata = require("../models/khataModel");
 const ExcelJS = require("exceljs");
 
+const normalizeHeaderKey = (key) =>
+  key?.toString().replace(/\r?\n/g, " ").replace(/\s+/g, " ").trim().toLowerCase();
+
+const toTrimmedString = (value) =>
+  value === null || value === undefined ? "" : value.toString().trim();
+
+const normalizeHeaderCode = (value) => {
+  const raw = toTrimmedString(value).replace(/\s+/g, "");
+  if (!raw) return "";
+  const match = raw.match(/^([A-Za-z]+)([0-9]+)$/);
+  if (!match) return raw;
+  return `${match[1].toUpperCase()}${match[2]}`;
+};
+
+const isLikelyHeaderCode = (value) =>
+  /^[A-Za-z]{2,}[0-9]{2}$/.test(normalizeHeaderCode(value));
+
+const buildGovtExcelRowsWithFlexibleHeaders = (sheet) => {
+  const singleHeaderRows = xlsx.utils.sheet_to_json(sheet, {
+    defval: null,
+    raw: true,
+  });
+
+  if (!singleHeaderRows || singleHeaderRows.length === 0) return [];
+
+  return singleHeaderRows.map((row) => {
+    const normalizedRow = {};
+
+    for (const key in row) {
+      const normalizedKey = normalizeHeaderKey(key);
+      normalizedRow[key] = row[key];
+      normalizedRow[normalizedKey] = row[key];
+    }
+
+    return normalizedRow;
+  });
+};
+
+const hasAnyValueByHeader = (row, headers) => {
+  if (!row) return false;
+  for (const header of headers) {
+    const value = row[header] ?? row[normalizeHeaderKey(header)];
+    if (value !== undefined && value !== null && `${value}`.trim() !== "") {
+      return true;
+    }
+  }
+  return false;
+};
+
+const GOVT_PLOT_ALLOWED_FIELDS = new Set([
+  "project_id",
+  "type",
+  "district",
+  "mouza",
+  "tahasil",
+  "thana_no",
+  "ri_circle",
+  "khata_no",
+  "kissam",
+  "name_of_ror",
+  "plot_no",
+  "total_area_acres",
+  "proposed_area_acres",
+  "total_area_hectares",
+  "proposed_area_hectares",
+  "lease_case_no",
+  "present_status",
+  "ua_idco_to_tahasildar",
+  "case_details",
+  "action_to_be_taken",
+  "ri_report",
+  "ri_report_attachment",
+  "proclamation",
+  "objection_received",
+  "others",
+  "modification_revision",
+  "misc_dr_case_prep",
+  "misc_dr_case_prep_number",
+  "reason_for_misc_dr_case",
+  "tree_enumeration",
+  "tree_enumeration_attachment",
+  "order_sheet_prep",
+  "lease_to_idco",
+  "lease_to_idco_attachment",
+  "lease_to_ua",
+  "lease_to_ua_attachment",
+  "remarks",
+]);
+
+const GOVT_PLOT_FIELD_ALIASES = {
+  village: "mouza",
+  village_name: "mouza",
+  district_name: "district",
+  khata: "khata_no",
+  plot: "plot_no",
+  plot_number: "plot_no",
+  kissam_of_land: "kissam",
+  land_category: "kissam",
+  name_of_khata: "name_of_ror",
+};
+
+const normalizeOptionalValue = (value) =>
+  value === "" || value === undefined ? null : value;
+
+const normalizeNumericValue = (value) => {
+  if (value === null || value === undefined || value === "") return null;
+  const parsed = Number.parseFloat(String(value).trim());
+  return Number.isFinite(parsed) ? parsed : null;
+};
+
+const normalizeBooleanFlag = (value) => {
+  if (value === null || value === undefined || value === "") return null;
+  if (typeof value === "number") return value ? 1 : 0;
+
+  const normalized = String(value).trim().toLowerCase();
+  if (["1", "yes", "y", "true"].includes(normalized)) return 1;
+  if (["0", "no", "n", "false"].includes(normalized)) return 0;
+  return null;
+};
+
+const normalizeEnumStatus = (value) => {
+  if (value === null || value === undefined || value === "") return null;
+
+  const normalized = String(value).trim().toLowerCase().replace(/\s+/g, " ");
+  if (normalized === "not started") return "Not Started";
+  if (normalized === "in progress") return "In Progress";
+  if (normalized === "complete") return "Complete";
+  return null;
+};
+
+const normalizePresentStatus = (value) => {
+  if (value === null || value === undefined || value === "") return null;
+  if (typeof value === "number" && value >= 1 && value <= 4) return value;
+
+  const rawValue = String(value).trim().toLowerCase();
+  if (/^[1-4]$/.test(rawValue)) return Number(rawValue);
+
+  const normalized = rawValue.replace(/[^a-z0-9]+/g, " ").trim();
+  if (normalized.includes("sub collector")) return 1;
+  if (normalized.includes("adm")) return 2;
+  if (normalized.includes("demand")) return 3;
+  if (normalized.includes("sanction")) return 4;
+  return null;
+};
+
+const normalizeGovtPlotPayload = (
+  payload = {},
+  files = {},
+  existingPlot = null,
+) => {
+  const normalizedInput = {};
+
+  Object.entries(payload).forEach(([key, value]) => {
+    const canonicalKey = GOVT_PLOT_FIELD_ALIASES[key] || key;
+    normalizedInput[canonicalKey] = normalizeOptionalValue(value);
+  });
+
+  const data = {};
+  GOVT_PLOT_ALLOWED_FIELDS.forEach((field) => {
+    if (Object.prototype.hasOwnProperty.call(normalizedInput, field)) {
+      data[field] = normalizedInput[field];
+    }
+  });
+
+  [
+    "total_area_acres",
+    "proposed_area_acres",
+    "total_area_hectares",
+    "proposed_area_hectares",
+  ].forEach((field) => {
+    if (Object.prototype.hasOwnProperty.call(data, field)) {
+      data[field] = normalizeNumericValue(data[field]);
+    }
+  });
+
+  [
+    "ua_idco_to_tahasildar",
+    "proclamation",
+    "objection_received",
+    "modification_revision",
+    "misc_dr_case_prep",
+    "lease_to_idco",
+    "lease_to_ua",
+  ].forEach((field) => {
+    if (Object.prototype.hasOwnProperty.call(data, field)) {
+      data[field] = normalizeBooleanFlag(data[field]);
+    }
+  });
+
+  ["ri_report", "tree_enumeration", "order_sheet_prep"].forEach((field) => {
+    if (Object.prototype.hasOwnProperty.call(data, field)) {
+      data[field] = normalizeEnumStatus(data[field]);
+    }
+  });
+
+  if (Object.prototype.hasOwnProperty.call(data, "present_status")) {
+    data.present_status = normalizePresentStatus(data.present_status);
+  }
+
+  const fileMappings = {
+    ri_report_attachment: "ri_report_attachment",
+    tree_enumeration_attachment: "tree_enumeration_attachment",
+    lease_to_idco_attachment: "lease_to_idco_attachment",
+    lease_to_ua_attachment: "lease_to_ua_attachment",
+  };
+
+  Object.entries(fileMappings).forEach(([field, fileKey]) => {
+    const uploadedFile = files?.[fileKey]?.[0]?.filename;
+    if (uploadedFile) {
+      data[field] = uploadedFile;
+      return;
+    }
+
+    if (existingPlot) {
+      data[field] = existingPlot[field] ?? null;
+      return;
+    }
+
+    if (!Object.prototype.hasOwnProperty.call(data, field)) {
+      data[field] = null;
+    }
+  });
+
+  return data;
+};
+
+const syncGovtKhataFromPlot = async (plotData) => {
+  const rows = [
+    {
+      district: plotData.district || null,
+      mouza: plotData.mouza,
+      tahasil: plotData.tahasil,
+      "thana no": plotData.thana_no || null,
+      "ri circle": plotData.ri_circle || null,
+      "khata no": plotData.khata_no,
+      "plot no": plotData.plot_no,
+      kissam: plotData.kissam || null,
+      "name of ror": plotData.name_of_ror || null,
+      "lease case no": plotData.lease_case_no || null,
+      "present status": plotData.present_status || null,
+      "case details/ deservation req.": plotData.case_details || null,
+    },
+  ];
+
+  const villageMap = await GovtVillage.upsertFromExcel(
+    rows,
+    plotData.project_id,
+    plotData.type,
+  );
+
+  const villageKey = `${plotData.mouza}_${plotData.tahasil}`;
+  const villageId = villageMap[villageKey];
+
+  if (!villageId) {
+    throw new Error("Unable to create/find village");
+  }
+
+  const khataMap = await GovtKhata.upsertFromExcel(
+    rows,
+    villageMap,
+    plotData.project_id,
+    plotData.type,
+  );
+
+  const khataKey = `${villageId}_${plotData.khata_no}`;
+  return {
+    villageId,
+    khataId: khataMap[khataKey] || null,
+  };
+};
+
 // const uploadGovtPlot = async (req, res) => {
 //   try {
 //     const { project_id, type } = req.body;
@@ -81,46 +352,52 @@ const uploadGovtPlot = async (req, res) => {
     }
 
     const workbook = xlsx.readFile(req.file.path);
-    const sheetName = workbook.SheetNames[0];
-
-    if (workbook.SheetNames.length !== 1) {
+    if (!workbook.SheetNames.length) {
       fs.unlinkSync(req.file.path);
       return res.status(400).json({
         success: false,
-        message: "Invalid Excel format. Only ONE sheet is allowed inside file.",
+        message: "Invalid Excel format. No sheet found inside file.",
       });
     }
 
-    const rawRows = xlsx.utils.sheet_to_json(workbook.Sheets[sheetName], {
-      defval: null,
-    });
-
-    const normalizeKey = (key) =>
-      key?.replace(/\r?\n/g, " ").replace(/\s+/g, " ").trim().toLowerCase();
-
-    // normalize headers
-    const rows = rawRows.map((r) => {
-      const obj = {};
-      for (const k in r) {
-        obj[normalizeKey(k)] = r[k];
-      }
-      return obj;
-    });
-
-    const REQUIRED_HEADERS = ["mouza", "tahasil", "khata no", "plot no"];
-    const excelHeaders = Object.keys(rows[0]);
-
-    const missingHeaders = REQUIRED_HEADERS.filter(
-      (h) => !excelHeaders.includes(h),
-    );
-
-    if (missingHeaders.length) {
+    if (workbook.SheetNames.length > 2) {
       fs.unlinkSync(req.file.path);
       return res.status(400).json({
         success: false,
-        message: `Invalid Excel format. Missing columns: ${missingHeaders.join(
-          ", ",
-        )}`,
+        message: "Invalid Excel format. Maximum 2 sheets are allowed inside file.",
+      });
+    }
+
+    const rows = workbook.SheetNames.flatMap((sheetName) =>
+      buildGovtExcelRowsWithFlexibleHeaders(workbook.Sheets[sheetName]),
+    );
+
+    if (!rows.length) {
+      fs.unlinkSync(req.file.path);
+      return res.status(400).json({
+        success: false,
+        message: "Excel file is empty",
+      });
+    }
+
+    const requiredGroups = [
+      ["LD01", "district"],
+      ["LD02", "mouza", "village", "name of village"],
+      ["LD03", "tahasil"],
+      ["LD06", "khata no", "khata_no"],
+      ["LD09", "plot no", "plot_no", "plot", "plot number", "plot no."],
+    ];
+    const missingGroups = requiredGroups.filter(
+      (group) => !rows.some((row) => hasAnyValueByHeader(row, group)),
+    );
+
+    if (missingGroups.length) {
+      fs.unlinkSync(req.file.path);
+      return res.status(400).json({
+        success: false,
+        message: `Invalid Excel format. Missing required columns for: ${missingGroups
+          .map((g) => g[0])
+          .join(", ")}`,
       });
     }
     // console.log("Header name", rows);
@@ -172,7 +449,21 @@ const uploadGovtPlot = async (req, res) => {
       null,
       null,
     );
-    console.error("Govt Plot Excel Upload Error:", err);
+    console.error("Govt Plot Excel Upload Error:", {
+      message: err.message,
+      stack: err.stack,
+      code: err.code || null,
+      sqlMessage: err.sqlMessage || null,
+      project_id: req.body?.project_id || null,
+      type: req.body?.type || null,
+      file: req.file
+        ? {
+          originalname: req.file.originalname,
+          filename: req.file.filename,
+          path: req.file.path,
+        }
+        : null,
+    });
     return res.status(500).json({
       success: false,
       message: "Server error",
@@ -182,15 +473,8 @@ const uploadGovtPlot = async (req, res) => {
 
 const addGovtPlot = async (req, res) => {
   const userId = req.user.id;
-  const data = req.body || {};
-  const files = req.files;
-
-  const normalize = (value) =>
-    value === "" || value === undefined ? null : value;
-
-  Object.keys(data).forEach((key) => {
-    data[key] = normalize(data[key]);
-  });
+  const files = req.files || {};
+  const data = normalizeGovtPlotPayload(req.body || {}, files);
 
   try {
     if (!data.project_id || !data.type) {
@@ -221,14 +505,14 @@ const addGovtPlot = async (req, res) => {
       });
     }
 
-    if (data.lease_to_idco == "1" && !files?.lease_to_idco_attachment) {
+    if (data.lease_to_idco === 1 && !files?.lease_to_idco_attachment) {
       return res.status(400).json({
         success: false,
         message: "Lease attachment is required for IDCO",
       });
     }
 
-    if (data.lease_to_ua == "1" && !files?.lease_to_ua_attachment) {
+    if (data.lease_to_ua === 1 && !files?.lease_to_ua_attachment) {
       return res.status(400).json({
         success: false,
         message: "Lease attachment is required for UA",
@@ -247,44 +531,7 @@ const addGovtPlot = async (req, res) => {
     data.lease_to_ua_attachment =
       files?.lease_to_ua_attachment?.[0]?.filename || null;
 
-    const rows = [
-      {
-        mouza: data.mouza,
-        tahasil: data.tahasil,
-        "khata no": data.khata_no,
-        "plot no": data.plot_no,
-        "kissam of land": data.kissam || null,
-        "lease case no": data.lease_case_no || null,
-        "case details/ deservation req.": data.case_details || null,
-      },
-    ];
-    // Village upsert
-    const villageMap = await GovtVillage.upsertFromExcel(
-      rows,
-      data.project_id,
-      data.type,
-    );
-
-    const villageKey = `${data.mouza}_${data.tahasil}`;
-    const villageId = villageMap[villageKey];
-
-    if (!villageId) {
-      return res.status(400).json({
-        success: false,
-        message: "Unable to create/find village",
-      });
-    }
-
-    // Khata upsert
-    const khataMap = await GovtKhata.upsertFromExcel(
-      rows,
-      villageMap,
-      data.project_id,
-      data.type,
-    );
-
-    const khataKey = `${villageId}_${data.khata_no}`;
-    const khataId = khataMap[khataKey] || null;
+    const { villageId, khataId } = await syncGovtKhataFromPlot(data);
 
     // data.village_id = villageId;
     // data.khata_id = khataId;
@@ -738,15 +985,8 @@ const updateGovtPlot = async (req, res) => {
   const userId = req.user.id;
   const { id } = req.params; // govt_plot id
 
-  const data = req.body || {};
   const files = req.files || {};
-
-  const normalize = (value) =>
-    value === "" || value === undefined ? null : value;
-
-  Object.keys(data).forEach((key) => {
-    data[key] = normalize(data[key]);
-  });
+  let data = normalizeGovtPlotPayload(req.body || {}, files);
 
   try {
     if (!id) {
@@ -775,6 +1015,8 @@ const updateGovtPlot = async (req, res) => {
       });
     }
 
+    data = normalizeGovtPlotPayload(req.body || {}, files, existingPlot);
+
     if (
       data.ri_report === "Complete" &&
       !files?.ri_report_attachment &&
@@ -798,7 +1040,7 @@ const updateGovtPlot = async (req, res) => {
     }
 
     if (
-      data.lease_to_idco == "1" &&
+      data.lease_to_idco === 1 &&
       !files?.lease_to_idco_attachment &&
       !existingPlot.lease_to_idco_attachment
     ) {
@@ -809,7 +1051,7 @@ const updateGovtPlot = async (req, res) => {
     }
 
     if (
-      data.lease_to_ua == "1" &&
+      data.lease_to_ua === 1 &&
       !files?.lease_to_ua_attachment &&
       !existingPlot.lease_to_ua_attachment
     ) {
@@ -819,25 +1061,9 @@ const updateGovtPlot = async (req, res) => {
       });
     }
 
-    // attachments (keep old if new not uploaded)
-    data.ri_report_attachment =
-      files?.ri_report_attachment?.[0]?.filename ??
-      existingPlot.ri_report_attachment;
-
-    data.tree_enumeration_attachment =
-      files?.tree_enumeration_attachment?.[0]?.filename ??
-      existingPlot.tree_enumeration_attachment;
-
-    data.lease_to_idco_attachment =
-      files?.lease_to_idco_attachment?.[0]?.filename ??
-      existingPlot.lease_to_idco_attachment;
-
-    data.lease_to_ua_attachment =
-      files?.lease_to_ua_attachment?.[0]?.filename ??
-      existingPlot.lease_to_ua_attachment;
-
     // update
     const updatedPlot = await GovtPlot.updateById(id, data);
+    await syncGovtKhataFromPlot(updatedPlot);
 
     await logAction(
       userId,

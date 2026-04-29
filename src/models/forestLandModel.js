@@ -63,106 +63,170 @@ const ForestLand = {
     );
     return rows[0];
   },
-
-  async bulkInsertFromExcel(rows, project_master_id, schedule_type) {
-    if (!rows || rows.length === 0) return 0;
-
-    const sql = `
-      INSERT INTO forest_land_schedule
-      (
-        project_master_id,
-        schedule_type,
-        district,
-        ri_circle,
-        tahasil,
-        village,
-        forest_division,
-        forest_range,
-        khata_no,
-        plot_no,
-        kisam,
-        forest_category_id,
-        ownership,
-        fra_allotted,
-        total_area_ha,
-        proposed_acquired_area_ha,
-        digital_area_ha,
-        ca_area_ha,
-        patch_name,
-        remarks
-      )
-      VALUES ?
-    `;
-
-    const values = rows.map((data) => [
-      project_master_id,
-      schedule_type,
-      emptyToNull(data.district),
-      emptyToNull(data.ri_circle),
-      emptyToNull(data.tahasil),
-      emptyToNull(data.village),
-      emptyToNull(data.forest_division),
-      emptyToNull(data.forest_range),
-      emptyToNull(data.khata_no),
-      emptyToNull(data.plot_no),
-      emptyToNull(data.kisam),
-      emptyToNull(data.forest_category_id),
-      emptyToNull(data.ownership),
-      emptyToNull(data.fra_allotted),
-      emptyToNull(data.total_area_ha),
-      emptyToNull(data.proposed_acquired_area_ha),
-      emptyToNull(data.digital_area_ha),
-      emptyToNull(data.ca_area_ha),
-      emptyToNull(data.patch_name),
-      emptyToNull(data.remarks),
+  async deleteDocumentByFilename(filename) {
+    await db.query(`DELETE FROM forest_land_document WHERE filename = ?`, [
+      filename,
     ]);
-
-    const [result] = await db.query(sql, [values]);
-    return result.affectedRows || 0;
+    return true;
   },
 
-  async findById(id) {
+  async findDocumentByFilename(filename) {
     const sql = `
-      SELECT *
-      FROM forest_land_schedule
-      WHERE id = ? AND is_deleted = 0
+      SELECT
+        id,
+        filename,
+        original_filename,
+        file_path
+      FROM forest_land_document
+      WHERE filename = ?
       LIMIT 1
     `;
-    const [rows] = await db.query(sql, [id]);
+
+    const [rows] = await db.query(sql, [filename]);
     return rows[0] || null;
   },
+async bulkInsertFromExcel(
+  rows,
+  project_master_id,
+  schedule_type,
+) {
+  if (!rows || rows.length === 0) return 0;
 
-  async list({ project_master_id, schedule_type, limit, offset }) {
-    let whereClause = `WHERE project_master_id = ? AND is_deleted = 0`;
-    const params = [project_master_id];
+  const sql = `
+    INSERT INTO forest_land_schedule
+    (
+      project_master_id,
+      schedule_type,
+      district,
+      ri_circle,
+      tahasil,
+      village,
+      forest_division,
+      forest_range,
+      khata_no,
+      plot_no,
+      kisam,
+      forest_category_id,
+      ownership,
+      fra_allotted,
+      total_area_ha,
+      proposed_acquired_area_ha,
+      digital_area_ha,
+      ca_area_ha,
+      patch_name,
+      remarks
+    )
+    VALUES ?
+    ON DUPLICATE KEY UPDATE
+      ri_circle = VALUES(ri_circle),
+      tahasil = VALUES(tahasil),
+      forest_division = VALUES(forest_division),
+      forest_range = VALUES(forest_range),
+      plot_no = VALUES(plot_no),
+      kisam = VALUES(kisam),
+      forest_category_id = VALUES(forest_category_id),
+      ownership = VALUES(ownership),
+      fra_allotted = VALUES(fra_allotted),
+      total_area_ha = VALUES(total_area_ha),
+      proposed_acquired_area_ha = VALUES(proposed_acquired_area_ha),
+      digital_area_ha = VALUES(digital_area_ha),
+      ca_area_ha = VALUES(ca_area_ha),
+      patch_name = VALUES(patch_name),
+      remarks = VALUES(remarks),
+      is_deleted = 0
+  `;
 
-    if (schedule_type) {
-      whereClause += ` AND schedule_type = ?`;
-      params.push(schedule_type);
-    }
+  const values = rows.map((data) => [
+    project_master_id,
+    schedule_type,
+    emptyToNull(data.district),
+    emptyToNull(data.ri_circle),
+    emptyToNull(data.tahasil),
+    emptyToNull(data.village),
+    emptyToNull(data.forest_division),
+    emptyToNull(data.forest_range),
+    emptyToNull(data.khata_no),
+    emptyToNull(data.plot_no),
+    emptyToNull(data.kisam),
+    emptyToNull(data.forest_category_id),
+    emptyToNull(data.ownership),
+    emptyToNull(data.fra_allotted),
+    emptyToNull(data.total_area_ha),
+    emptyToNull(data.proposed_acquired_area_ha),
+    emptyToNull(data.digital_area_ha),
+    emptyToNull(data.ca_area_ha),
+    emptyToNull(data.patch_name),
+    emptyToNull(data.remarks),
+  ]);
 
-    const listSql = `
-      SELECT *
-      FROM forest_land_schedule
-      ${whereClause}
-      ORDER BY id DESC
-      LIMIT ? OFFSET ?
+  const [result] = await db.query(sql, [values]);
+
+  return result.affectedRows || 0;
+},
+
+async findById(id) {
+  const sql = `
+    SELECT *
+    FROM forest_land_schedule
+    WHERE id = ?
+      AND is_deleted = 0
+    LIMIT 1
+  `;
+
+  const [rows] = await db.query(sql, [id]);
+
+  return rows[0] || null;
+},
+
+async list({
+  project_master_id,
+  schedule_type,
+  limit,
+  offset,
+}) {
+  let whereClause = `
+    WHERE project_master_id = ?
+      AND is_deleted = 0
+  `;
+
+  const params = [project_master_id];
+
+  if (schedule_type) {
+    whereClause += `
+      AND schedule_type = ?
     `;
+    params.push(schedule_type);
+  }
 
-    const countSql = `
-      SELECT COUNT(*) AS total
-      FROM forest_land_schedule
-      ${whereClause}
-    `;
+  const listSql = `
+    SELECT *
+    FROM forest_land_schedule
+    ${whereClause}
+    ORDER BY id DESC
+    LIMIT ? OFFSET ?
+  `;
 
-    const [rows] = await db.query(listSql, [...params, limit, offset]);
-    const [[count]] = await db.query(countSql, params);
+  const countSql = `
+    SELECT COUNT(*) AS total
+    FROM forest_land_schedule
+    ${whereClause}
+  `;
 
-    return {
-      data: rows,
-      total: count.total,
-    };
-  },
+  const [rows] = await db.query(
+    listSql,
+    [...params, limit, offset],
+  );
+
+  const [[count]] = await db.query(
+    countSql,
+    params,
+  );
+
+  return {
+    data: rows,
+    total: count.total,
+  };
+},
 
   async update(id, data) {
     const sql = `
@@ -885,6 +949,64 @@ const ForestLand = {
     const [rows] = await db.query(sql, [projectId]);
 
     return rows.length ? rows[0].status : null;
+  },
+
+  async insertDocument(data) {
+    const sql = `
+      INSERT IGNORE INTO forest_land_document
+      (project_id, type, filename, original_filename, file_path, uploaded_by)
+      VALUES (?, ?, ?, ?, ?, ?)
+    `;
+
+    const params = [
+      data.project_id,
+      data.type,
+      data.filename,
+      data.original_filename,
+      data.file_path,
+      data.uploaded_by,
+    ];
+
+    const [result] = await db.query(sql, params);
+    return result.insertId;
+  },
+
+  async findAllDocuments({ project_id, type, schedule_type }) {
+    let sql = `
+      SELECT
+        id,
+        project_id,
+        type,
+        original_filename,
+        filename,
+        file_path,
+        created_at
+      FROM forest_land_document
+      WHERE 1 = 1
+    `;
+
+    const params = [];
+
+    if (project_id) {
+      sql += ` AND project_id = ?`;
+      params.push(project_id);
+    }
+
+    if (type && schedule_type) {
+      sql += ` AND (type = ? OR type = ?)`;
+      params.push(type, schedule_type);
+    } else if (type) {
+      sql += ` AND type = ?`;
+      params.push(type);
+    } else if (schedule_type) {
+      sql += ` AND type = ?`;
+      params.push(schedule_type);
+    }
+
+    sql += ` ORDER BY created_at DESC`;
+
+    const [rows] = await db.query(sql, params);
+    return rows;
   },
 
   async getDashboardSummary() {

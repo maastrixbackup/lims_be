@@ -78,6 +78,35 @@ const normalizeToMysqlDate = (rawValue) => {
   return null;
 };
 
+const syncKhataFromPlot = async (plotData, previousPlot = null) => {
+  if (!plotData?.project_id || !plotData?.type) return;
+
+  await Village.insertVillageForManualPlot(
+    plotData,
+    plotData.project_id,
+    plotData.type,
+  );
+
+  const khatasToSync = new Set();
+  if (previousPlot?.khata_no) {
+    khatasToSync.add(
+      `${previousPlot.project_id}::${previousPlot.type}::${previousPlot.khata_no}`,
+    );
+  }
+  if (plotData.khata_no) {
+    khatasToSync.add(`${plotData.project_id}::${plotData.type}::${plotData.khata_no}`);
+  }
+
+  for (const item of khatasToSync) {
+    const [project_id, type, khata_no] = item.split("::");
+    await Khata.insertKhataFromManualPlot({
+      project_id,
+      type,
+      khata_no,
+    });
+  }
+};
+
 const uploadPlots = async (req, res) => {
   const userId = req.user.id;
   try {
@@ -104,7 +133,9 @@ const uploadPlots = async (req, res) => {
 
     const workbook = xlsx.readFile(req.file.path);
     const sheetName = workbook.SheetNames[0];
-    const data = xlsx.utils.sheet_to_json(workbook.Sheets[sheetName]);
+    const data = xlsx.utils.sheet_to_json(workbook.Sheets[sheetName], {
+      defval: null,
+    });
 
     if (!data.length) {
       fs.unlinkSync(req.file.path);
@@ -199,16 +230,32 @@ const uploadPlots = async (req, res) => {
       null,
       null,
     );
-    console.error("Upload Plots Error:", err);
-    return res.status(500).json({ success: false, message: "Server error" });
-    // return res.status(500).json({
-    //   success: false,
-    //   message: err.sqlMessage || err.message,
-    //   sqlState: err.sqlState,
-    //   sqlCode: err.code,
-    // });
+    console.error("Upload Plots Error:", {
+      message: err.message,
+      stack: err.stack,
+      code: err.code || null,
+      sqlMessage: err.sqlMessage || null,
+      sqlState: err.sqlState || null,
+      project_id: req.body?.project_id || null,
+      type: req.body?.type || null,
+      file: req.file
+        ? {
+          originalname: req.file.originalname,
+          filename: req.file.filename,
+          path: req.file.path,
+        }
+        : null,
+    });
+    // return res.status(500).json({ success: false, message: "Server error" });
+    return res.status(500).json({
+      success: false,
+      message: err.sqlMessage || err.message,
+      sqlState: err.sqlState,
+      sqlCode: err.code,
+    });
   }
 };
+
 
 const plotList = async (req, res) => {
   try {
@@ -318,6 +365,8 @@ const plotDocumentList = async (req, res) => {
       type: r.type,
       name: r.original_filename,
       download_name: r.filename,
+      district: r.district,
+      no_days_interest: r.no_days_interest,
       uploadedAt: r.created_at,
       documentUrl: `${req.protocol}://${req.get("host")}${req.get("host").includes("localhost") ? "" : "/api"
         }/uploads/excels/${r.filename}`,
@@ -635,7 +684,6 @@ const createPlot = async (req, res) => {
     }
 
     const enumMaps = {
-      displaced_affected_project: ["PDF", "PAF"],
       abatement: ["Yes", "No"],
     };
 
@@ -676,16 +724,22 @@ const createPlot = async (req, res) => {
       }
     });
 
-    const existingPlot = await Plot.findByCaseFileNo(
+    const existingPlot = await Plot.findByCaseAndPlot(
+      safeRequestPayload.project_id,
+      safeRequestPayload.type,
       safeRequestPayload.la_case_file_no,
+      safeRequestPayload.plot_no,
     );
     let plot, message;
     if (existingPlot) {
-      plot = await Plot.updateByCaseFileNo(
+      plot = await Plot.updateByCaseAndPlot(
+        safeRequestPayload.project_id,
+        safeRequestPayload.type,
         safeRequestPayload.la_case_file_no,
+        safeRequestPayload.plot_no,
         safeRequestPayload,
       );
-      message = "Plot updated successfully (existing LA Case File No.)";
+      message = "Plot updated successfully (existing LA Case File No. and Plot No.)";
       await logAction(
         userId,
         "update plot (via create)",
@@ -708,19 +762,7 @@ const createPlot = async (req, res) => {
       );
     }
 
-    await Village.insertVillageForManualPlot(
-      safeRequestPayload,
-      safeRequestPayload.project_id,
-      safeRequestPayload.type,
-    );
-
-    if (safeRequestPayload.khata_no) {
-      await Khata.insertKhataFromManualPlot({
-        project_id: safeRequestPayload.project_id,
-        type: safeRequestPayload.type,
-        khata_no: safeRequestPayload.khata_no,
-      });
-    }
+    await syncKhataFromPlot(plot);
 
     return res.status(existingPlot ? 200 : 201).json({
       success: true,
@@ -752,14 +794,24 @@ const updatePlot = async (req, res) => {
         message: "Plot not found",
       });
     }
-    if (safeRequestPayload.la_case_file_no) {
-      const duplicate = await Plot.findByCaseFileNo(
-        safeRequestPayload.la_case_file_no,
+    const nextProjectId =
+      safeRequestPayload.project_id ?? existing.project_id;
+    const nextType = safeRequestPayload.type ?? existing.type;
+    const nextCaseFileNo =
+      safeRequestPayload.la_case_file_no ?? existing.la_case_file_no;
+    const nextPlotNo = safeRequestPayload.plot_no ?? existing.plot_no;
+
+    if (nextCaseFileNo && nextPlotNo) {
+      const duplicate = await Plot.findByCaseAndPlot(
+        nextProjectId,
+        nextType,
+        nextCaseFileNo,
+        nextPlotNo,
       );
       if (duplicate && duplicate.id !== Number(id)) {
         return res.status(400).json({
           success: false,
-          message: `LA Case File No. '${safeRequestPayload.la_case_file_no}' already exist.`,
+          message: `Plot already exists for LA Case File No. '${nextCaseFileNo}' and Plot No. '${nextPlotNo}'.`,
         });
       }
     }
@@ -793,13 +845,7 @@ const updatePlot = async (req, res) => {
 
     const updated = await Plot.update(id, safeRequestPayload);
 
-    if (updated.khata_no && updated.project_id && updated.type) {
-      await Khata.insertKhataFromManualPlot({
-        project_id: updated.project_id,
-        type: updated.type,
-        khata_no: updated.khata_no,
-      });
-    }
+    await syncKhataFromPlot(updated, existing);
 
     await logAction(
       userId,
