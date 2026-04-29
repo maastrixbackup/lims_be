@@ -323,16 +323,6 @@ const updateKhata = async (req, res) => {
       });
     }
 
-    if (
-      displaced_affected_project &&
-      !["PDF", "PAF"].includes(displaced_affected_project)
-    ) {
-      return res.status(400).json({
-        success: false,
-        message: "Invalid displaced_affected_project value",
-      });
-    }
-
     const updatedKhata = await Khata.update({
       khataId,
       project_id,

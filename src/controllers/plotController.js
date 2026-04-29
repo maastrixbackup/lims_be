@@ -9,6 +9,15 @@ const Khata = require("../models/khataModel");
 const ExcelJS = require("exceljs");
 
 const pad2 = (n) => String(n).padStart(2, "0");
+const normalizeNullableText = (value) => {
+  if (value === null || value === undefined || value === "") {
+    return null;
+  }
+
+  const normalized = value.toString().trim();
+  return normalized || null;
+};
+
 const normalizeToMysqlDate = (rawValue) => {
   if (rawValue === null || rawValue === undefined || rawValue === "") {
     return null;
@@ -626,9 +635,6 @@ const createPlot = async (req, res) => {
       safeRequestPayload[k] = null;
     }
   });
-  // if (!["PDF", "PAF"].includes(safeRequestPayload.displaced_affected_project)) {
-  //   safeRequestPayload.displaced_affected_project = null;
-  // }
   try {
     // if (
     //   !safeRequestPayload.project_id ||
@@ -710,6 +716,10 @@ const createPlot = async (req, res) => {
       }
       safeRequestPayload.family_with_orphan_members = orphanMembers;
     }
+
+    safeRequestPayload.displaced_affected_project = normalizeNullableText(
+      safeRequestPayload.displaced_affected_project,
+    );
 
     const dateFields = [
       "date_of_award",
@@ -828,6 +838,15 @@ const updatePlot = async (req, res) => {
         });
       }
       safeRequestPayload.family_with_orphan_members = orphanMembers;
+    }
+
+    if (Object.prototype.hasOwnProperty.call(
+      safeRequestPayload,
+      "displaced_affected_project",
+    )) {
+      safeRequestPayload.displaced_affected_project = normalizeNullableText(
+        safeRequestPayload.displaced_affected_project,
+      );
     }
 
     const dateFields = [
