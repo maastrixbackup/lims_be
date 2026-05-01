@@ -309,12 +309,42 @@ const normalizeDateInput = (value) => {
   const isoDateMatch = trimmed.match(/^(\d{4}-\d{2}-\d{2})/);
   if (isoDateMatch) return isoDateMatch[1];
 
+  const dayFirstMatch = trimmed.match(
+    /^(\d{1,2})[-/](\d{1,2})[-/](\d{4})(?:\s+.*)?$/,
+  );
+  if (dayFirstMatch) {
+    const [, day, month, year] = dayFirstMatch;
+    const dayNum = Number(day);
+    const monthNum = Number(month);
+
+    if (
+      Number.isInteger(dayNum) &&
+      Number.isInteger(monthNum) &&
+      dayNum >= 1 &&
+      dayNum <= 31 &&
+      monthNum >= 1 &&
+      monthNum <= 12
+    ) {
+      return `${year}-${String(monthNum).padStart(2, "0")}-${String(dayNum).padStart(2, "0")}`;
+    }
+  }
+
   const parsed = new Date(trimmed);
   if (!Number.isNaN(parsed.getTime())) {
     return parsed.toISOString().slice(0, 10);
   }
 
   return trimmed;
+};
+
+const normalizeOptionalInteger = (value) => {
+  if (value === null || value === undefined) return null;
+
+  const trimmed = String(value).trim();
+  if (!trimmed) return null;
+
+  const parsed = Number(trimmed);
+  return Number.isInteger(parsed) ? parsed : null;
 };
 
 const normalizeHeaderCode = (value) => {
@@ -1374,6 +1404,7 @@ const addForestProjectWithEds = async (req, res) => {
     });
 
     const masterId = master.id;
+    const globalProjectId = master.project_id;
 
     // Multiple EDS handling
     // if (edsFlag === 1 && body.eds_list) {
@@ -1428,14 +1459,14 @@ const addForestProjectWithEds = async (req, res) => {
         const fileObj = files[i];
 
         await ForestLand.createEds({
-          project_master_id: masterId,
+          project_master_id: globalProjectId,
           eds_ref_no: eds.eds_ref_no,
           issuing_authority: eds.issuing_authority,
-          eds_issue_date: eds.eds_issue_date,
-          eds_due_date: eds.eds_due_date,
-          total_issues: eds.total_issues,
-          issues_closed: eds.issues_closed,
-          issues_pending: eds.issues_pending,
+          eds_issue_date: normalizeDateInput(eds.eds_issue_date),
+          eds_due_date: normalizeDateInput(eds.eds_due_date),
+          total_issues: normalizeOptionalInteger(eds.total_issues),
+          issues_closed: normalizeOptionalInteger(eds.issues_closed),
+          issues_pending: normalizeOptionalInteger(eds.issues_pending),
           eds_reply_document: fileObj?.filename || null,
           eds_status: eds.eds_status,
         });
@@ -1445,7 +1476,8 @@ const addForestProjectWithEds = async (req, res) => {
     return res.status(201).json({
       success: true,
       message: "Forest project with EDS saved successfully",
-      project_id: masterId,
+      project_id: globalProjectId,
+      forest_project_id: masterId,
     });
   } catch (err) {
     console.error("EDS Error:", err);
@@ -1670,7 +1702,7 @@ const updateForestProject = async (req, res) => {
       payload
     );
 
-    await ForestLand.deleteEdsByMasterId(masterProjectId);
+    await ForestLand.deleteEdsByMasterId(existing.project_id);
 
     if (edsFlag === 1 && body.eds_list) {
       const edsList =
@@ -1683,14 +1715,14 @@ const updateForestProject = async (req, res) => {
         const fileObj = files[i];
 
         await ForestLand.createEds({
-          project_master_id: masterProjectId,
+          project_master_id: existing.project_id,
           eds_ref_no: eds.eds_ref_no,
           issuing_authority: eds.issuing_authority,
-          eds_issue_date: eds.eds_issue_date,
-          eds_due_date: eds.eds_due_date,
-          total_issues: eds.total_issues,
-          issues_closed: eds.issues_closed,
-          issues_pending: eds.issues_pending,
+          eds_issue_date: normalizeDateInput(eds.eds_issue_date),
+          eds_due_date: normalizeDateInput(eds.eds_due_date),
+          total_issues: normalizeOptionalInteger(eds.total_issues),
+          issues_closed: normalizeOptionalInteger(eds.issues_closed),
+          issues_pending: normalizeOptionalInteger(eds.issues_pending),
           eds_reply_document: fileObj?.filename || null,
           eds_status: eds.eds_status,
         });
