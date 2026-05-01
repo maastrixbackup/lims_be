@@ -130,7 +130,7 @@ const getDashboardData = async (req, res) => {
       khata: khataCount,
       survey_status: 70,
       payment_status: completedPayments,
-      la_status: 20,
+      la_status: null,
       rr_status: khataCount,
       land_distribution: {
         pvt_land: landDistribution.private,
@@ -225,7 +225,7 @@ const getGovtDashboardData = async (req, res) => {
       khata: govtKhataCount,
       survey_status: 70,
       payment_status: completedPayments,
-      la_status: 20,
+      la_status: null,
       rr_status: govtKhataCount,
       land_distribution: {
         pvt_land: landDistribution.private,

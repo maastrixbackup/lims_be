@@ -449,8 +449,8 @@ async list({
       data.project_master_id,
       data.eds_ref_no,
       data.issuing_authority,
-      data.eds_issue_date,
-      data.eds_due_date,
+      emptyToNull(data.eds_issue_date),
+      emptyToNull(data.eds_due_date),
       data.total_issues,
       data.issues_closed,
       data.issues_pending,
@@ -671,7 +671,7 @@ async list({
       `SELECT * FROM forest_eds_master 
      WHERE project_master_id = ? AND is_deleted = 0
      ORDER BY id ASC`,
-      [master.id]
+      [master.project_id]
     );
 
     return {
