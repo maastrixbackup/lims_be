@@ -1119,14 +1119,24 @@ async govtPlotDelete(id) {
     return rows[0];
   },
 
-  async addPaymentProof(land_cost_id, paymentProof, demandNoteAttachment) {
+  async addPaymentProof(landCostData, paymentProof, demandNoteAttachment) {
     const [result] = await db.query(
       `UPDATE plot_payments
       SET
         payment_proof = COALESCE(?, payment_proof),
         demand_note_attachment = COALESCE(?, demand_note_attachment)
-        WHERE id = ? AND type = 2`,
-      [paymentProof, demandNoteAttachment, land_cost_id],
+      WHERE unique_id <=> ?
+        AND project_id = ?
+        AND type = ?
+        AND lease_case_no <=> ?`,
+      [
+        paymentProof,
+        demandNoteAttachment,
+        landCostData.unique_id,
+        landCostData.project_id,
+        landCostData.type,
+        landCostData.lease_case_no,
+      ],
     );
     return result;
   },
@@ -1170,59 +1180,107 @@ async govtPlotDelete(id) {
     return true;
   },
 
-  async getByUniqueId(unique_id, project_id, type) {
-    const [rows] = await db.query(
-      `
-    SELECT id, plot_id, status, payment_proof, transaction_no
+  async getByUniqueId(unique_id, project_id, type, filters = {}) {
+    const { plot_no, plot_id, lease_case_no } = filters;
+
+    let query = `
+    SELECT id, plot_id, plot_no, lease_case_no, status, payment_proof, transaction_no
     FROM plot_payments
     WHERE unique_id = ?
       AND project_id = ?
       AND type = ?
-    `,
-      [unique_id, project_id, type],
-    );
+    `;
+    const params = [unique_id, project_id, type];
+
+    if (plot_no) {
+      query += ` AND plot_no = ?`;
+      params.push(plot_no);
+    }
+
+    if (lease_case_no) {
+      query += ` AND lease_case_no = ?`;
+      params.push(lease_case_no);
+    }
+
+    if (plot_id) {
+      query += ` AND plot_id = ?`;
+      params.push(plot_id);
+    }
+
+    const [rows] = await db.query(query, params);
     return rows;
   },
 
-  async markPaymentComplete(unique_id, project_id, type) {
-    // get plot_id first
-    const [rows] = await db.query(
-      `
+  async markPaymentComplete(unique_id, project_id, type, filters = {}) {
+    const { plot_no, plot_id, lease_case_no } = filters;
+
+    let selectQuery = `
     SELECT DISTINCT plot_id
     FROM plot_payments
     WHERE unique_id = ?
       AND project_id = ?
       AND type = ?
-    `,
-      [unique_id, project_id, type],
-    );
+    `;
+    const selectParams = [unique_id, project_id, type];
+
+    if (plot_no) {
+      selectQuery += ` AND plot_no = ?`;
+      selectParams.push(plot_no);
+    }
+
+    if (lease_case_no) {
+      selectQuery += ` AND lease_case_no = ?`;
+      selectParams.push(lease_case_no);
+    }
+
+    if (plot_id) {
+      selectQuery += ` AND plot_id = ?`;
+      selectParams.push(plot_id);
+    }
+
+    const [rows] = await db.query(selectQuery, selectParams);
 
     if (!rows.length) return false;
 
-    const plotId = rows[0].plot_id;
-
-    // update govt_plots table
+    // update govt_plots table for all matched plots
     await db.query(
       `
     UPDATE govt_plots
     SET payment_status = 'complete',
         updated_at = NOW()
-    WHERE id = ? AND type = 2
+    WHERE id IN (?) AND type = 2
     `,
-      [plotId],
+      [rows.map((row) => row.plot_id)],
     );
 
-    // update plot_payments table
-    await db.query(
-      `
+    let updateQuery = `
     UPDATE plot_payments
     SET status = 'complete',
         updated_at = NOW()
     WHERE unique_id = ?
       AND project_id = ?
       AND type = ?
-    `,
-      [unique_id, project_id, type],
+    `;
+    const updateParams = [unique_id, project_id, type];
+
+    if (plot_no) {
+      updateQuery += ` AND plot_no = ?`;
+      updateParams.push(plot_no);
+    }
+
+    if (lease_case_no) {
+      updateQuery += ` AND lease_case_no = ?`;
+      updateParams.push(lease_case_no);
+    }
+
+    if (plot_id) {
+      updateQuery += ` AND plot_id = ?`;
+      updateParams.push(plot_id);
+    }
+
+    await db.query(
+      updateQuery,
+      updateParams,
     );
 
     return true;
