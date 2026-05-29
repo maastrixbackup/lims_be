@@ -849,279 +849,6 @@ const updatePlot = async (req, res) => {
       );
     }
 
-    const dateFields = [
-      "date_of_award",
-      "grievance_date",
-      "land_case_date",
-      "tribunal_deposit_date",
-    ];
-
-    dateFields.forEach((f) => {
-      if (safeRequestPayload[f] !== undefined) {
-        safeRequestPayload[f] = normalizeToMysqlDate(safeRequestPayload[f]);
-      }
-    });
-
-    const updated = await Plot.update(id, safeRequestPayload);
-
-    await syncKhataFromPlot(updated, existing);
-
-    await logAction(
-      userId,
-      "update plot",
-      "success",
-      "Plot updated",
-      safeRequestPayload,
-      updated,
-    );
-    res.status(200).json({
-      success: true,
-      message: "Plot updated successfully",
-      plot: updated,
-    });
-  } catch (err) {
-    await logAction(
-      userId,
-      "update plot",
-      "failure",
-      err.message,
-      safeRequestPayload,
-      null,
-    );
-    res.status(500).json({ success: false, message: err.message });
-  }
-};
-
-const deletePlot = async (req, res) => {
-  const userId = req.user.id;
-  const plotId = req.params.id;
-
-  try {
-    const deleted = await Plot.plotDelete(plotId);
-    if (!deleted) {
-      return res
-        .status(404)
-        .json({ success: false, message: "Plot not found" });
-    }
-    await logAction(
-      userId,
-      "delete plot",
-      "success",
-      "Plot soft deleted",
-      { plotId },
-      null,
-    );
-
-    return res
-      .status(200)
-      .json({ success: true, message: "Plot soft deleted successfully" });
-  } catch (err) {
-    await logAction(
-      userId,
-      "delete plot",
-      "failure",
-      err.message,
-      { plotId },
-      null,
-    );
-    res.status(500).json({ success: false, message: err.message });
-  }
-};
-
-const getDeletedPlots = async (req, res) => {
-  const userId = req.user.id;
-  try {
-    const deletedPlots = await Plot.getDeletedPlots();
-    if (!deletedPlots.length) {
-      return res.status(404).json({
-        success: false,
-        message: "No deleted plots found",
-      });
-    }
-
-    return res.status(200).json({
-      success: true,
-      message: "Deleted plots fetched successfully",
-      data: deletedPlots,
-    });
-  } catch (err) {
-    res.status(500).json({
-      success: false,
-      message: err.message,
-    });
-  }
-};
-
-const restorePlot = async (req, res) => {
-  const { id } = req.params;
-  const userId = req.user.id;
-  try {
-    const restored = await Plot.restorePlot(id);
-    if (!restored) {
-      return res.status(404).json({
-        success: false,
-        message: "Plot not found or already active",
-      });
-    }
-    await logAction(
-      userId,
-      "restore plot",
-      "success",
-      "Plot restored successfully",
-      { id },
-      null,
-    );
-
-    return res.status(200).json({
-      success: true,
-      message: "Plot restored successfully",
-    });
-  } catch (err) {
-    await logAction(
-      userId,
-      "restore plot",
-      "failure",
-      err.message,
-      { id },
-      null,
-    );
-    res.status(500).json({ success: false, message: err.message });
-  }
-};
-
-// const paymentReady = async (req, res) => {
-//   const { plot_id } = req.body;
-//   const userId = req.user.id;
-
-//   try {
-//     if (!plot_id) {
-//       return res.status(400).json({
-//         success: false,
-//         message: "Plot Id is required",
-//       });
-//     }
-
-//     const plot = await Plot.findById(plot_id);
-//     if (!plot) {
-//       return res.status(404).json({
-//         success: false,
-//         message: "Plot not found",
-//       });
-//     }
-
-//     await Plot.updatePaymentStatus(plot_id, "Processing");
-
-//     const paymentData = {
-//       plot_id: plot.id,
-//       // unique_id: plot.unique_id,
-//       // //unique id is not in plots table.
-//       // we have to fetch unique_id from khatas table by khata_no
-//       khata_no: plot.khata_no,
-//       project_id: plot.project_id,
-
-//       present_tenant_names: plot.name_of_present_tenant, // comma separated
-//       total_compensation: plot.total_compensation,
-
-//       bank_ac: plot.bank_account_no,
-//       bank_name: plot.bank_name,
-//       ifsc: plot.branch_ifsc,
-
-//       status: "Processing",
-//     };
-
-//     const paymentRecord = await Plot.addPaymentRecord(paymentData);
-
-//     await logAction(
-//       userId,
-//       "Payment ready",
-//       "success",
-//       "Payment processed successfully",
-//       { plot_id },
-//       paymentRecord
-//     );
-
-//     return res.status(200).json({
-//       success: true,
-//       message: "Payment processed successfully",
-//       data: paymentRecord,
-//     });
-//   } catch (err) {
-//     console.error("Payment Ready Error:", err);
-
-//     return res.status(500).json({
-//       success: false,
-//       message: "Server error",
-//     });
-//   }
-// };
-// Updated Payment Ready Controller
-
-const paymentReady = async (req, res) => {
-  const { plot_id, payment_status } = req.body;
-  const userId = req.user.id;
-
-  try {
-    if (!plot_id) {
-      return res.status(400).json({
-        success: false,
-        message: "Plot Id is required",
-      });
-    }
-
-    if (!payment_status) {
-      return res.status(400).json({
-        success: false,
-        message: "Payment status is required",
-      });
-    }
-
-    const allowedStatuses = ["ready", "processing"];
-    if (!allowedStatuses.includes(payment_status)) {
-      return res.status(400).json({
-        success: false,
-        message: "Invalid payment_status for this action",
-      });
-    }
-
-    const plot = await Plot.findById(plot_id);
-    if (!plot) {
-      return res.status(404).json({
-        success: false,
-        message: "Plot not found",
-      });
-    }
-
-    if (payment_status === "processing") {
-      const existing = await Plot.hasProcessingPayments(plot_id);
-      if (existing) {
-        return res.status(400).json({
-          success: false,
-          message: "Payment already in processing state",
-        });
-      }
-    }
-
-    const khata = await Khata.getKhataByNumber(plot.khata_no);
-    const unique_id = khata ? khata.unique_id : null;
-    // Update plot status
-    await Plot.updatePaymentStatus(plot_id, payment_status);
-
-    if (payment_status === "ready") {
-      await logAction(
-        userId,
-        "Payment marked ready",
-        "success",
-        "Payment marked as ready",
-        { plot_id, payment_status },
-        [],
-      );
-
-      return res.status(200).json({
-        success: true,
-        message: "Payment marked as ready",
-      });
-    }
-
     // Split tenant names into an array
     const tenants = plot.name_of_present_tenant
       ? plot.name_of_present_tenant.split(",").map((t) => t.trim())
@@ -1330,6 +1057,7 @@ const getAllPaymentReady = async (req, res) => {
       groups[row.unique_id].tenants.push({
         id: row.id,
         plot_no: row.plot_no,
+        total_compensation: row.total_compensation,
         present_tenant: row.present_tenant_names,
         payment_area: 0,
         compensation_payment: 0,
@@ -1611,7 +1339,7 @@ const updatePlotPayment = async (req, res) => {
 
 const markPaymentCompleted = async (req, res) => {
   const userId = req.user.id;
-  const { unique_id, project_id, type } = req.body;
+  const { unique_id, project_id, type, plot_no, plot_id } = req.body;
 
   try {
     if (!unique_id || !project_id || !type) {
@@ -1621,12 +1349,23 @@ const markPaymentCompleted = async (req, res) => {
       });
     }
 
-    const records = await Plot.getByUniqueId(unique_id, project_id, type);
+    const records = await Plot.getByUniqueId(unique_id, project_id, type, {
+      plot_no,
+      plot_id,
+    });
 
     if (!records.length) {
       return res.status(404).json({
         success: false,
         message: "No payment records found",
+      });
+    }
+
+    const matchedPlotNos = [...new Set(records.map((record) => record.plot_no))];
+    if (!plot_no && !plot_id && matchedPlotNos.length > 1) {
+      return res.status(400).json({
+        success: false,
+        message: "plot_no or plot_id is required to complete payment plot-wise",
       });
     }
 
@@ -1647,14 +1386,17 @@ const markPaymentCompleted = async (req, res) => {
       });
     }
 
-    await Plot.markPaymentComplete(unique_id, project_id, type);
+    await Plot.markPaymentComplete(unique_id, project_id, type, {
+      plot_no,
+      plot_id,
+    });
 
     await logAction(
       userId,
       "mark payment completed",
       "success",
       "Payment Completed",
-      { unique_id, project_id, type },
+      { unique_id, project_id, type, plot_no, plot_id },
       null,
     );
 
