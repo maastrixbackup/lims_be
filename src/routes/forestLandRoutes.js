@@ -110,127 +110,127 @@ router.delete("/deleteForestProject/:id", deleteForestProject);
 
 router.post(
     "/addStage0",
-    handleUpload(uploadStage0.fields([
-        { name: "dgps_document", maxCount: 10},
-        { name: "orsac_document", maxCount: 10},
-        { name: "tree_enumeration_document", maxCount: 10},
-        { name: "administrative_document", maxCount: 10},
-        { name: "legal_lease_document", maxCount: 10},
-        { name: "technical_document", maxCount: 10},
-        { name: "forest_land_details_document", maxCount: 10},
-        { name: "ca_ca_document", maxCount: 10},
-        { name: "fra_document", maxCount: 10},
-        { name: "environmental_document", maxCount: 10},
-        { name: "wildlife_document", maxCount: 10},
-        { name: "maps_document", maxCount: 10},
-        { name: "financial_document", maxCount: 10},
-        { name: "proposal_document", maxCount: 10},
-    ]), "File size exceeds the 10MB limit for Stage-0 document upload."),
+    uploadStage0.fields([
+        { name: "dgps_document", maxCount: 20},
+        { name: "orsac_document", maxCount: 20},
+        { name: "tree_enumeration_document", maxCount: 20},
+        { name: "administrative_document", maxCount: 20},
+        { name: "legal_lease_document", maxCount: 20},
+        { name: "technical_document", maxCount: 20},
+        { name: "forest_land_details_document", maxCount: 20},
+        { name: "ca_ca_document", maxCount: 20},
+        { name: "fra_document", maxCount: 20},
+        { name: "environmental_document", maxCount: 20},
+        { name: "wildlife_document", maxCount: 20},
+        { name: "maps_document", maxCount: 20},
+        { name: "financial_document", maxCount: 20},
+        { name: "proposal_document", maxCount: 20},
+    ]),
     addStage0
 );
 
 router.put(
     "/updateStage0/:forest_project_id",
-    handleUpload(uploadStage0.fields([
-        { name: "dgps_document", maxCount: 10},
-        { name: "orsac_document", maxCount: 10},
-        { name: "tree_enumeration_document", maxCount: 10},
-        { name: "administrative_document", maxCount: 10},
-        { name: "legal_lease_document", maxCount: 10},
-        { name: "technical_document", maxCount: 10},
-        { name: "forest_land_details_document", maxCount: 10},
-        { name: "ca_ca_document", maxCount: 10},
-        { name: "fra_document", maxCount: 10},
-        { name: "environmental_document", maxCount: 10},
-        { name: "wildlife_document", maxCount: 10},
-        { name: "maps_document", maxCount: 10},
-        { name: "financial_document", maxCount: 10},
-        { name: "proposal_document", maxCount: 10},
-    ]), "File size exceeds the 10MB limit for Stage-0 document upload."),
+    uploadStage0.fields([
+        { name: "dgps_document", maxCount: 20},
+        { name: "orsac_document", maxCount: 20},
+        { name: "tree_enumeration_document", maxCount: 20},
+        { name: "administrative_document", maxCount: 20},
+        { name: "legal_lease_document", maxCount: 20},
+        { name: "technical_document", maxCount: 20},
+        { name: "forest_land_details_document", maxCount: 20},
+        { name: "ca_ca_document", maxCount: 20},
+        { name: "fra_document", maxCount: 20},
+        { name: "environmental_document", maxCount: 20},
+        { name: "wildlife_document", maxCount: 20},
+        { name: "maps_document", maxCount: 20},
+        { name: "financial_document", maxCount: 20},
+        { name: "proposal_document", maxCount: 20},
+    ]),
     updateStage0
 );
 
 router.post(
     "/addStage1",
-    handleUpload(uploadStage1.fields([
-        { name: "stage1_approval_document", maxCount: 10},
-        { name: "stage1_conditions_document", maxCount: 10},
-        { name: "ca_land_document", maxCount: 10},
-        { name: "fra_document", maxCount: 10},
-        { name: "npv_document", maxCount: 10},
-        { name: "ca_payment_document", maxCount: 10},
-        { name: "aca_payment_document", maxCount: 10},
-        { name: "wildlife_payment_document", maxCount: 10},
-        { name: "technical_document", maxCount: 10},
-        { name: "stage1_acceptance_document", maxCount: 10},
-    ]), "File size exceeds the 20MB limit for Stage-1 document upload."),
+    uploadStage1.fields([
+        { name: "stage1_approval_document", maxCount: 20},
+        { name: "stage1_conditions_document", maxCount: 20},
+        { name: "ca_land_document", maxCount: 20},
+        { name: "fra_document", maxCount: 20},
+        { name: "npv_document", maxCount: 20},
+        { name: "ca_payment_document", maxCount: 20},
+        { name: "aca_payment_document", maxCount: 20},
+        { name: "wildlife_payment_document", maxCount: 20},
+        { name: "technical_document", maxCount: 20},
+        { name: "stage1_acceptance_document", maxCount: 20},
+    ]),
     addStage1
 );
 
 router.put(
     "/updateStage1/:forest_project_id",
-    handleUpload(uploadStage1.fields([
-        { name: "stage1_approval_document", maxCount: 10},
-        { name: "stage1_conditions_document", maxCount: 10},
-        { name: "ca_land_document", maxCount: 10},
-        { name: "fra_document", maxCount: 10},
-        { name: "npv_document", maxCount: 10},
-        { name: "ca_payment_document", maxCount: 10},
-        { name: "aca_payment_document", maxCount: 10},
-        { name: "wildlife_payment_document", maxCount: 10},
-        { name: "technical_document", maxCount: 10},
-        { name: "stage1_acceptance_document", maxCount: 10},
-    ]), "File size exceeds the 20MB limit for Stage-1 document upload."),
+    uploadStage1.fields([
+        { name: "stage1_approval_document", maxCount: 20},
+        { name: "stage1_conditions_document", maxCount: 20},
+        { name: "ca_land_document", maxCount: 20},
+        { name: "fra_document", maxCount: 20},
+        { name: "npv_document", maxCount: 20},
+        { name: "ca_payment_document", maxCount: 20},
+        { name: "aca_payment_document", maxCount: 20},
+        { name: "wildlife_payment_document", maxCount: 20},
+        { name: "technical_document", maxCount: 20},
+        { name: "stage1_acceptance_document", maxCount: 20},
+    ]),
     updateStage1
 );
 
 router.post(
     "/addStage2",
-    handleUpload(uploadStage2.fields([
-        { name: "environmental_document", maxCount: 10},
-        { name: "nbwl_document", maxCount: 10},
-        { name: "final_ca_document", maxCount: 10},
-        { name: "final_maps_document", maxCount: 10},
-        { name: "final_technical_document", maxCount: 10},
-        { name: "stage2_approval_document", maxCount: 10},
-    ]), "File size exceeds the 20MB limit for Stage-2 document upload."),
+    uploadStage2.fields([
+        { name: "environmental_document", maxCount: 20},
+        { name: "nbwl_document", maxCount: 20},
+        { name: "final_ca_document", maxCount: 20},
+        { name: "final_maps_document", maxCount: 20},
+        { name: "final_technical_document", maxCount: 20},
+        { name: "stage2_approval_document", maxCount: 20},
+    ]),
     addStage2
 );
 
 router.put(
     "/updateStage2/:forest_project_id",
-    handleUpload(uploadStage2.fields([
-        { name: "environmental_document", maxCount: 10},
-        { name: "nbwl_document", maxCount: 10},
-        { name: "final_ca_document", maxCount: 10},
-        { name: "final_maps_document", maxCount: 10},
-        { name: "final_technical_document", maxCount: 10},
-        { name: "stage2_approval_document", maxCount: 10},
-    ]), "File size exceeds the 20MB limit for Stage-2 document upload."),
+    uploadStage2.fields([
+        { name: "environmental_document", maxCount: 20},
+        { name: "nbwl_document", maxCount: 20},
+        { name: "final_ca_document", maxCount: 20},
+        { name: "final_maps_document", maxCount: 20},
+        { name: "final_technical_document", maxCount: 20},
+        { name: "stage2_approval_document", maxCount: 20},
+    ]),
     updateStage2
 );
 
 router.post(
     "/postClearance",
-    handleUpload(uploadPostClearance.fields([
-        { name: "ca_plantation_started_document", maxCount: 10},
-        { name: "ca_plantation_completed_document", maxCount: 10},
-        { name: "survival_report_document", maxCount: 10},
-        { name: "wildlife_mitigation_document", maxCount: 10},
-        { name: "safety_zone_document", maxCount: 10},
-    ]), "File size exceeds the 20MB limit for post-clearance document upload."),
+    uploadPostClearance.fields([
+        { name: "ca_plantation_started_document", maxCount: 20},
+        { name: "ca_plantation_completed_document", maxCount: 20},
+        { name: "survival_report_document", maxCount: 20},
+        { name: "wildlife_mitigation_document", maxCount: 20},
+        { name: "safety_zone_document", maxCount: 20},
+    ]),
     addPostClearance
 );
 
 router.put(
     "/updatePostClearance/:forest_project_id",
-    handleUpload(uploadPostClearance.fields([
-        { name: "ca_plantation_started_document", maxCount: 10},
-        { name: "ca_plantation_completed_document", maxCount: 10},
-        { name: "survival_report_document", maxCount: 10},
-        { name: "wildlife_mitigation_document", maxCount: 10},
-        { name: "safety_zone_document", maxCount: 10},
-    ]), "File size exceeds the 20MB limit for post-clearance document upload."),
+    uploadPostClearance.fields([
+        { name: "ca_plantation_started_document", maxCount: 20},
+        { name: "ca_plantation_completed_document", maxCount: 20},
+        { name: "survival_report_document", maxCount: 20},
+        { name: "wildlife_mitigation_document", maxCount: 20},
+        { name: "safety_zone_document", maxCount: 20},
+    ]),
     updatePostClearance
 );
 
