@@ -1,14 +1,5 @@
 const db = require("../config/db");
 
-const normalizeNullableText = (value) => {
-  if (value === null || value === undefined || value === "") {
-    return null;
-  }
-
-  const normalized = value.toString().trim();
-  return normalized || null;
-};
-
 const Plot = {
   // async bulkInsert(plots, project_id) {
   //   if (!plots || plots.length === 0) return;
@@ -1329,9 +1320,7 @@ const Plot = {
         "Name of Tenant",
       );
       const address = get("LO03", "Present Address");
-      const displaced = normalizeNullableText(
-        get("LO04", "Displaced/Affected Person"),
-      );
+      const displaced = get("LO04", "Displaced/Affected Person");
       const awardDate = toMysqlDate(get("LO06", "Date of Award", "Date of award"));
 
       // LD - Land detail fields
@@ -1607,7 +1596,7 @@ const Plot = {
       land_case_no, land_case_date, land_case_type, land_case_status, land_case_action,grievance_no,
       grievance_date, grievance_subject, grievance_status, grievance_action, tribunal,
       tribunal_deposit_date, tribunal_amount, premium, ground_rent, cess,
-	      incidental_charges, total, abatement, type, is_deleted, full_part
+        incidental_charges, total, abatement, type, is_deleted, full_part
     )
     VALUES ?
     ON DUPLICATE KEY UPDATE
@@ -1695,9 +1684,9 @@ const Plot = {
       incidental_charges = VALUES(incidental_charges),
       total = VALUES(total),
       abatement = VALUES(abatement),
-	      type = VALUES(type),
-	      is_deleted = VALUES(is_deleted),
-	      full_part = VALUES(full_part),
+        type = VALUES(type),
+        is_deleted = VALUES(is_deleted),
+        full_part = VALUES(full_part),
       updated_at = CURRENT_TIMESTAMP
     `,
       [values],
@@ -3012,36 +3001,57 @@ const Plot = {
     return true;
   },
 
-  async getByUniqueId(unique_id, project_id, type) {
-    const [rows] = await db.query(
-      `
-    SELECT id, plot_id, status, payment_proof, transaction_no
+  async getByUniqueId(unique_id, project_id, type, filters = {}) {
+    const { plot_no, plot_id } = filters;
+
+    let query = `
+    SELECT id, plot_id, plot_no, status, payment_proof, transaction_no
     FROM plot_payments
     WHERE unique_id = ?
       AND project_id = ?
       AND type = ?
-    `,
-      [unique_id, project_id, type],
-    );
+    `;
+    const params = [unique_id, project_id, type];
+
+    if (plot_no) {
+      query += ` AND plot_no = ?`;
+      params.push(plot_no);
+    }
+
+    if (plot_id) {
+      query += ` AND plot_id = ?`;
+      params.push(plot_id);
+    }
+
+    const [rows] = await db.query(query, params);
     return rows;
   },
 
-  async markPaymentComplete(unique_id, project_id, type) {
-    // get plot_id first
-    const [rows] = await db.query(
-      `
+  async markPaymentComplete(unique_id, project_id, type, filters = {}) {
+    const { plot_no, plot_id } = filters;
+
+    let selectQuery = `
     SELECT DISTINCT plot_id
     FROM plot_payments
     WHERE unique_id = ?
       AND project_id = ?
       AND type = ?
-    `,
-      [unique_id, project_id, type],
-    );
+    `;
+    const selectParams = [unique_id, project_id, type];
+
+    if (plot_no) {
+      selectQuery += ` AND plot_no = ?`;
+      selectParams.push(plot_no);
+    }
+
+    if (plot_id) {
+      selectQuery += ` AND plot_id = ?`;
+      selectParams.push(plot_id);
+    }
+
+    const [rows] = await db.query(selectQuery, selectParams);
 
     if (!rows.length) return false;
-
-    const plotId = rows[0].plot_id;
 
     // update plots table
     await db.query(
@@ -3049,22 +3059,37 @@ const Plot = {
     UPDATE plots
     SET payment_status = 'complete',
         updated_at = NOW()
-    WHERE id = ? AND type = 1
+    WHERE id IN (?)
+      AND type = 1
     `,
-      [plotId],
+      [rows.map((row) => row.plot_id)],
     );
 
-    // update plot_payments table
-    await db.query(
-      `
+    let updateQuery = `
     UPDATE plot_payments
     SET status = 'complete',
         updated_at = NOW()
     WHERE unique_id = ?
       AND project_id = ?
       AND type = ?
+    `;
+    const updateParams = [unique_id, project_id, type];
+
+    if (plot_no) {
+      updateQuery += ` AND plot_no = ?`;
+      updateParams.push(plot_no);
+    }
+
+    if (plot_id) {
+      updateQuery += ` AND plot_id = ?`;
+      updateParams.push(plot_id);
+    }
+
+    await db.query(
+      `
+    ${updateQuery}
     `,
-      [unique_id, project_id, type],
+      updateParams,
     );
 
     return true;
