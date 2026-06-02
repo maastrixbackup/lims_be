@@ -59,6 +59,23 @@ const hasAnyValueByHeader = (row, headers) => {
   return false;
 };
 
+const hasAnyValueByCode = (row, code) => {
+  if (!row || !code) return false;
+
+  const target = normalizeHeaderKey(code);
+  for (const key of Object.keys(row)) {
+    const normalizedKey = normalizeHeaderKey(key);
+    if (normalizedKey === target || normalizedKey.startsWith(`${target} `)) {
+      const value = row[key];
+      if (value !== undefined && value !== null && `${value}`.trim() !== "") {
+        return true;
+      }
+    }
+  }
+
+  return false;
+};
+
 const GOVT_PLOT_ALLOWED_FIELDS = new Set([
   "project_id",
   "type",
@@ -380,24 +397,25 @@ const uploadGovtPlot = async (req, res) => {
       });
     }
 
-    const requiredGroups = [
-      ["LD01", "district"],
-      ["LD02", "mouza", "village", "name of village"],
-      ["LD03", "tahasil"],
-      ["LD06", "khata no", "khata_no"],
-      ["LD09", "plot no", "plot_no", "plot", "plot number", "plot no."],
+    const requiredGovtCodes = [
+      "LD01",
+      "LD02",
+      "LD03",
+      "LD06",
+      "LD09",
+      "CD01",
+      "CD02",
+      "CR01",
     ];
-    const missingGroups = requiredGroups.filter(
-      (group) => !rows.some((row) => hasAnyValueByHeader(row, group)),
+    const missingGroups = requiredGovtCodes.filter(
+      (code) => !rows.some((row) => hasAnyValueByCode(row, code)),
     );
 
     if (missingGroups.length) {
       fs.unlinkSync(req.file.path);
       return res.status(400).json({
         success: false,
-        message: `Invalid Excel format. Missing required columns for: ${missingGroups
-          .map((g) => g[0])
-          .join(", ")}`,
+        message: `Invalid govt land Excel format. Missing required field codes: ${missingGroups.join(", ")}`,
       });
     }
     // console.log("Header name", rows);
@@ -1300,19 +1318,15 @@ const getAllPaymentReady = async (req, res) => {
       });
     }
 
-    // Group by unique_id + lease_case_no so a single payment card can cover
-    // all plots tied to the same lease case.
+    // Group by unique_id
     const groups = {};
 
     for (const row of all) {
-      const groupKey = `${row.unique_id || "no-unique-id"}-${row.lease_case_no || "no-lease-case"}`;
-
-      if (!groups[groupKey]) {
+      if (!groups[row.unique_id]) {
         // Initialize group using first row values (all rows have same totals)
-        groups[groupKey] = {
+        groups[row.unique_id] = {
           unique_id: row.unique_id,
           plot_id: row.plot_id,
-          lease_case_no: row.lease_case_no,
           project_id: row.project_id,
           khata_no: row.khata_no,
           type: row.type,
@@ -1323,7 +1337,7 @@ const getAllPaymentReady = async (req, res) => {
       }
 
       // Add each tenant row
-      groups[groupKey].tenants.push({
+      groups[row.unique_id].tenants.push({
         id: row.id,
         plot_no: row.plot_no,
         lease_case_no: row.lease_case_no,
@@ -1397,28 +1411,20 @@ const landCostPaymentUpload = async (req, res) => {
 
     // const filePath = `uploads/land_cost_payments/${req.file.filename}`;
 
-    await GovtPlot.addPaymentProof(
-      landCostData,
-      paymentProof,
-      demandNoteAttachment,
-    );
+    await GovtPlot.addPaymentProof(land_cost_id, paymentProof, demandNoteAttachment);
 
     await logAction(
       userId,
       "upload land cost payment proof",
       "success",
       "Payment proof uploaded successfully",
-      {
-        land_cost_id,
-        lease_case_no: landCostData.lease_case_no,
-        unique_id: landCostData.unique_id,
-      },
+      { land_cost_id },
       null,
     );
 
     res.status(200).json({
       success: true,
-      message: "Payment proof uploaded successfully for the lease case",
+      message: "Payment proof uploaded successfully",
     });
   } catch (err) {
     console.error("UPLOAD ERROR:", err);
@@ -1510,7 +1516,7 @@ const updatePlotPayment = async (req, res) => {
 
 const markPaymentCompleted = async (req, res) => {
   const userId = req.user.id;
-  const { unique_id, project_id, type, plot_no, plot_id, lease_case_no } = req.body;
+  const { unique_id, project_id, type } = req.body;
 
   try {
     if (!unique_id || !project_id || !type) {
@@ -1520,26 +1526,12 @@ const markPaymentCompleted = async (req, res) => {
       });
     }
 
-    const records = await GovtPlot.getByUniqueId(unique_id, project_id, type, {
-      plot_no,
-      plot_id,
-      lease_case_no,
-    });
+    const records = await GovtPlot.getByUniqueId(unique_id, project_id, type);
 
     if (!records.length) {
       return res.status(404).json({
         success: false,
         message: "No payment records found",
-      });
-    }
-
-    const matchedLeaseCases = [
-      ...new Set(records.map((record) => record.lease_case_no).filter(Boolean)),
-    ];
-    if (!lease_case_no && matchedLeaseCases.length > 1) {
-      return res.status(400).json({
-        success: false,
-        message: "lease_case_no is required to complete payment lease-case-wise",
       });
     }
 
@@ -1560,18 +1552,14 @@ const markPaymentCompleted = async (req, res) => {
       });
     }
 
-    await GovtPlot.markPaymentComplete(unique_id, project_id, type, {
-      plot_no,
-      plot_id,
-      lease_case_no,
-    });
+    await GovtPlot.markPaymentComplete(unique_id, project_id, type);
 
     await logAction(
       userId,
       "mark payment completed",
       "success",
       "Payment Completed",
-      { unique_id, project_id, type, plot_no, plot_id, lease_case_no },
+      { unique_id, project_id, type },
       null,
     );
 

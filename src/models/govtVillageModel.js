@@ -21,7 +21,7 @@ const govtVillage = {
       );
     };
 
-    const getValue = (row, code, ...fallbacks) => {
+    const getValue = (row, code) => {
       const codeKey = normalizeCompareKey(code);
       for (const key of Object.keys(row || {})) {
         const normalized = normalizeCompareKey(key);
@@ -30,40 +30,17 @@ const govtVillage = {
           if (normalizeText(value)) return value;
         }
       }
-      for (const fb of fallbacks) {
-        const fbKey = normalizeCompareKey(fb);
-        for (const key of Object.keys(row || {})) {
-          if (normalizeCompareKey(key) === fbKey) {
-            const value = row[key];
-            if (normalizeText(value)) return value;
-          }
-        }
-      }
       return null;
     };
-const getDistrict = (row) => {
-  const district = getValue(
-    row,
-    "LD01", // assuming LD01 is district (adjust if needed)
-    "District",
-    "district name",
-    "District",
-    "DISTRICT"
-  );
 
-  const normalized = normalizeText(district);
-  return normalized || null;
-};
+    const getDistrict = (row) => {
+      const district = getValue(row, "LD01");
+      const normalized = normalizeText(district);
+      return normalized || null;
+    };
+
     const getThanaNo = (row) => {
-      const thana = getValue(
-        row,
-        "LD04",
-        "thana no",
-        "thana_no",
-        "Thana No",
-        "Thana no.",
-        "Thana No.",
-      );
+      const thana = getValue(row, "LD04");
 
       const normalized = normalizeText(thana);
       return normalized || null;
@@ -72,11 +49,11 @@ const getDistrict = (row) => {
     const villageMap = new Map();
 
     rows.forEach((r) => {
-      const mouzaRaw = getValue(r, "LD02", "mouza", "village", "name of village");
+      const mouzaRaw = getValue(r, "LD02");
       if (!mouzaRaw) return;
-      
+
       const mouza = normalizeText(mouzaRaw);
-      const tahasil = normalizeText(getValue(r, "LD03", "tahasil"));
+      const tahasil = normalizeText(getValue(r, "LD03"));
       const thana_no = getThanaNo(r);
       const district = getDistrict(r);
 

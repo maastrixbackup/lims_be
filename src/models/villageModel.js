@@ -253,26 +253,17 @@ const Village = {
 
     const normalize = (val) =>
       val === null || val === undefined ? "" : val.toString().trim().toLowerCase();
-    const normalizeHeader = (val) =>
-      normalize(val).replace(/[^a-z0-9]+/g, "");
-    const getCellValue = (row, headers = []) => {
-      for (const header of headers) {
-        if (row[header] !== undefined && row[header] !== null && row[header] !== "") {
-          return row[header];
+    const getCodeValue = (row, code) => {
+      const target = normalize(code);
+      for (const key of Object.keys(row || {})) {
+        const normalizedKey = normalize(key);
+        if (normalizedKey === target || normalizedKey.startsWith(`${target} `)) {
+          const value = row[key];
+          if (value !== undefined && value !== null && value !== "") {
+            return value;
+          }
         }
       }
-
-      const normalizedRowEntries = Object.entries(row).map(([k, v]) => [
-        normalizeHeader(k),
-        v,
-      ]);
-
-      for (const header of headers) {
-        const target = normalizeHeader(header);
-        const matched = normalizedRowEntries.find(([k, v]) => k === target && v !== undefined && v !== null && v !== "");
-        if (matched) return matched[1];
-      }
-
       return null;
     };
 
@@ -286,40 +277,20 @@ const Village = {
     let insertedCount = 0;
 
     for (const row of data) {
-      const villageNameRaw = getCellValue(row, [
-        "LD02",
-        "Name of Village",
-        "name of village",
-      ]);
+      const villageNameRaw = getCodeValue(row, "LD02");
       const villageName = villageNameRaw ? villageNameRaw.toString().trim() : null;
-      const tahasilRaw = getCellValue(row, [
-        "LD03",
-        "Name of the Tahasil",
-        "Tahasil/Thana",
-      ]);
+      const tahasilRaw = getCodeValue(row, "LD03");
       const tahasil = tahasilRaw ? tahasilRaw.toString().trim() : null;
-      const thanaNoRaw = getCellValue(row, ["LD05", "Thana No.", "Thana no"]);
+      const thanaNoRaw = getCodeValue(row, "LD05");
       const thanaNo =
         thanaNoRaw !== undefined && thanaNoRaw !== null
           ? thanaNoRaw.toString().trim()
           : null;
-      const presentAddress =
-        getCellValue(row, ["LO03", "Present Address"]) || null;
 
       // if (!villageName || !tahasil) continue;
       if (!villageName) continue;
 
-      let district =
-        getCellValue(row, ["LD01", "District", "district"])
-          ?.toString()
-          .trim() || null;
-
-      if (!district && presentAddress) {
-        const distMatch = presentAddress.match(/Dist[-: ]+([A-Za-z\s]+)/i);
-        if (distMatch && distMatch[1]) {
-          district = distMatch[1].trim() || null;
-        }
-      }
+      const district = getCodeValue(row, "LD01")?.toString().trim() || null;
 
       // Key for matching existing data
       const baseKey = `${villageName.toLowerCase()}`;
