@@ -9,6 +9,15 @@ const Khata = require("../models/khataModel");
 const ExcelJS = require("exceljs");
 
 const pad2 = (n) => String(n).padStart(2, "0");
+const normalizeNullableText = (value) => {
+  if (value === null || value === undefined || value === "") {
+    return null;
+  }
+
+  const normalized = value.toString().trim();
+  return normalized || null;
+};
+
 const normalizeToMysqlDate = (rawValue) => {
   if (rawValue === null || rawValue === undefined || rawValue === "") {
     return null;
@@ -78,6 +87,21 @@ const normalizeToMysqlDate = (rawValue) => {
   return null;
 };
 
+const normalizeHeaderKey = (key) =>
+  key?.toString().replace(/\r?\n/g, " ").replace(/\s+/g, " ").trim().toLowerCase();
+
+const hasHeaderCode = (rows, code) => {
+  if (!Array.isArray(rows) || !rows.length || !code) return false;
+
+  const target = normalizeHeaderKey(code);
+  return rows.some((row) =>
+    Object.keys(row || {}).some((key) => {
+      const normalizedKey = normalizeHeaderKey(key);
+      return normalizedKey === target || normalizedKey.startsWith(`${target} `);
+    }),
+  );
+};
+
 const syncKhataFromPlot = async (plotData, previousPlot = null) => {
   if (!plotData?.project_id || !plotData?.type) return;
 
@@ -90,19 +114,22 @@ const syncKhataFromPlot = async (plotData, previousPlot = null) => {
   const khatasToSync = new Set();
   if (previousPlot?.khata_no) {
     khatasToSync.add(
-      `${previousPlot.project_id}::${previousPlot.type}::${previousPlot.khata_no}`,
+      `${previousPlot.project_id}::${previousPlot.type}::${previousPlot.khata_no}::${previousPlot.village_name || ""}`,
     );
   }
   if (plotData.khata_no) {
-    khatasToSync.add(`${plotData.project_id}::${plotData.type}::${plotData.khata_no}`);
+    khatasToSync.add(
+      `${plotData.project_id}::${plotData.type}::${plotData.khata_no}::${plotData.village_name || ""}`,
+    );
   }
 
   for (const item of khatasToSync) {
-    const [project_id, type, khata_no] = item.split("::");
+    const [project_id, type, khata_no, village_name] = item.split("::");
     await Khata.insertKhataFromManualPlot({
       project_id,
       type,
       khata_no,
+      village_name: village_name || null,
     });
   }
 };
@@ -142,6 +169,33 @@ const uploadPlots = async (req, res) => {
       return res
         .status(400)
         .json({ success: false, message: "Excel file is empty" });
+    }
+
+    const requiredPrivateCodes = [
+      "LO01",
+      "LO02",
+      "LO03",
+      "LO06",
+      "LD01",
+      "LD02",
+      "LD03",
+      "LD06",
+      "LD07",
+      "LA01",
+      "LA02",
+      "BK01",
+      "PD01",
+    ];
+    const missingCodes = requiredPrivateCodes.filter(
+      (code) => !hasHeaderCode(data, code),
+    );
+
+    if (missingCodes.length) {
+      fs.unlinkSync(req.file.path);
+      return res.status(400).json({
+        success: false,
+        message: `Invalid private land Excel format. Missing required field codes: ${missingCodes.join(", ")}`,
+      });
     }
 
     // const requiredColumns = {
@@ -626,9 +680,6 @@ const createPlot = async (req, res) => {
       safeRequestPayload[k] = null;
     }
   });
-  // if (!["PDF", "PAF"].includes(safeRequestPayload.displaced_affected_project)) {
-  //   safeRequestPayload.displaced_affected_project = null;
-  // }
   try {
     // if (
     //   !safeRequestPayload.project_id ||
@@ -710,6 +761,10 @@ const createPlot = async (req, res) => {
       }
       safeRequestPayload.family_with_orphan_members = orphanMembers;
     }
+
+    safeRequestPayload.displaced_affected_project = normalizeNullableText(
+      safeRequestPayload.displaced_affected_project,
+    );
 
     const dateFields = [
       "date_of_award",
@@ -830,6 +885,15 @@ const updatePlot = async (req, res) => {
       safeRequestPayload.family_with_orphan_members = orphanMembers;
     }
 
+    if (Object.prototype.hasOwnProperty.call(
+      safeRequestPayload,
+      "displaced_affected_project",
+    )) {
+      safeRequestPayload.displaced_affected_project = normalizeNullableText(
+        safeRequestPayload.displaced_affected_project,
+      );
+    }
+
     const dateFields = [
       "date_of_award",
       "grievance_date",
@@ -878,12 +942,22 @@ const deletePlot = async (req, res) => {
   const plotId = req.params.id;
 
   try {
+    const existingPlot = await Plot.findById(plotId);
+    if (!existingPlot) {
+      return res
+        .status(404)
+        .json({ success: false, message: "Plot not found" });
+    }
+
     const deleted = await Plot.plotDelete(plotId);
     if (!deleted) {
       return res
         .status(404)
         .json({ success: false, message: "Plot not found" });
     }
+
+    await syncKhataFromPlot(existingPlot, existingPlot);
+
     await logAction(
       userId,
       "delete plot",
@@ -1311,7 +1385,6 @@ const getAllPaymentReady = async (req, res) => {
       groups[row.unique_id].tenants.push({
         id: row.id,
         plot_no: row.plot_no,
-        total_compensation: row.total_compensation,
         present_tenant: row.present_tenant_names,
         payment_area: 0,
         compensation_payment: 0,
@@ -1593,7 +1666,7 @@ const updatePlotPayment = async (req, res) => {
 
 const markPaymentCompleted = async (req, res) => {
   const userId = req.user.id;
-  const { unique_id, project_id, type, plot_no, plot_id } = req.body;
+  const { unique_id, project_id, type } = req.body;
 
   try {
     if (!unique_id || !project_id || !type) {
@@ -1603,23 +1676,12 @@ const markPaymentCompleted = async (req, res) => {
       });
     }
 
-    const records = await Plot.getByUniqueId(unique_id, project_id, type, {
-      plot_no,
-      plot_id,
-    });
+    const records = await Plot.getByUniqueId(unique_id, project_id, type);
 
     if (!records.length) {
       return res.status(404).json({
         success: false,
         message: "No payment records found",
-      });
-    }
-
-    const matchedPlotNos = [...new Set(records.map((record) => record.plot_no))];
-    if (!plot_no && !plot_id && matchedPlotNos.length > 1) {
-      return res.status(400).json({
-        success: false,
-        message: "plot_no or plot_id is required to complete payment plot-wise",
       });
     }
 
@@ -1640,17 +1702,14 @@ const markPaymentCompleted = async (req, res) => {
       });
     }
 
-    await Plot.markPaymentComplete(unique_id, project_id, type, {
-      plot_no,
-      plot_id,
-    });
+    await Plot.markPaymentComplete(unique_id, project_id, type);
 
     await logAction(
       userId,
       "mark payment completed",
       "success",
       "Payment Completed",
-      { unique_id, project_id, type, plot_no, plot_id },
+      { unique_id, project_id, type },
       null,
     );
 

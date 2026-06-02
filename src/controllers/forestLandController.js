@@ -396,6 +396,9 @@ const uploadForestLandSchedule = async (req, res) => {
   try {
     const project_master_id = req.body.project_master_id || req.body.project_id;
     const schedule_type = req.body.schedule_type || req.body.type;
+    const isCaSchedule = ["CA_LAND", "ACA_LAND"].includes(schedule_type);
+    const isForestSchedule = schedule_type === "FOREST_AREA";
+    const isNonForestSchedule = schedule_type === "NON_FOREST_AREA";
 
     if (!project_master_id || !schedule_type) {
       return res.status(400).json({
@@ -491,73 +494,103 @@ const uploadForestLandSchedule = async (req, res) => {
       return getValueByNormalizedKey(row, fallbacks);
     };
 
+    const getScheduleValue = (row, config = {}) => {
+      const { forestCode, nonForestCode, caCode, fallbacks = [] } = config;
+      if (!row) return null;
+
+      if (isForestSchedule && forestCode) {
+        return getCodeValue(row, forestCode);
+      }
+
+      if (isNonForestSchedule && nonForestCode) {
+        return getCodeValue(row, nonForestCode);
+      }
+
+      if (isCaSchedule && caCode) {
+        return getCodeValue(row, caCode);
+      }
+
+      const preferredCode = forestCode || nonForestCode || caCode;
+      if (!preferredCode) return null;
+      return get(row, preferredCode, ...fallbacks);
+    };
+
     const parsedRows = rawRows
       .map((row) => {
         const totalAreaHa = toNumberOrNull(
-          get(row, "FA01", "NFA02", "CAA01", "total area (ha)", "total area ha"),
+          getScheduleValue(row, {
+            forestCode: "FA01",
+            nonForestCode: "NFA02",
+            caCode: "CAA01",
+          }),
         );
         const totalAreaAcre = toNumberOrNull(
-          get(row, "total area (in acres)", "total area (acre)"),
+          isForestSchedule
+            ? get(row, "total area (in acres)", "total area (acre)")
+            : null,
         );
         const proposedAreaHa = toNumberOrNull(
-          get(
-            row,
-            "FA02",
-            "NFA03",
-            "proposed/ acquired area ha",
-            "proposed_acquired_area_ha",
-            "proposed area (ha)",
-          ),
+          getScheduleValue(row, {
+            forestCode: "FA02",
+            nonForestCode: "NFA03",
+          }),
         );
         const proposedAreaAcre = toNumberOrNull(
-          get(row, "LA02", "proposed area (in acres)", "proposed area (acre)"),
+          isForestSchedule ? get(row, "LA02") : null,
         );
 
         return {
-          district: get(row, "FD01", "NFD01", "CAD01", "district"),
-          ri_circle: get(row,  "FD02", "NFD02", "CAD02", "ri circle", "ri_circle"),
-          tahasil: get(row, "NFD03", "CAD03", "tahasil", "tehasil"),
-          village: get(
-            row,
-            "FD05",
-            "NFD04",
-            "CAD04",
-            "village",
-            "mouza",
-            "mauza",
-            "name of village",
-          ),
-          forest_division: get(row, "FD03", "CA04", "forest division", "forest_division"),
-          forest_range: get(row, "FD04", "forest range", "forest_range"),
-          khata_no: get(
-            row,
-            "FD06",
-            "NFD05",
-            "CAD05",
-            "khata no",
-            "khata_no",
-            "khata no.",
-          ),
-          plot_no: get(
-            row,
-            "FD07",
-            "NFD06",
-            "CAD06",
-            "plot no",
-            "plot_no",
-            "plot no.",
-          ),
-          kisam: get(row, "FD08", "NFD07", "CAD07", "kisam", "kissam"),
-          forest_category_id: get(
-            row,
-            "FD09",
-            "forest category id",
-            "forest_category_id",
-            "forest category",
-            "forest_category",
-          ),
-          ownership: get(row, "NFO01", "CAO01", "ownership"),
-          fra_allotted: get(row, "NFA01", "fra allotted", "fra_allotted", "land allotted through fra"),
+          district: getScheduleValue(row, {
+            forestCode: "FD01",
+            nonForestCode: "NFD01",
+            caCode: "CAD01",
+          }),
+          ri_circle: getScheduleValue(row, {
+            forestCode: "FD02",
+            nonForestCode: "NFD02",
+            caCode: "CAD02",
+          }),
+          tahasil: getScheduleValue(row, {
+            nonForestCode: "NFD03",
+            caCode: "CAD03",
+          }),
+          village: getScheduleValue(row, {
+            forestCode: "FD05",
+            nonForestCode: "NFD04",
+            caCode: "CAD04",
+          }),
+          forest_division: getScheduleValue(row, {
+            forestCode: "FD03",
+            caCode: "CA04",
+          }),
+          forest_range: getScheduleValue(row, {
+            forestCode: "FD04",
+          }),
+          khata_no: getScheduleValue(row, {
+            forestCode: "FD06",
+            nonForestCode: "NFD05",
+            caCode: "CAD05",
+          }),
+          plot_no: getScheduleValue(row, {
+            forestCode: "FD07",
+            nonForestCode: "NFD06",
+            caCode: "CAD06",
+          }),
+          kisam: getScheduleValue(row, {
+            forestCode: "FD08",
+            nonForestCode: "NFD07",
+            caCode: "CAD07",
+          }),
+          forest_category_id: getScheduleValue(row, {
+            forestCode: "FD09",
+          }),
+          ownership: getScheduleValue(row, {
+            nonForestCode: "NFO01",
+            caCode: "CAO01",
+          }),
+          fra_allotted: getScheduleValue(row, {
+            nonForestCode: "NFA01",
+          }),
           total_area_ha:
             totalAreaHa !== null
               ? totalAreaHa
@@ -571,11 +604,17 @@ const uploadForestLandSchedule = async (req, res) => {
                 ? parseFloat((proposedAreaAcre / 2.47105).toFixed(4))
                 : null,
           digital_area_ha: toNumberOrNull(
-            get(row, "digital area (ha)", "digital_area_ha", "digital area ha"),
+            isCaSchedule || isNonForestSchedule
+              ? null
+              : get(row, "digital area (ha)", "digital_area_ha", "digital area ha"),
           ),
-          ca_area_ha: toNumberOrNull(get(row, "CA02", "ca area (ha)", "ca_area_ha")),
-          patch_name: get(row, "CA03", "patch name", "patch_name"),
-          remarks: get(row, "FA03", "NFA04", "CA05", "remarks", "remark"),
+          ca_area_ha: toNumberOrNull(getCodeValue(row, "CA02")),
+          patch_name: getCodeValue(row, "CA03"),
+          remarks: getScheduleValue(row, {
+            forestCode: "FA03",
+            nonForestCode: "NFA04",
+            caCode: "CA05",
+          }),
         };
       })
       .map((row) => ({
