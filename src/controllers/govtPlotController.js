@@ -1409,9 +1409,25 @@ const landCostPaymentUpload = async (req, res) => {
       });
     }
 
-    // const filePath = `uploads/land_cost_payments/${req.file.filename}`;
-
-    await GovtPlot.addPaymentProof(land_cost_id, paymentProof, demandNoteAttachment);
+    if (
+      landCostData.lease_case_no &&
+      landCostData.project_id &&
+      landCostData.type
+    ) {
+      await GovtPlot.addPaymentProofByLeaseCaseNo(
+        landCostData.lease_case_no,
+        landCostData.project_id,
+        landCostData.type,
+        paymentProof,
+        demandNoteAttachment,
+      );
+    } else {
+      await GovtPlot.addPaymentProof(
+        land_cost_id,
+        paymentProof,
+        demandNoteAttachment,
+      );
+    }
 
     await logAction(
       userId,
@@ -1516,17 +1532,21 @@ const updatePlotPayment = async (req, res) => {
 
 const markPaymentCompleted = async (req, res) => {
   const userId = req.user.id;
-  const { unique_id, project_id, type } = req.body;
+  const { lease_case_no, project_id, type } = req.body;
 
   try {
-    if (!unique_id || !project_id || !type) {
+    if (!lease_case_no || !project_id || !type) {
       return res.status(400).json({
         success: false,
-        message: "unique_id,project_id and type are required",
+        message: "lease_case_no, project_id and type are required",
       });
     }
 
-    const records = await GovtPlot.getByUniqueId(unique_id, project_id, type);
+    const records = await GovtPlot.getByLeaseCaseNo(
+      lease_case_no,
+      project_id,
+      type,
+    );
 
     if (!records.length) {
       return res.status(404).json({
@@ -1552,14 +1572,18 @@ const markPaymentCompleted = async (req, res) => {
       });
     }
 
-    await GovtPlot.markPaymentComplete(unique_id, project_id, type);
+    await GovtPlot.markPaymentCompleteByLeaseCaseNo(
+      lease_case_no,
+      project_id,
+      type,
+    );
 
     await logAction(
       userId,
       "mark payment completed",
       "success",
       "Payment Completed",
-      { unique_id, project_id, type },
+      { lease_case_no, project_id, type },
       null,
     );
 

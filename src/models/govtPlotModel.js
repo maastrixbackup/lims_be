@@ -786,6 +786,26 @@ async govtPlotDelete(id) {
     return result;
   },
 
+  async addPaymentProofByLeaseCaseNo(
+    lease_case_no,
+    project_id,
+    type,
+    paymentProof,
+    demandNoteAttachment,
+  ) {
+    const [result] = await db.query(
+      `UPDATE plot_payments
+      SET
+        payment_proof = COALESCE(?, payment_proof),
+        demand_note_attachment = COALESCE(?, demand_note_attachment)
+      WHERE lease_case_no = ?
+        AND project_id = ?
+        AND type = ?`,
+      [paymentProof, demandNoteAttachment, lease_case_no, project_id, type],
+    );
+    return result;
+  },
+
   async updatePaymentDetails(data) {
     const {
       land_cost_id,
@@ -839,6 +859,20 @@ async govtPlotDelete(id) {
     return rows;
   },
 
+  async getByLeaseCaseNo(lease_case_no, project_id, type) {
+    const [rows] = await db.query(
+      `
+    SELECT id, plot_id, status, payment_proof, transaction_no
+    FROM plot_payments
+    WHERE lease_case_no = ?
+      AND project_id = ?
+      AND type = ?
+    `,
+      [lease_case_no, project_id, type],
+    );
+    return rows;
+  },
+
   async markPaymentComplete(unique_id, project_id, type) {
     // get plot_id first
     const [rows] = await db.query(
@@ -878,6 +912,52 @@ async govtPlotDelete(id) {
       AND type = ?
     `,
       [unique_id, project_id, type],
+    );
+
+    return true;
+  },
+
+  async markPaymentCompleteByLeaseCaseNo(lease_case_no, project_id, type) {
+    const [rows] = await db.query(
+      `
+    SELECT DISTINCT plot_id
+    FROM plot_payments
+    WHERE lease_case_no = ?
+      AND project_id = ?
+      AND type = ?
+    `,
+      [lease_case_no, project_id, type],
+    );
+
+    if (!rows.length) return false;
+
+    const plotIds = rows
+      .map((row) => row.plot_id)
+      .filter((plotId) => plotId !== null && plotId !== undefined);
+
+    if (plotIds.length) {
+      await db.query(
+        `
+      UPDATE govt_plots
+      SET payment_status = 'complete',
+          updated_at = NOW()
+      WHERE id IN (${plotIds.map(() => "?").join(",")})
+        AND type = 2
+      `,
+        plotIds,
+      );
+    }
+
+    await db.query(
+      `
+    UPDATE plot_payments
+    SET status = 'complete',
+        updated_at = NOW()
+    WHERE lease_case_no = ?
+      AND project_id = ?
+      AND type = ?
+    `,
+      [lease_case_no, project_id, type],
     );
 
     return true;
