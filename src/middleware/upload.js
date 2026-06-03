@@ -2,10 +2,21 @@ const multer = require("multer");
 const path = require("path");
 const fs = require("fs");
 
+const getUploadPath = (folder) => {
+  const fullPath = path.join(process.cwd(), "uploads", folder);
+
+  if (!fs.existsSync(fullPath)) {
+    fs.mkdirSync(fullPath, { recursive: true });
+  }
+
+  return fullPath;
+};
+
 //Upload excel
 const excelStorage = multer.diskStorage({
   destination: (req, file, cb) => {
-    cb(null, "uploads/excels");
+    //cb(null, "uploads/excels");
+	  cb(null, getUploadPath("excels"));
   },
   filename: (req, file, cb) => {
     const originalname = file.originalname.replace(/\s+/g, "_");
@@ -34,7 +45,8 @@ const uploadPlotExcel = multer({
 //Upload profile pic
 const profileStorage = multer.diskStorage({
   destination: (req, file, cb) => {
-    cb(null, "uploads/profile_pics");
+    //cb(null, "uploads/profile_pics");
+	  cb(null, getUploadPath("profile_pics"));
   },
   filename: (req, file, cb) => {
     const originalname = file.originalname.replace(/\s+/g, "_");
@@ -64,7 +76,8 @@ const uploadProfilePic = multer({
 //Upload pvt khata
 const KhataStorage = multer.diskStorage({
   destination: (req, file, cb) => {
-    cb(null, "uploads/khata");
+    //cb(null, "uploads/khata");
+	  cb(null, getUploadPath("khata"));
   },
   filename: (req, file, cb) => {
     const originalname = file.originalname.replace(/\s+/g, "_");
@@ -100,7 +113,8 @@ const uploadKhata = multer({
 // Upload map document (KMZ files)
 const mapStorage = multer.diskStorage({
   destination: (req, file, cb) => {
-    cb(null, "uploads/maps");
+    //cb(null, "uploads/maps");
+	  cb(null, getUploadPath("maps"));
   },
   filename: (req, file, cb) => {
     const originalname = file.originalname.replace(/\s+/g, "_");
@@ -127,13 +141,13 @@ const mapFileFilter = (req, file, cb) => {
 const uploadMapDocument = multer({
   storage: mapStorage,
   fileFilter: mapFileFilter,
-  limits: { fileSize: 10 * 1024 * 1024 }, // 10MB limit
+  limits: { fileSize: 20 * 1024 * 1024 }, // 10MB limit
 });
 
 // Upload payment proof
 const paymentStorage = multer.diskStorage({
   destination: (req, file, cb) => {
-    cb(null, "uploads/land_cost_payments");
+	  cb(null, getUploadPath("land_cost_payments"));
   },
   filename: (req, file, cb) => {
     const originalname = file.originalname.replace(/\s+/g, "_");
@@ -162,13 +176,13 @@ const paymentFileFilter = (req, file, cb) => {
 const uploadLandCostPayment = multer({
   storage: paymentStorage,
   fileFilter: paymentFileFilter,
-  limits: { fileSize: 5 * 1024 * 1024 }, // 5MB
+  limits: { fileSize: 20 * 1024 * 1024 }, // 5MB
 });
 
 // Upload govt payment proof
 const govtPaymentStorage = multer.diskStorage({
   destination: (req, file, cb) => {
-    cb(null, "uploads/govt_land_cost_payments");
+	  cb(null, getUploadPath("govt_land_cost_payments"));
   },
   filename: (req, file, cb) => {
     const originalname = file.originalname.replace(/\s+/g, "_");
@@ -197,12 +211,12 @@ const govtPaymentFileFilter = (req, file, cb) => {
 const uploadGovtLandCostPayment = multer({
   storage: govtPaymentStorage,
   fileFilter: govtPaymentFileFilter,
-  limits: { fileSize: 5 * 1024 * 1024 }, // 5MB
+  limits: { fileSize: 20 * 1024 * 1024 }, // 5MB
 });
 
 const govtPlotStorage = multer.diskStorage({
   destination: (req, file, cb) => {
-    cb(null, "uploads/govt_plots");
+	  cb(null, getUploadPath("govt_plots"));
   },
   filename: (req, file, cb) => {
     const originalname = file.originalname.replace(/\s+/g, "_");
@@ -230,12 +244,13 @@ const govtPlotFileFilter = (req, file, cb) => {
 const uploadGovtPlotAttachments = multer({
   storage: govtPlotStorage,
   fileFilter: govtPlotFileFilter,
-  limits: { fileSize: 10 * 1024 * 1024 }, // 10MB
+  limits: { fileSize: 20 * 1024 * 1024 }, // 10MB
 });
 
 const govtPlotExcelStorage = multer.diskStorage({
   destination: (req, file, cb) => {
-    cb(null, "uploads/govt_plot_excels");
+    //cb(null, "uploads/govt_plot_excels");
+	  cb(null, getUploadPath("govt_plot_excels"));
   },
   filename: (req, file, cb) => {
     const originalname = file.originalname.replace(/\s+/g, "_");
@@ -261,7 +276,7 @@ const govtPlotExcelFileFilter = (req, file, cb) => {
 const uploadGovtPlotExcel = multer({
   storage: govtPlotExcelStorage,
   fileFilter: govtPlotExcelFileFilter,
-  limits: { fileSize: 10 * 1024 * 1024 }, // 10 MB
+  limits: { fileSize: 20 * 1024 * 1024 }, // 10 MB
 });
 
 const forestLandExcelStorage = multer.diskStorage({
@@ -292,13 +307,13 @@ const forestLandExcelFileFilter = (req, file, cb) => {
 const uploadForestLandExcel = multer({
   storage: forestLandExcelStorage,
   fileFilter: forestLandExcelFileFilter,
-  limits: { fileSize: 10 * 1024 * 1024 },
+  limits: { fileSize: 20 * 1024 * 1024 },
 });
 
 //Upload Govt khata
 const GovtKhataStorage = multer.diskStorage({
   destination: (req, file, cb) => {
-    cb(null, "uploads/govt_khata");
+	  cb(null, getUploadPath("govt_khata"));
   },
   filename: (req, file, cb) => {
     const originalname = file.originalname.replace(/\s+/g, "_");
@@ -320,7 +335,7 @@ const uploadGovtKhata = multer({
 //upload govt map document (KMZ files)
 const govtMapStorage = multer.diskStorage({
   destination: (req, file, cb) => {
-    cb(null, "uploads/govt_maps");
+	  cb(null, getUploadPath("govt_maps"));
   },
   filename: (req, file, cb) => {
     const originalname = file.originalname.replace(/\s+/g, "_");
@@ -347,7 +362,7 @@ const govtMapFileFilter = (req, file, cb) => {
 const uploadGovtMapDocument = multer({
   storage: govtMapStorage,
   fileFilter: govtMapFileFilter,
-  limits: { fileSize: 10 * 1024 * 1024 }, // 10MB limit
+  limits: { fileSize: 20 * 1024 * 1024 }, // 10MB limit
 });
 
 // const EDSStorage = multer.diskStorage({
@@ -390,7 +405,7 @@ const uploadGovtMapDocument = multer({
 
 const edsStorage = multer.diskStorage({
   destination: (req, file, cb) => {
-    cb(null, "uploads/eds");
+	  cb(null, getUploadPath("eds"));
   },
   filename: (req, file, cb) => {
     const originalname = file.originalname.replace(/\s+/g, "_");
@@ -443,11 +458,11 @@ const edsFileFilter = (req, file, cb) => {
 const uploadEdsDocuments = multer({
   storage: edsStorage,
   fileFilter: edsFileFilter,
-  limits: { fileSize: 10 * 1024 * 1024 },
+  limits: { fileSize: 20 * 1024 * 1024 },
 });
 const stageZeroStorage = multer.diskStorage({
   destination: (req, file, cb) => {
-    cb(null, "uploads/stage0");
+	  cb(null, getUploadPath("stage0"));
   },
   filename: (req, file, cb) => {
     const name =
@@ -459,12 +474,12 @@ const stageZeroStorage = multer.diskStorage({
 const uploadStage0 = multer({
   storage: stageZeroStorage,
   fileFilter: stageDocumentFileFilter,
-  limits: { fileSize: 10 * 1024 * 1024 },
+  limits: { fileSize: 20 * 1024 * 1024 },
 });
 
 const stage1Storage = multer.diskStorage({
   destination: (req, file, cb) => {
-    cb(null, "uploads/stage1");
+	   cb(null, getUploadPath("stage1"));
   },
   filename: (req, file, cb) => {
     const originalname = file.originalname.replace(/\s+/g, "_");
@@ -480,7 +495,7 @@ const uploadStage1 = multer({
 
 const stage2Storage = multer.diskStorage({
   destination: (req, file, cb) => {
-    cb(null, "uploads/stage2");
+	   cb(null, getUploadPath("stage2"));
   },
   filename: (req, file, cb) => {
     const cleanName = file.originalname.replace(/\s+/g, "_");
@@ -496,7 +511,7 @@ const uploadStage2 = multer({
 
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
-    cb(null, "uploads/post_clearance");
+	   cb(null, getUploadPath("post_clearance"));
   },
   filename: (req, file, cb) => {
     const clean = file.originalname.replace(/\s+/g, "_");

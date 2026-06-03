@@ -1363,15 +1363,17 @@ const getAllPaymentReady = async (req, res) => {
       });
     }
 
-    // Group by unique_id
+    // Group by plot number so completion/proofs stay tied to the actual plot.
     const groups = {};
 
     for (const row of all) {
-      if (!groups[row.unique_id]) {
-        // Initialize group using first row values (all rows have same totals)
-        groups[row.unique_id] = {
+      const groupKey = row.plot_no;
+
+      if (!groups[groupKey]) {
+        groups[groupKey] = {
           unique_id: row.unique_id,
           plot_id: row.plot_id,
+          plot_no: row.plot_no,
           project_id: row.project_id,
           khata_no: row.khata_no,
           type: row.type,
@@ -1382,7 +1384,7 @@ const getAllPaymentReady = async (req, res) => {
       }
 
       // Add each tenant row
-      groups[row.unique_id].tenants.push({
+      groups[groupKey].tenants.push({
         id: row.id,
         plot_no: row.plot_no,
         present_tenant: row.present_tenant_names,
@@ -1666,17 +1668,17 @@ const updatePlotPayment = async (req, res) => {
 
 const markPaymentCompleted = async (req, res) => {
   const userId = req.user.id;
-  const { unique_id, project_id, type } = req.body;
+  const { plot_no, project_id, type } = req.body;
 
   try {
-    if (!unique_id || !project_id || !type) {
+    if (!plot_no || !project_id || !type) {
       return res.status(400).json({
         success: false,
-        message: "unique_id,project_id and type are required",
+        message: "plot_no, project_id and type are required",
       });
     }
 
-    const records = await Plot.getByUniqueId(unique_id, project_id, type);
+    const records = await Plot.getByPlotNo(plot_no, project_id, type);
 
     if (!records.length) {
       return res.status(404).json({
@@ -1702,14 +1704,14 @@ const markPaymentCompleted = async (req, res) => {
       });
     }
 
-    await Plot.markPaymentComplete(unique_id, project_id, type);
+    await Plot.markPaymentCompleteByPlotNo(plot_no, project_id, type);
 
     await logAction(
       userId,
       "mark payment completed",
       "success",
       "Payment Completed",
-      { unique_id, project_id, type },
+      { plot_no, project_id, type },
       null,
     );
 

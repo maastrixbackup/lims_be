@@ -1658,7 +1658,7 @@ const Plot = {
 
         plot.present_tenant_count = tenants.length;
       } else {
-        plot.present_tenant_count = "N/A";
+        plot.present_tenant_count = null;
       }
 
       return plot;
@@ -2943,6 +2943,20 @@ const Plot = {
     return rows;
   },
 
+  async getByPlotNo(plot_no, project_id, type) {
+    const [rows] = await db.query(
+      `
+    SELECT id, plot_id, plot_no, status, payment_proof, transaction_no
+    FROM plot_payments
+    WHERE plot_no = ?
+      AND project_id = ?
+      AND type = ?
+    `,
+      [plot_no, project_id, type],
+    );
+    return rows;
+  },
+
   async markPaymentComplete(unique_id, project_id, type) {
     // get plot_id first
     const [rows] = await db.query(
@@ -2982,6 +2996,52 @@ const Plot = {
       AND type = ?
     `,
       [unique_id, project_id, type],
+    );
+
+    return true;
+  },
+
+  async markPaymentCompleteByPlotNo(plot_no, project_id, type) {
+    const [rows] = await db.query(
+      `
+    SELECT DISTINCT plot_id
+    FROM plot_payments
+    WHERE plot_no = ?
+      AND project_id = ?
+      AND type = ?
+    `,
+      [plot_no, project_id, type],
+    );
+
+    if (!rows.length) return false;
+
+    const plotIds = rows
+      .map((row) => row.plot_id)
+      .filter((plotId) => plotId !== null && plotId !== undefined);
+
+    if (plotIds.length) {
+      await db.query(
+        `
+      UPDATE plots
+      SET payment_status = 'complete',
+          updated_at = NOW()
+      WHERE id IN (${plotIds.map(() => "?").join(",")})
+        AND type = 1
+      `,
+        plotIds,
+      );
+    }
+
+    await db.query(
+      `
+    UPDATE plot_payments
+    SET status = 'complete',
+        updated_at = NOW()
+    WHERE plot_no = ?
+      AND project_id = ?
+      AND type = ?
+    `,
+      [plot_no, project_id, type],
     );
 
     return true;
