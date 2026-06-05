@@ -589,11 +589,28 @@ const Khata = {
     return rows;
   },
 
-  async getKhataByNumber(khata_no) {
-    const [rows] = await db.query(
-      `SELECT * FROM khatas WHERE khata_no = ? LIMIT 1`,
-      [khata_no]
-    );
+  async getKhataByNumber(khata_no, project_id = null, type = null, village_id = null) {
+    let query = `SELECT * FROM khatas WHERE khata_no = ?`;
+    const params = [khata_no];
+
+    if (project_id) {
+      query += ` AND project_id = ?`;
+      params.push(project_id);
+    }
+
+    if (type) {
+      query += ` AND type = ?`;
+      params.push(type);
+    }
+
+    if (village_id) {
+      query += ` AND village_id = ?`;
+      params.push(village_id);
+    }
+
+    query += ` LIMIT 1`;
+
+    const [rows] = await db.query(query, params);
     return rows[0];
   },
 

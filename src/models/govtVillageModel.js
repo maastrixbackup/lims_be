@@ -33,14 +33,27 @@ const govtVillage = {
       return null;
     };
 
+    const getValueByAliases = (row, ...aliases) => {
+      const normalizedAliases = aliases.map((alias) => normalizeCompareKey(alias));
+      for (const key of Object.keys(row || {})) {
+        const normalized = normalizeCompareKey(key);
+        if (normalizedAliases.includes(normalized)) {
+          const value = row[key];
+          if (normalizeText(value)) return value;
+        }
+      }
+      return null;
+    };
+
     const getDistrict = (row) => {
-      const district = getValue(row, "LD01");
+      const district = getValue(row, "LD01") ?? getValueByAliases(row, "district");
       const normalized = normalizeText(district);
       return normalized || null;
     };
 
     const getThanaNo = (row) => {
-      const thana = getValue(row, "LD04");
+      const thana =
+        getValue(row, "LD04") ?? getValueByAliases(row, "thana no", "thana_no");
 
       const normalized = normalizeText(thana);
       return normalized || null;
@@ -49,11 +62,15 @@ const govtVillage = {
     const villageMap = new Map();
 
     rows.forEach((r) => {
-      const mouzaRaw = getValue(r, "LD02");
+      const mouzaRaw =
+        getValue(r, "LD02") ??
+        getValueByAliases(r, "mouza", "village", "village_name", "name of village");
       if (!mouzaRaw) return;
 
       const mouza = normalizeText(mouzaRaw);
-      const tahasil = normalizeText(getValue(r, "LD03"));
+      const tahasil = normalizeText(
+        getValue(r, "LD03") ?? getValueByAliases(r, "tahasil"),
+      );
       const thana_no = getThanaNo(r);
       const district = getDistrict(r);
 
