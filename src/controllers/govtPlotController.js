@@ -711,24 +711,59 @@ const deleteGovtPlot = async (req, res) => {
   const plotId = req.params.id;
 
   try {
+    const existingPlot = await GovtPlot.findById(plotId);
+    if (!existingPlot) {
+      return res
+        .status(404)
+        .json({ success: false, message: "Plot not found" });
+    }
+
     const deleted = await GovtPlot.govtPlotDelete(plotId);
     if (!deleted) {
       return res
         .status(404)
         .json({ success: false, message: "Plot not found" });
     }
+
+    const remainingPlots = await GovtPlot.countActiveByKhata(
+      existingPlot.project_id,
+      existingPlot.type,
+      existingPlot.khata_no,
+    );
+
+    let khataDeleted = false;
+    if (remainingPlots === 0 && existingPlot.khata_no) {
+      const khata = await GovtKhata.findByProjectTypeKhataNo(
+        existingPlot.project_id,
+        existingPlot.type,
+        existingPlot.khata_no,
+      );
+
+      if (khata) {
+        await GovtKhata.deleteKhataById(khata.id);
+        khataDeleted = true;
+      }
+    }
+
     await logAction(
       userId,
       "delete govt plot",
       "success",
       "Govt plot soft deleted",
       { plotId },
-      null,
+      {
+        plot: existingPlot,
+        khataDeleted,
+      },
     );
 
-    return res
-      .status(200)
-      .json({ success: true, message: "Plot soft deleted successfully" });
+    return res.status(200).json({
+      success: true,
+      message:
+        remainingPlots === 0 && khataDeleted
+          ? "Plot soft deleted successfully and linked khata deleted"
+          : "Plot soft deleted successfully",
+    });
   } catch (err) {
     await logAction(
       userId,
@@ -1552,23 +1587,6 @@ const markPaymentCompleted = async (req, res) => {
       return res.status(404).json({
         success: false,
         message: "No payment records found",
-      });
-    }
-
-    const notProcessing = records.find((r) => r.status !== "processing");
-    if (notProcessing) {
-      return res.status(400).json({
-        success: false,
-        message: "Only processing payments can be completed",
-      });
-    }
-
-    const invalid = records.find((r) => !r.payment_proof);
-
-    if (invalid) {
-      return res.status(400).json({
-        success: false,
-        message: "Payment proof required",
       });
     }
 

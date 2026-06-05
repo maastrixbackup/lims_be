@@ -635,6 +635,22 @@ async govtPlotDelete(id) {
   return result.affectedRows;
 },
 
+  async countActiveByKhata(project_id, type, khata_no) {
+    const [rows] = await db.query(
+      `
+      SELECT COUNT(*) AS total
+      FROM govt_plots
+      WHERE project_id = ?
+        AND type = ?
+        AND khata_no = ?
+        AND is_deleted = 0
+      `,
+      [project_id, type, khata_no],
+    );
+
+    return rows[0]?.total || 0;
+  },
+
   async findByPk(id) {
     const [rows] = await db.query(
       `SELECT * FROM govt_plots WHERE id = ? AND is_deleted = 0`,
