@@ -172,6 +172,20 @@ const Village = {
     return rows.length > 0;
   },
 
+  async checkVillageExistsExcept(id, project_id, type, village_name) {
+    const [rows] = await db.query(
+      `SELECT id
+     FROM villages
+     WHERE project_id = ?
+       AND type = ?
+       AND village_name = ?
+       AND id <> ?
+     LIMIT 1`,
+      [project_id, type, village_name.trim(), id]
+    );
+    return rows.length > 0;
+  },
+
   // async countAll(projectId = null) {
   //   let query = "SELECT COUNT(*) AS total FROM villages";
   //   let params = [];
