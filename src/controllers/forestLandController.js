@@ -347,6 +347,16 @@ const normalizeOptionalInteger = (value) => {
   return Number.isInteger(parsed) ? parsed : null;
 };
 
+const normalizeOptionalDecimal = (value) => {
+  if (value === null || value === undefined) return null;
+
+  const trimmed = String(value).trim();
+  if (!trimmed) return null;
+
+  const parsed = Number(trimmed);
+  return Number.isFinite(parsed) ? parsed : null;
+};
+
 const normalizeHeaderCode = (value) => {
   const raw = toTrimmedString(value).replace(/\s+/g, "");
   if (!raw) return "";
@@ -1960,7 +1970,7 @@ const addStage0 = async (req, res) => {
       forest_project_id: body.forest_project_id,
 
       dgps_survey_done: dgpsSurveyDone,
-      dgps_area_ha: body.dgps_area_ha || null,
+      dgps_area_ha: normalizeOptionalDecimal(body.dgps_area_ha),
       dgps_document: buildDocumentValue(files, "dgps_document"),
 
       orsac_authentication: orsacAuth,
@@ -2261,9 +2271,9 @@ const addStage2 = async (req, res) => {
       stage2_approval_date: body.stage2_approval_date || null,
 
       approved_forest_area_ha:
-        body.approved_forest_area_ha || null,
+        normalizeOptionalDecimal(body.approved_forest_area_ha),
       approved_non_forest_area_ha:
-        body.approved_non_forest_area_ha || null,
+        normalizeOptionalDecimal(body.approved_non_forest_area_ha),
 
       stage2_status: stage2Status,
       eligible_post_clearance: eligiblePostClearance,
@@ -2576,7 +2586,7 @@ const updateStage0 = async (req, res) => {
       dgps_survey_done: dgpsSurveyDone,
       dgps_area_ha:
         body.dgps_area_ha !== undefined
-          ? body.dgps_area_ha
+          ? normalizeOptionalDecimal(body.dgps_area_ha)
           : existingData.dgps_area_ha,
       dgps_document: dgpsDocument,
       orsac_authentication: orsacAuth,
@@ -2926,11 +2936,11 @@ const updateStage2 = async (req, res) => {
           : existingData.stage2_approval_date,
       approved_forest_area_ha:
         body.approved_forest_area_ha !== undefined
-          ? body.approved_forest_area_ha
+          ? normalizeOptionalDecimal(body.approved_forest_area_ha)
           : existingData.approved_forest_area_ha,
       approved_non_forest_area_ha:
         body.approved_non_forest_area_ha !== undefined
-          ? body.approved_non_forest_area_ha
+          ? normalizeOptionalDecimal(body.approved_non_forest_area_ha)
           : existingData.approved_non_forest_area_ha,
       stage2_status: stage2Status,
       eligible_post_clearance: eligiblePostClearance,
