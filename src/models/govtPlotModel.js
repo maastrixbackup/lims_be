@@ -260,284 +260,6 @@ async create(data) {
     return result.insertId;
   },
 
-  // async findAll({ project_id, type, limit = 10, offset = 0 }) {
-  //   const sql = `SELECT * FROM govt_plots
-  //     WHERE is_deleted = 0
-  //     AND project_id = ${project_id}
-  //     AND type = ?
-  //     ORDER BY id DESC
-  //     LIMIT ? OFFSET ?`;
-
-  //   const [rows] = await db.query(sql, [project_id, type, limit, offset]);
-
-  //   const countSql = `
-  //     SELECT COUNT(*) AS total
-  //     FROM govt_plots
-  //     WHERE is_deleted = 0
-  //     AND project_id = ${project_id}
-  //     AND type = ?
-  //   `;
-
-  //   const [countRows] = await db.query(countSql, [project_id, type]);
-
-  //   return {
-  //     data: rows,
-  //     total: countRows[0].total,
-  //   };
-  // },
-
-  // async bulkInsertFromExcel(rows, project_id, type) {
-  //   const values = rows.map((r) => [
-  //     project_id,
-  //     type,
-  //     r["Mouza"] || null,
-  //     r["Tahasil"] || null,
-  //     r["Thana No"] || null,
-  //     r["RI Circle"] || null,
-  //     r["Khata No"] || null,
-  //     r["Kissam"] || null,
-  //     r["Name of ROR"] || null,
-  //     r["Plot No"] || null,
-
-  //     r["Total Area (Acre)"] || null,
-  //     r["Proposed Area (Acre)"] || null,
-  //     r["Total Area (Hectare)"] || null,
-  //     r["Proposed Area (Hectare)"] || null,
-
-  //     r["Lease Case No"] || null,
-  //     r["Present Status"] || 0,
-
-  //     yesNoToBit(r["UA /IDCO to Tahasildar"]),
-  //     r["Action to be taken"] || null,
-
-  //     r["RI Report"] || null,
-
-  //     yesNoToBit(r["Proclamation"]),
-  //     yesNoToBit(r["Objection Received"]),
-
-  //     r["Others"] || null,
-  //     r["Modification/Revision"] || null,
-
-  //     yesNoToBit(r["Mising Case Prep./ DR Case. Prep."]),
-  //     r["Mising Case Prep./ DR Case. Prep. Number"] || null,
-  //     r["Reason for Misc/DR case"] || null,
-
-  //     r["Tree Enumeration"] || null,
-
-  //     yesNoToBit(r["Order Sheet Prep."]),
-  //     yesNoToBit(r["Lease to IDCO"]),
-  //     yesNoToBit(r["Lease to  UA"]),
-
-  //     r["Remarks"] || null,
-  //   ]);
-
-  //   const sql = `
-  //   INSERT INTO govt_plots (
-  //     project_id, type, mouza, tahasil, thana_no, ri_circle,
-  //     khata_no, kissam, name_of_ror, plot_no,
-
-  //     total_area_acres, proposed_area_acres,
-  //     total_area_hectares, proposed_area_hectares,
-
-  //     lease_case_no, present_status,
-
-  //     ua_idco_to_tahasildar,
-  //     action_to_be_taken,
-
-  //     ri_report,
-
-  //     proclamation,
-  //     objection_received,
-
-  //     others,
-  //     modification_revision,
-
-  //     misc_dr_case_prep,
-  //     misc_dr_case_prep_number,
-  //     reason_for_misc_dr_case,
-
-  //     tree_enumeration,
-
-  //     order_sheet_prep,
-  //     lease_to_idco,
-  //     lease_to_ua,
-
-  //     remarks
-  //   ) VALUES ?
-  // `;
-
-  //   await db.query(sql, [values]);
-  // },
-
-  // async bulkInsertFromExcel(rows, project_id, type) {
-  //   const yesNoToBool = (val) => {
-  //     if (!val) return 0;
-  //     return String(val).toLowerCase() === "yes" ? 1 : 0;
-  //   };
-
-  //   const getPresentStatus = (row) => {
-  //     if (yesNoToBool(row["lease case to sub-collector"])) return 1;
-  //     if (yesNoToBool(row["lease case to adm (rev.sec)"])) return 2;
-  //     if (yesNoToBool(row["demand raised"])) return 3;
-  //     if (yesNoToBool(row["lease sanctioned by collector"])) return 4;
-  //     return 0;
-  //   };
-  //   const values = rows.map((r) => [
-  //     project_id,
-  //     type,
-  //     r["mouza"],
-  //     r["tahasil"],
-  //     r["thana no"],
-  //     r["ri"],
-  //     r["khata no"],
-  //     r["name of khata"],
-  //     r["plot no"],
-
-  //     r["total area (in acres)"],
-  //     r["proposed area (in acres)"],
-
-  //     r["lease case no"],
-  //     getPresentStatus(r),
-
-  //     r["case details/ deservation req."],
-  //     r["action to be taken"],
-
-  //     yesNoToBool(r["ua /idco to tahasildar"]),
-  //     r["ri report"],
-  //     yesNoToBool(r["proclamation"]),
-  //     yesNoToBool(r["objection received"]),
-  //     r["others"],
-  //     r["modification/ revision"],
-
-  //     yesNoToBool(r["mising case prep."]) || yesNoToBool(r["dr case. prep."]),
-
-  //     r["tree enumeration"],
-  //     yesNoToBool(r["order sheet prep."]),
-  //     yesNoToBool(r["lease to idco"]),
-  //     yesNoToBool(r["lease to ua"]),
-  //   ]);
-
-  //   await db.query(
-  //     `
-  //   INSERT INTO govt_plots (
-  //     project_id, type, mouza, tahasil, thana_no, ri_circle,
-  //     khata_no, name_of_ror, plot_no,
-  //     total_area_acres, proposed_area_acres,
-  //     lease_case_no, present_status,
-  //     case_details, action_to_be_taken,
-  //     ua_idco_to_tahasildar,
-  //     ri_report, proclamation, objection_received,
-  //     others, modification_revision,
-  //     misc_dr_case_prep,
-  //     tree_enumeration,
-  //     order_sheet_prep,
-  //     lease_to_idco, lease_to_ua
-  //   ) VALUES ?
-  //   `,
-  //     [values]
-  //   );
-  // },
-
-  // async bulkInsertFromExcel(rows, project_id, type) {
-  //   const yesNoToBool = (val) => {
-  //     if (!val) return 0;
-  //     return String(val).trim().toLowerCase() === "yes" ? 1 : 0;
-  //   };
-
-  //   const getPresentStatus = (row) => {
-  //     if (yesNoToBool(row["lease case to sub-collector"])) return 1;
-  //     if (yesNoToBool(row["lease case to adm (rev.sec)"])) return 2;
-  //     if (yesNoToBool(row["demand raised"])) return 3;
-  //     if (yesNoToBool(row["lease sanctioned by collector"])) return 4;
-  //     return 0;
-  //   };
-
-  //   const validRows = rows.filter((r) => {
-  //     const khata = r["khata no"];
-  //     return (
-  //       khata !== undefined && khata !== null && String(khata).trim() !== ""
-  //     );
-  //   });
-
-  //   if (!validRows.length) return 0;
-  //   const values = validRows.map((r) => [
-  //     project_id,
-  //     type,
-  //     r["mouza"] || null,
-  //     r["tahasil"] || null,
-  //     r["thana no"] || null,
-  //     r["ri"] || null,
-  //     r["khata no"] || null,
-  //     r["name of khata"] || null,
-  //     r["plot no"] || null,
-
-  //     r["total area (in acres)"] || null,
-  //     r["proposed area (in acres)"] || null,
-
-  //     r["lease case no"] || null,
-  //     getPresentStatus(r),
-
-  //     r["case details/ deservation req."] || null,
-  //     r["action to be taken"] || null,
-
-  //     yesNoToBool(r["ua /idco to tahasildar"]),
-  //     r["ri report"] || null,
-  //     yesNoToBool(r["proclamation"]),
-  //     yesNoToBool(r["objection received"]),
-  //     r["others"] || null,
-  //     r["modification/ revision"] || null,
-
-  //     yesNoToBool(r["mising case prep."]) || yesNoToBool(r["dr case. prep."]),
-
-  //     r["tree enumeration"] || null,
-  //     yesNoToBool(r["order sheet prep."]),
-  //     yesNoToBool(r["lease to idco"]),
-  //     yesNoToBool(r["lease to ua"]),
-  //   ]);
-
-  //   if (!values.length) return;
-
-  //   await db.query(
-  //     `
-  //   INSERT INTO govt_plots (
-  //     project_id, type, mouza, tahasil, thana_no, ri_circle,
-  //     khata_no, name_of_ror, plot_no,
-  //     total_area_acres, proposed_area_acres,
-  //     lease_case_no, present_status,
-  //     case_details, action_to_be_taken,
-  //     ua_idco_to_tahasildar,
-  //     ri_report, proclamation, objection_received,
-  //     others, modification_revision,
-  //     misc_dr_case_prep,
-  //     tree_enumeration,
-  //     order_sheet_prep,
-  //     lease_to_idco, lease_to_ua
-  //   )
-  //   VALUES ?
-  //   ON DUPLICATE KEY UPDATE
-  //     total_area_acres = VALUES(total_area_acres),
-  //     proposed_area_acres = VALUES(proposed_area_acres),
-  //     lease_case_no = VALUES(lease_case_no),
-  //     present_status = VALUES(present_status),
-  //     case_details = VALUES(case_details),
-  //     action_to_be_taken = VALUES(action_to_be_taken),
-  //     ua_idco_to_tahasildar = VALUES(ua_idco_to_tahasildar),
-  //     ri_report = VALUES(ri_report),
-  //     proclamation = VALUES(proclamation),
-  //     objection_received = VALUES(objection_received),
-  //     others = VALUES(others),
-  //     modification_revision = VALUES(modification_revision),
-  //     misc_dr_case_prep = VALUES(misc_dr_case_prep),
-  //     tree_enumeration = VALUES(tree_enumeration),
-  //     order_sheet_prep = VALUES(order_sheet_prep),
-  //     lease_to_idco = VALUES(lease_to_idco),
-  //     lease_to_ua = VALUES(lease_to_ua),
-  //     updated_at = NOW()
-  //   `,
-  //     [values]
-  //   );
-  // },
-
   async findAll({ project_id, type, limit = 10, offset = 0 }) {
     const sql = `
     SELECT *
@@ -671,34 +393,6 @@ async create(data) {
       return null;
     };
 
-    const getValueByNormalizedKey = (row, possibleKeys) => {
-      if (!row) return null;
-      const normalizedKeys = possibleKeys.map((k) => normalizeCompareKey(k));
-      for (const key of Object.keys(row)) {
-        if (normalizedKeys.includes(normalizeCompareKey(key))) {
-          return row[key];
-        }
-      }
-      return null;
-    };
-
-    const getCaseDetailsValue = (row) => {
-      return getValueByNormalizedKey(row, [
-        "case details/ deservation req.",
-        "case details/de-reservation req.",
-        "case details/ de-reservation req.",
-        "Case details/De - reservation Req.",
-      ]);
-    };
-    const getMissingCaseNumber = (row) => {
-      return getValueByNormalizedKey(row, [
-        "mising case prep./ dr case. prep. number",
-        "Missing Case Prep./DR Case Number",
-        "missing case prep / dr case number",
-        "misc_dr_case_prep_number",
-      ]);
-    };
-
     const getCodeValue = (row, code) => {
       const target = normalizeCompareKey(code);
       for (const key of Object.keys(row || {})) {
@@ -713,12 +407,6 @@ async create(data) {
       return null;
     };
 
-    const get = (row, code, ...fallbacks) => {
-      const byCode = getCodeValue(row, code);
-      if (byCode !== null) return byCode;
-      return getValueByNormalizedKey(row, fallbacks);
-    };
-
     // const getFullPartValue = (row) => {
     //   return getValueByNormalizedKey(row, [
     //     "Full/Part",
@@ -728,19 +416,11 @@ async create(data) {
     // };
 
     const validRows = rows.filter((r) => {
-      const khata = get(r, "LD06", "khata no", "khata_no");
-      const plot = get(
-        r,
-        "LD09",
-        "plot no",
-        "plot_no",
-        "plot",
-        "plot number",
-        "plot no.",
-      );
-      const district = get(r, "LD01", "district");
-      const mouza = get(r, "LD02", "mouza", "village", "name of village");
-      const tahasil = get(r, "LD03", "tahasil");
+      const khata = getCodeValue(r, "LD06");
+      const plot = getCodeValue(r, "LD09");
+      const district = getCodeValue(r, "LD01");
+      const mouza = getCodeValue(r, "LD02");
+      const tahasil = getCodeValue(r, "LD03");
       return (
         khata !== undefined &&
         khata !== null &&
@@ -758,38 +438,28 @@ async create(data) {
 
     if (!validRows.length) return 0;
 const values = validRows.map((r) => {
-  const district = get(r, "LD01", "district");
-  const mouza = get(r, "LD02", "mouza", "village", "name of village");
-  const tahasil = get(r, "LD03", "tahasil");
-  const thanaNo = get(r, "LD04", "thana no", "thana_no", "thana no.");
-  const riCircle = get(r, "LD05", "ri circle", "ri");
-  const khataNo = get(r, "LD06", "khata no", "khata_no");
-  const kissam = get(r, "LD07", "kissam", "kissam of land");
-  const nameOfRor = get(r, "LD08", "name of ror", "name of khata");
-  const plotNo = get(
-    r,
-    "LD09",
-    "plot no",
-    "plot_no",
-    "plot",
-    "plot number",
-    "plot no."
-  );
+  const district = getCodeValue(r, "LD01");
+  const mouza = getCodeValue(r, "LD02");
+  const tahasil = getCodeValue(r, "LD03");
+  const thanaNo = getCodeValue(r, "LD04");
+  const riCircle = getCodeValue(r, "LD05");
+  const khataNo = getCodeValue(r, "LD06");
+  const kissam = getCodeValue(r, "LD07");
+  const nameOfRor = getCodeValue(r, "LD08");
+  const plotNo = getCodeValue(r, "LD09");
 
   let totalAcres =
-    parseFloat(get(r, "LA01", "total area (in acres)", "total area (acre)")) ||
+    parseFloat(getCodeValue(r, "LA01")) ||
     null;
 
   let proposedAcres =
-    parseFloat(
-      get(r, "LA02", "proposed area (in acres)", "proposed area (acre)")
-    ) || null;
+    parseFloat(getCodeValue(r, "LA02")) || null;
 
   let totalHectares =
-    parseFloat(get(r, "LA03", "total area (in hectares)")) || null;
+    parseFloat(getCodeValue(r, "LA03")) || null;
 
   let proposedHectares =
-    parseFloat(get(r, "LA04", "proposed area (in hectares)")) || null;
+    parseFloat(getCodeValue(r, "LA04")) || null;
 
   if (totalAcres && !totalHectares)
     totalHectares = parseFloat((totalAcres / 2.47105).toFixed(4));
@@ -803,73 +473,58 @@ const values = validRows.map((r) => {
   if (proposedHectares && !proposedAcres)
     proposedAcres = parseFloat((proposedHectares * 2.47105).toFixed(4));
 
-  const leaseCaseNo = get(r, "CD01", "lease case no");
-  const presentStatus = presentStatusMap(get(r, "CD02", "present status"));
+  const leaseCaseNo = getCodeValue(r, "CD01");
+  const presentStatus = presentStatusMap(getCodeValue(r, "CD02"));
 
   const uaToTahasildar = yesNoToBool(
-    get(r, "CD03", "ua /idco to tahasildar")
+    getCodeValue(r, "CD03")
   );
 
-  const caseDetails = get(
-    r,
-    "CD04",
-    "case details/ deservation req.",
-    "case details/de-reservation req.",
-    "case details/ de-reservation req."
-  );
+  const caseDetails = getCodeValue(r, "CD04");
 
-  const actionToBeTaken = get(r, "CD05", "action to be taken");
+  const actionToBeTaken = getCodeValue(r, "CD05");
 
   const riReport = enumStatus(
-    get(r, "CD06", "ri report (1)", "ri report")
+    getCodeValue(r, "CD06")
   );
 
-  const proclamation = yesNoToBool(get(r, "CD07", "proclamation"));
+  const proclamation = yesNoToBool(getCodeValue(r, "CD07"));
 
   const objectionReceived = yesNoToBool(
-    get(r, "CD08", "objection received")
+    getCodeValue(r, "CD08")
   );
 
-  const others = get(r, "CD09", "others");
+  const others = getCodeValue(r, "CD09");
 
   const modificationRevision = yesNoToBool(
-    get(r, "CD10", "modification/revision")
+    getCodeValue(r, "CD10")
   );
 
   const miscDrCasePrep = yesNoToBool(
-    get(r, "CD11", "mising case prep./ dr case. prep.")
+    getCodeValue(r, "CD11")
   );
 
-  const miscDrCasePrepNumber = get(
-    r,
-    "CD12",
-    "mising case prep./ dr case. prep. number",
-    "Missing Case Prep./DR Case Number"
-  );
+  const miscDrCasePrepNumber = getCodeValue(r, "CD12");
 
-  const reasonForMiscDrCase = get(
-    r,
-    "CD13",
-    "reason for misc/dr case"
-  );
+  const reasonForMiscDrCase = getCodeValue(r, "CD13");
 
   const treeEnumeration = enumStatus(
-    get(r, "CR01", "tree enumeration")
+    getCodeValue(r, "CR01")
   );
 
   const orderSheetPrep = enumStatus(
-    get(r, "CR02", "order sheet prep.")
+    getCodeValue(r, "CR02")
   );
 
   const leaseToIdco = yesNoToBool(
-    get(r, "CR03", "lease to idco")
+    getCodeValue(r, "CR03")
   );
 
   const leaseToUa = yesNoToBool(
-    get(r, "CR04", "lease to ua")
+    getCodeValue(r, "CR04")
   );
 
-  const remarks = get(r, "CR05", "remarks");
+  const remarks = getCodeValue(r, "CR05");
 
   return [
     project_id,
@@ -979,6 +634,22 @@ async govtPlotDelete(id) {
 
   return result.affectedRows;
 },
+
+  async countActiveByKhata(project_id, type, khata_no) {
+    const [rows] = await db.query(
+      `
+      SELECT COUNT(*) AS total
+      FROM govt_plots
+      WHERE project_id = ?
+        AND type = ?
+        AND khata_no = ?
+        AND is_deleted = 0
+      `,
+      [project_id, type, khata_no],
+    );
+
+    return rows[0]?.total || 0;
+  },
 
   async findByPk(id) {
     const [rows] = await db.query(
@@ -1131,6 +802,26 @@ async govtPlotDelete(id) {
     return result;
   },
 
+  async addPaymentProofByLeaseCaseNo(
+    lease_case_no,
+    project_id,
+    type,
+    paymentProof,
+    demandNoteAttachment,
+  ) {
+    const [result] = await db.query(
+      `UPDATE plot_payments
+      SET
+        payment_proof = COALESCE(?, payment_proof),
+        demand_note_attachment = COALESCE(?, demand_note_attachment)
+      WHERE lease_case_no = ?
+        AND project_id = ?
+        AND type = ?`,
+      [paymentProof, demandNoteAttachment, lease_case_no, project_id, type],
+    );
+    return result;
+  },
+
   async updatePaymentDetails(data) {
     const {
       land_cost_id,
@@ -1184,6 +875,20 @@ async govtPlotDelete(id) {
     return rows;
   },
 
+  async getByLeaseCaseNo(lease_case_no, project_id, type) {
+    const [rows] = await db.query(
+      `
+    SELECT id, plot_id, status, payment_proof, transaction_no
+    FROM plot_payments
+    WHERE lease_case_no = ?
+      AND project_id = ?
+      AND type = ?
+    `,
+      [lease_case_no, project_id, type],
+    );
+    return rows;
+  },
+
   async markPaymentComplete(unique_id, project_id, type) {
     // get plot_id first
     const [rows] = await db.query(
@@ -1223,6 +928,52 @@ async govtPlotDelete(id) {
       AND type = ?
     `,
       [unique_id, project_id, type],
+    );
+
+    return true;
+  },
+
+  async markPaymentCompleteByLeaseCaseNo(lease_case_no, project_id, type) {
+    const [rows] = await db.query(
+      `
+    SELECT DISTINCT plot_id
+    FROM plot_payments
+    WHERE lease_case_no = ?
+      AND project_id = ?
+      AND type = ?
+    `,
+      [lease_case_no, project_id, type],
+    );
+
+    if (!rows.length) return false;
+
+    const plotIds = rows
+      .map((row) => row.plot_id)
+      .filter((plotId) => plotId !== null && plotId !== undefined);
+
+    if (plotIds.length) {
+      await db.query(
+        `
+      UPDATE govt_plots
+      SET payment_status = 'complete',
+          updated_at = NOW()
+      WHERE id IN (${plotIds.map(() => "?").join(",")})
+        AND type = 2
+      `,
+        plotIds,
+      );
+    }
+
+    await db.query(
+      `
+    UPDATE plot_payments
+    SET status = 'complete',
+        updated_at = NOW()
+    WHERE lease_case_no = ?
+      AND project_id = ?
+      AND type = ?
+    `,
+      [lease_case_no, project_id, type],
     );
 
     return true;

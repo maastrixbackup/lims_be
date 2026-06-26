@@ -1,5 +1,14 @@
 const db = require("../config/db");
 
+const normalizeNullableText = (value) => {
+  if (value === null || value === undefined || value === "") {
+    return null;
+  }
+
+  const normalized = value.toString().trim();
+  return normalized || null;
+};
+
 const Plot = {
   // async bulkInsert(plots, project_id) {
   //   if (!plots || plots.length === 0) return;
@@ -1268,31 +1277,7 @@ const Plot = {
       });
 
       plot = normalizedPlot;
-      const normalizeHeaderLoose = (value) =>
-        normalizeKey(value).replace(/[^a-z0-9]+/g, "");
-      const getCell = (...headers) => {
-        for (const header of headers) {
-          const value = plot[header];
-          if (value !== undefined && value !== null && value !== "") return value;
-        }
-
-        const rowEntries = Object.entries(plot).map(([k, v]) => [
-          normalizeHeaderLoose(k),
-          v,
-        ]);
-
-        for (const header of headers) {
-          const target = normalizeHeaderLoose(header);
-          const matched = rowEntries.find(
-            ([k, v]) => k === target && v !== undefined && v !== null && v !== "",
-          );
-          if (matched) return matched[1];
-        }
-
-        return null;
-      };
-
-      const get = (code, ...fallbacks) => {
+      const get = (code) => {
         const direct = plot[code];
         if (direct !== undefined && direct !== null && direct !== "") return direct;
 
@@ -1303,74 +1288,38 @@ const Plot = {
             return canonical;
           }
         }
-
-        return getCell(...fallbacks);
+        return null;
       };
 
       // LO - Land owner / tenant fields
-      const surveyNo = get("LO05", "SES Survey No.");
-      const recordedTenant = get(
-        "LO01",
-        "LO1-Name of Recorded Tenant (RT)",
-        "Name of Tenant",
+      const surveyNo = get("LO05");
+      const recordedTenant = get("LO01");
+      const presentTenant = get("LO02");
+      const address = get("LO03");
+      const displaced = normalizeNullableText(
+        get("LO04"),
       );
-      const presentTenant = get(
-        "LO02",
-        "LO2-Name of Present Tenant(s)",
-        "Name of Tenant",
-      );
-      const address = get("LO03", "Present Address");
-      const displaced = get("LO04", "Displaced/Affected Person");
-      const awardDate = toMysqlDate(get("LO06", "Date of Award", "Date of award"));
+      const awardDate = toMysqlDate(get("LO06"));
 
       // LD - Land detail fields
-      const district = get("LD01", "District", "district");
-      const villageName = get("LD02", "Name of Village", "name of village");
-      const tahasil = get("LD03", "Name of the Tahasil", "Tahasil/Thana");
-      const riCircle = get("LD04", "Name of the R.I. Circle");
-      const thanaNo = get("LD05", "Thana No.", "Thana no", "Thana No");
-      const khataNo = get("LD06", "Khata No.", "Khata No");
-      const plotNo = get("LD07", "Plot No.");
-      const kissam = get("LD08", "Kissam of the Land", "Kissam");
-      const landCategory = get("LD09", "LO12-Category of Land");
-      const ldRemarks = get("LD10", "LO13-Remarks");
-      const fullPart = get("LD11", "Full/Part", "Full Part");
+      const district = get("LD01");
+      const villageName = get("LD02");
+      const tahasil = get("LD03");
+      const riCircle = get("LD04");
+      const thanaNo = get("LD05");
+      const khataNo = get("LD06");
+      const plotNo = get("LD07");
+      const kissam = get("LD08");
+      const landCategory = get("LD09");
+      const ldRemarks = get("LD10");
+      const fullPart = get("LD11");
 
       // LA - Land acquisition fields
       let totalAcres =
-        parseFloat(
-          get(
-            "LA01",
-            "LA1-Land Area (Total Area in Acres)",
-            "Land Area (Total Area in Acres)",
-          ),
-        ) || null;
-      let totalHectares =
-        parseFloat(
-          get(
-            "LA02",
-            "LA2-Land Area (Total Area in Ha.)",
-            "Land Area (Total Area in Ha.)",
-            "ROR Area In Ha.",
-          ),
-        ) || null;
-      let acquiredAcres =
-        parseFloat(
-          get(
-            "LA03",
-            "Land Area (Total Acquired Area in Acres)",
-            "Land Area (Acquired Area in Acres)",
-          ),
-        ) || null;
-      let acquiredHectares =
-        parseFloat(
-          get(
-            "LA04",
-            "Land Area (Total Acquired Area in Ha.)",
-            "Land Area (Acquired Area in Ha.)",
-            "Area occupied in Ha.",
-          ),
-        ) || null;
+        parseFloat(get("LA01")) || null;
+      let totalHectares = parseFloat(get("LA02")) || null;
+      let acquiredAcres = parseFloat(get("LA03")) || null;
+      let acquiredHectares = parseFloat(get("LA04")) || null;
 
       if (totalAcres && !totalHectares)
         totalHectares = parseFloat((totalAcres / 2.47105).toFixed(4));
@@ -1381,106 +1330,77 @@ const Plot = {
       if (acquiredHectares && !acquiredAcres)
         acquiredAcres = parseFloat((acquiredHectares * 2.47105).toFixed(4));
 
-      const benchMarkValue = get(
-        "LA05",
-        "Market Value fixed U/S.26 of RFCTLARR Act 2013 (Per Acre)",
-      );
-      const basicLandValue = get("LA06", "Basic Land value");
-      const landValueWithMF = get(
-        "LA07",
-        "Land value  with multiplication factor (Values from 1 to 2)",
-      );
-      const noOfTrees = get("LA08", "No. of Trees");
-      const totalTreeValue = get("LA09", "Total Value of Trees ");
-      const noOfHouse = get("LA10", "No. of House");
-      const houseValue = get("LA11", "Value of Structure (house)");
-      const otherStructureDetails = get("LA12", "Detail of Structures other than House");
-      const otherStructureValue = get("LA13", "Value of structures other than house");
-      const totalValue = get(
-        "LA14",
-        "Total Value  (Land-22 + Tree-24 + House-26 + Structures-28)",
-      );
-      const solatium = get("LA15", "Solatium @ of (100%)");
-      const noDaysInterest = get(
-        "LA16",
-        "No. of days of Interest",
-        "No of days of Interest",
-        "No. of Days of Interest",
-        "No of Days of Interest",
-        "No. of days interest",
-        "No of days interest",
-      );
-      const additional12 = get(
-        "LA17",
-        "12% additional compensation on market value of land area",
-      );
-      const totalCompensation = get("LA18", "Total Compensation Amount");
-      const apportionment = get(
-        "LA19",
-        "LA18-Apportionment Amount of the Award for the Individual Family Member",
-      );
-      const priority = get("LA20", "LA19-Priority/Urgency");
-      const landUsePlan = get("LA21", "LA20-Land Use Plan");
-      const laRemarks = get("LA22", "LA21-Remarks");
+      const benchMarkValue = get("LA05");
+      const basicLandValue = get("LA06");
+      const landValueWithMF = get("LA07");
+      const noOfTrees = get("LA08");
+      const totalTreeValue = get("LA09");
+      const noOfHouse = get("LA10");
+      const houseValue = get("LA11");
+      const otherStructureDetails = get("LA12");
+      const otherStructureValue = get("LA13");
+      const totalValue = get("LA14");
+      const solatium = get("LA15");
+      const noDaysInterest = get("LA16");
+      const additional12 = get("LA17");
+      const totalCompensation = get("LA18");
+      const apportionment = get("LA19");
+      const priority = get("LA20");
+      const landUsePlan = get("LA21");
+      const laRemarks = get("LA22");
 
       // BK - Bank
-      const bankAccount = get("BK01", "BK01-Bank Account No.");
-      const bankName = get("BK02", "BK02-Name of the Bank");
-      const branchIFSC = get("BK03", "BK03-Name of the Branch with IFSC Code");
+      const bankAccount = get("BK01");
+      const bankName = get("BK02");
+      const branchIFSC = get("BK03");
 
       // PD - Personal details
-      const aadhaar = get("PD01", "PD01-Aadhaar No.");
-      const pan = get("PD02", "PAN No.");
-      const age = get("PD03", "Age");
-      const caste = get("PD04", "Caste");
-      const maritalStatus = get("PD05", "Marital Status");
-      const education = get("PD06", "Education");
-      const occupation = get("PD07", "Occupation");
-      const income = get("PD08", "Annual Income");
-      const skill = get("PD09", "PD09- Skill Acquired");
-      const affidavit = get("PD10", "PD10-Affidavit with subject details (if any)");
+      const aadhaar = get("PD01");
+      const pan = get("PD02");
+      const age = get("PD03");
+      const caste = get("PD04");
+      const maritalStatus = get("PD05");
+      const education = get("PD06");
+      const occupation = get("PD07");
+      const income = get("PD08");
+      const skill = get("PD09");
+      const affidavit = get("PD10");
 
       // FD - Family details
-      const majorMale = get("FD01", "FD01-No. of Family Members (Major Male)");
-      const majorFemale = get("FD02", "No. of Family Members (Major Female)");
-      const minorMale = get("FD03", "No. of Family Members (Minor Male)");
-      const minorFemale = get("FD04", "No. of Family Members (Minor Female)");
-      const majorTrans = get("FD05", "No. of Family Members (Major Transgender)");
-      const minorTrans = get("FD06", "No. of Family Members (Minor Transgender)");
-      const disability = get("FD07", "No. of Persons with Disability");
-      const orphan = get("FD08", "Family with Orphan Members (Y/N)");
-      const legalHeir = get("FD09", "FD09-Legal Heir Certificate No. (if any)");
+      const majorMale = get("FD01");
+      const majorFemale = get("FD02");
+      const minorMale = get("FD03");
+      const minorFemale = get("FD04");
+      const majorTrans = get("FD05");
+      const minorTrans = get("FD06");
+      const disability = get("FD07");
+      const orphan = get("FD08");
+      const legalHeir = get("FD09");
 
       // LG - Legal details
-      const landCaseNo = get("LG01", "LG01-Land Case - No. (Number)");
-      const landCaseDate = toMysqlDate(
-        get("LG02", "Land Case - Date (Date)", "land case - date (date)"),
-      );
-      const landCaseType = get("LG03", "Land Case Type");
-      const landCaseStatus = get("LG04", "Land case - Status");
-      const landCaseAction = get("LG05", "LG05-Land Case - Action");
+      const landCaseNo = get("LG01");
+      const landCaseDate = toMysqlDate(get("LG02"));
+      const landCaseType = get("LG03");
+      const landCaseStatus = get("LG04");
+      const landCaseAction = get("LG05");
 
       // GR/TR/GV
-      const grievanceNo = get("GR01", "GR01-Grievance No. ");
-      const grievanceDate = toMysqlDate(
-        get("GR02", "Grievance  Date", "Grievance Date", "grievance date"),
-      );
-      const grievanceSubject = get("GR03", "Grievance - Subject Matter");
-      const grievanceStatus = get("GR04", "Grievance - Present Status");
-      const grievanceAction = get("GR05", "GR05-Grievance - Action taken");
+      const grievanceNo = get("GR01");
+      const grievanceDate = toMysqlDate(get("GR02"));
+      const grievanceSubject = get("GR03");
+      const grievanceStatus = get("GR04");
+      const grievanceAction = get("GR05");
 
-      const tribunal = get("TR01", "TR01-Tribunal (Y/N)");
-      const tribunalDate = toMysqlDate(
-        get("TR02", "Tribunal - Date of Deposit", "tribunal - date of deposit"),
-      );
-      const tribunalAmount = get("TR03", "TR03-Tribunal - Amount Deposited");
+      const tribunal = get("TR01");
+      const tribunalDate = toMysqlDate(get("TR02"));
+      const tribunalAmount = get("TR03");
 
-      const premium = get("GV01", "GV01-Premium");
-      const groundRent = get("GV02", "GV02-Ground Rent");
-      const cess = get("GV03", "GV03-Cess");
-      const incidentalCharges = get("GV04", "GV04-Incidental Charges");
-      const total = get("GV05", "GV05-Total");
-      const abatement = get("GV06", "Abatement");
+      const premium = get("GV01");
+      const groundRent = get("GV02");
+      const cess = get("GV03");
+      const incidentalCharges = get("GV04");
+      const total = get("GV05");
+      const abatement = get("GV06");
 
       // LA00 is always auto-generated (not taken from Excel input)
       const LA00 = `${clientCode}/${villageName || "NA"}/${khataNo || "NA"}`;
@@ -1497,7 +1417,7 @@ const Plot = {
         displaced || null,
         district || null,
         villageName || null,
-        plot["Village Code"] || null,
+        null,
         tahasil || null,
         riCircle || null,
         tahasil || null,
@@ -1738,7 +1658,7 @@ const Plot = {
 
         plot.present_tenant_count = tenants.length;
       } else {
-        plot.present_tenant_count = "N/A";
+        plot.present_tenant_count = null;
       }
 
       return plot;
@@ -2810,11 +2730,19 @@ const Plot = {
     return result.affectedRows > 0;
   },
 
-  async findByKhataNo(khata_no, type, project_id) {
-    const [rows] = await db.query(
-      "SELECT * FROM plots WHERE khata_no = ? AND type = ? AND project_id = ?",
-      [khata_no, type, project_id],
-    );
+  async findByKhataNo(khata_no, type, project_id, village_name = null) {
+    let query =
+      "SELECT * FROM plots WHERE khata_no = ? AND type = ? AND project_id = ? AND is_deleted = 0";
+    const params = [khata_no, type, project_id];
+
+    if (village_name) {
+      query += " AND village_name = ?";
+      params.push(village_name);
+    }
+
+    query += " ORDER BY plot_no ASC, id ASC";
+
+    const [rows] = await db.query(query, params);
     return rows;
   },
 
@@ -3015,6 +2943,20 @@ const Plot = {
     return rows;
   },
 
+  async getByPlotNo(plot_no, project_id, type) {
+    const [rows] = await db.query(
+      `
+    SELECT id, plot_id, plot_no, status, payment_proof, transaction_no
+    FROM plot_payments
+    WHERE plot_no = ?
+      AND project_id = ?
+      AND type = ?
+    `,
+      [plot_no, project_id, type],
+    );
+    return rows;
+  },
+
   async markPaymentComplete(unique_id, project_id, type) {
     // get plot_id first
     const [rows] = await db.query(
@@ -3054,6 +2996,52 @@ const Plot = {
       AND type = ?
     `,
       [unique_id, project_id, type],
+    );
+
+    return true;
+  },
+
+  async markPaymentCompleteByPlotNo(plot_no, project_id, type) {
+    const [rows] = await db.query(
+      `
+    SELECT DISTINCT plot_id
+    FROM plot_payments
+    WHERE plot_no = ?
+      AND project_id = ?
+      AND type = ?
+    `,
+      [plot_no, project_id, type],
+    );
+
+    if (!rows.length) return false;
+
+    const plotIds = rows
+      .map((row) => row.plot_id)
+      .filter((plotId) => plotId !== null && plotId !== undefined);
+
+    if (plotIds.length) {
+      await db.query(
+        `
+      UPDATE plots
+      SET payment_status = 'complete',
+          updated_at = NOW()
+      WHERE id IN (${plotIds.map(() => "?").join(",")})
+        AND type = 1
+      `,
+        plotIds,
+      );
+    }
+
+    await db.query(
+      `
+    UPDATE plot_payments
+    SET status = 'complete',
+        updated_at = NOW()
+    WHERE plot_no = ?
+      AND project_id = ?
+      AND type = ?
+    `,
+      [plot_no, project_id, type],
     );
 
     return true;

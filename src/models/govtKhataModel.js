@@ -5,12 +5,9 @@ const getCaseDetailsValue = (row) => {
   return (
     row["CD04"] ||
     row["cd04"] ||
-    row["case details/ deservation req."] ||
+    row["case_details"] ||
     row["case details"] ||
-    row["case details/de-reservation req."] ||
-    row["case details/de reservation req."] ||
-    row["case details/ de-reservation req."] ||
-    row["case details/ de reservation req."] ||
+    row["case details/ deservation req."] ||
     null
   );
 };
@@ -18,6 +15,8 @@ const getCaseDetailsValue = (row) => {
 const GovtKhata = {
   async upsertFromExcel(rows, villageMap, project_id, type) {
     const khataMap = new Map();
+    const normalizeText = (value) =>
+      value === undefined || value === null ? "" : String(value).trim();
     const normalizeCompareKey = (key) =>
       key
         ?.toString()
@@ -35,7 +34,7 @@ const GovtKhata = {
       );
     };
 
-    const getValue = (row, code, ...fallbacks) => {
+    const getValue = (row, code) => {
       const codeKey = normalizeCompareKey(code);
       for (const key of Object.keys(row || {})) {
         const normalized = normalizeCompareKey(key);
@@ -46,16 +45,16 @@ const GovtKhata = {
           }
         }
       }
+      return null;
+    };
 
-      for (const fb of fallbacks) {
-        const fbKey = normalizeCompareKey(fb);
-        for (const key of Object.keys(row || {})) {
-          if (normalizeCompareKey(key) === fbKey) {
-            const value = row[key];
-            if (value !== undefined && value !== null && `${value}`.trim() !== "") {
-              return value;
-            }
-          }
+    const getValueByAliases = (row, ...aliases) => {
+      const normalizedAliases = aliases.map((alias) => normalizeCompareKey(alias));
+      for (const key of Object.keys(row || {})) {
+        const normalized = normalizeCompareKey(key);
+        if (normalizedAliases.includes(normalized)) {
+          const value = row[key];
+          if (normalizeText(value)) return value;
         }
       }
       return null;
@@ -90,9 +89,11 @@ const GovtKhata = {
     };
 
     rows.forEach((r) => {
-      const khataRaw = getValue(r, "LD06", "khata no", "khata_no");
-      const mouzaRaw = getValue(r, "LD02", "mouza", "village", "name of village");
-      const tahasilRaw = getValue(r, "LD03", "tahasil");
+      const khataRaw = getValue(r, "LD06") ?? getValueByAliases(r, "khata no", "khata_no");
+      const mouzaRaw =
+        getValue(r, "LD02") ??
+        getValueByAliases(r, "mouza", "village", "village_name", "name of village");
+      const tahasilRaw = getValue(r, "LD03") ?? getValueByAliases(r, "tahasil");
       if (!khataRaw || !mouzaRaw) return;
 
       const khataNo = String(khataRaw).trim();
@@ -114,24 +115,27 @@ const GovtKhata = {
 
       const key = `${villageId}_${khataNo}`;
       const existing = khataMap.get(key);
-      const rowNameOfRor =
-        getValue(r, "LD08", "name of ror", "name_of_ror", "name of khata") ||
-        null;
-      const rowLandCategory =
-        getValue(r, "LD07", "land category", "land_category", "kissam") ||
-        null;
+      const rowNameOfRor = getValue(r, "LD08") || null;
+      const rowLandCategory = getValue(r, "LD07") || null;
 
       khataMap.set(key, {
         project_id,
         type,
         khata_no: khataNo,
         village_id: villageId,
-        kissam: getValue(r, "LD07", "kissam") || null,
-        plot_no: getValue(r, "LD09", "plot no", "plot_no") || null,
-        lease_case_no: getValue(r, "CD01", "lease case no") || null,
-        present_status: presentStatusMap(getValue(r, "CD02", "present status")),
+        kissam: getValue(r, "LD07") ?? getValueByAliases(r, "kissam") ?? null,
+        plot_no: getValue(r, "LD09") ?? getValueByAliases(r, "plot no", "plot_no") ?? null,
+        lease_case_no:
+          getValue(r, "CD01") ?? getValueByAliases(r, "lease case no", "lease_case_no") ?? null,
+        present_status: presentStatusMap(
+          getValue(r, "CD02") ?? getValueByAliases(r, "present status", "present_status"),
+        ),
         case_details: getCaseDetailsValue(r),
-        name_of_ror: rowNameOfRor || existing?.name_of_ror || null,
+        name_of_ror:
+          rowNameOfRor ??
+          getValueByAliases(r, "name of ror", "name_of_ror") ??
+          existing?.name_of_ror ??
+          null,
         land_category: rowLandCategory || existing?.land_category || null,
       });
     });
@@ -459,6 +463,22 @@ const GovtKhata = {
       id,
     ]);
     return rows.length ? rows[0] : null;
+  },
+
+  async findByProjectTypeKhataNo(project_id, type, khata_no) {
+    const [rows] = await db.query(
+      `
+      SELECT *
+      FROM govt_khata
+      WHERE project_id = ?
+        AND type = ?
+        AND khata_no = ?
+      LIMIT 1
+      `,
+      [project_id, type, khata_no],
+    );
+
+    return rows[0] || null;
   },
 
   async existsKhata({ project_id, type, village_id, khata_no, excludeId }) {

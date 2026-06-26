@@ -59,6 +59,23 @@ const hasAnyValueByHeader = (row, headers) => {
   return false;
 };
 
+const hasAnyValueByCode = (row, code) => {
+  if (!row || !code) return false;
+
+  const target = normalizeHeaderKey(code);
+  for (const key of Object.keys(row)) {
+    const normalizedKey = normalizeHeaderKey(key);
+    if (normalizedKey === target || normalizedKey.startsWith(`${target} `)) {
+      const value = row[key];
+      if (value !== undefined && value !== null && `${value}`.trim() !== "") {
+        return true;
+      }
+    }
+  }
+
+  return false;
+};
+
 const GOVT_PLOT_ALLOWED_FIELDS = new Set([
   "project_id",
   "type",
@@ -380,24 +397,25 @@ const uploadGovtPlot = async (req, res) => {
       });
     }
 
-    const requiredGroups = [
-      ["LD01", "district"],
-      ["LD02", "mouza", "village", "name of village"],
-      ["LD03", "tahasil"],
-      ["LD06", "khata no", "khata_no"],
-      ["LD09", "plot no", "plot_no", "plot", "plot number", "plot no."],
+    const requiredGovtCodes = [
+      "LD01",
+      "LD02",
+      "LD03",
+      "LD06",
+      "LD09",
+      "CD01",
+      "CD02",
+      "CR01",
     ];
-    const missingGroups = requiredGroups.filter(
-      (group) => !rows.some((row) => hasAnyValueByHeader(row, group)),
+    const missingGroups = requiredGovtCodes.filter(
+      (code) => !rows.some((row) => hasAnyValueByCode(row, code)),
     );
 
     if (missingGroups.length) {
       fs.unlinkSync(req.file.path);
       return res.status(400).json({
         success: false,
-        message: `Invalid Excel format. Missing required columns for: ${missingGroups
-          .map((g) => g[0])
-          .join(", ")}`,
+        message: `Invalid govt land Excel format. Missing required field codes: ${missingGroups.join(", ")}`,
       });
     }
     // console.log("Header name", rows);
@@ -693,24 +711,59 @@ const deleteGovtPlot = async (req, res) => {
   const plotId = req.params.id;
 
   try {
+    const existingPlot = await GovtPlot.findById(plotId);
+    if (!existingPlot) {
+      return res
+        .status(404)
+        .json({ success: false, message: "Plot not found" });
+    }
+
     const deleted = await GovtPlot.govtPlotDelete(plotId);
     if (!deleted) {
       return res
         .status(404)
         .json({ success: false, message: "Plot not found" });
     }
+
+    const remainingPlots = await GovtPlot.countActiveByKhata(
+      existingPlot.project_id,
+      existingPlot.type,
+      existingPlot.khata_no,
+    );
+
+    let khataDeleted = false;
+    if (remainingPlots === 0 && existingPlot.khata_no) {
+      const khata = await GovtKhata.findByProjectTypeKhataNo(
+        existingPlot.project_id,
+        existingPlot.type,
+        existingPlot.khata_no,
+      );
+
+      if (khata) {
+        await GovtKhata.deleteKhataById(khata.id);
+        khataDeleted = true;
+      }
+    }
+
     await logAction(
       userId,
       "delete govt plot",
       "success",
       "Govt plot soft deleted",
       { plotId },
-      null,
+      {
+        plot: existingPlot,
+        khataDeleted,
+      },
     );
 
-    return res
-      .status(200)
-      .json({ success: true, message: "Plot soft deleted successfully" });
+    return res.status(200).json({
+      success: true,
+      message:
+        remainingPlots === 0 && khataDeleted
+          ? "Plot soft deleted successfully and linked khata deleted"
+          : "Plot soft deleted successfully",
+    });
   } catch (err) {
     await logAction(
       userId,
@@ -1391,9 +1444,25 @@ const landCostPaymentUpload = async (req, res) => {
       });
     }
 
-    // const filePath = `uploads/land_cost_payments/${req.file.filename}`;
-
-    await GovtPlot.addPaymentProof(land_cost_id, paymentProof, demandNoteAttachment);
+    if (
+      landCostData.lease_case_no &&
+      landCostData.project_id &&
+      landCostData.type
+    ) {
+      await GovtPlot.addPaymentProofByLeaseCaseNo(
+        landCostData.lease_case_no,
+        landCostData.project_id,
+        landCostData.type,
+        paymentProof,
+        demandNoteAttachment,
+      );
+    } else {
+      await GovtPlot.addPaymentProof(
+        land_cost_id,
+        paymentProof,
+        demandNoteAttachment,
+      );
+    }
 
     await logAction(
       userId,
@@ -1498,17 +1567,21 @@ const updatePlotPayment = async (req, res) => {
 
 const markPaymentCompleted = async (req, res) => {
   const userId = req.user.id;
-  const { unique_id, project_id, type } = req.body;
+  const { lease_case_no, project_id, type } = req.body;
 
   try {
-    if (!unique_id || !project_id || !type) {
+    if (!lease_case_no || !project_id || !type) {
       return res.status(400).json({
         success: false,
-        message: "unique_id,project_id and type are required",
+        message: "lease_case_no, project_id and type are required",
       });
     }
 
-    const records = await GovtPlot.getByUniqueId(unique_id, project_id, type);
+    const records = await GovtPlot.getByLeaseCaseNo(
+      lease_case_no,
+      project_id,
+      type,
+    );
 
     if (!records.length) {
       return res.status(404).json({
@@ -1517,31 +1590,18 @@ const markPaymentCompleted = async (req, res) => {
       });
     }
 
-    const notProcessing = records.find((r) => r.status !== "processing");
-    if (notProcessing) {
-      return res.status(400).json({
-        success: false,
-        message: "Only processing payments can be completed",
-      });
-    }
-
-    const invalid = records.find((r) => !r.payment_proof);
-
-    if (invalid) {
-      return res.status(400).json({
-        success: false,
-        message: "Payment proof required",
-      });
-    }
-
-    await GovtPlot.markPaymentComplete(unique_id, project_id, type);
+    await GovtPlot.markPaymentCompleteByLeaseCaseNo(
+      lease_case_no,
+      project_id,
+      type,
+    );
 
     await logAction(
       userId,
       "mark payment completed",
       "success",
       "Payment Completed",
-      { unique_id, project_id, type },
+      { lease_case_no, project_id, type },
       null,
     );
 

@@ -414,7 +414,7 @@ const Khata = {
       k.displaced_affected_project,
       k.full_part,
 
-      k.plot_no,
+      COALESCE(kp.plot_nos, k.plot_no) AS plot_no,
 
       p.project_name,
       v.village_name,
@@ -446,15 +446,46 @@ const Khata = {
 
     LEFT JOIN (
       SELECT
-        project_id,
-        type,
-        khata_no,
-        COUNT(*) AS plot_count
-      FROM plots
-      GROUP BY project_id, type, khata_no
+        pl.project_id,
+        pl.type,
+        v.id AS village_id,
+        pl.khata_no,
+        GROUP_CONCAT(
+          DISTINCT NULLIF(TRIM(pl.plot_no), '')
+          ORDER BY TRIM(pl.plot_no)
+          SEPARATOR ', '
+        ) AS plot_nos
+      FROM plots pl
+      JOIN villages v
+        ON v.village_name = pl.village_name
+       AND v.project_id = pl.project_id
+       AND v.type = pl.type
+      WHERE pl.is_deleted = 0
+      GROUP BY pl.project_id, pl.type, v.id, pl.khata_no
+    ) kp
+      ON kp.project_id = k.project_id
+     AND kp.type = k.type
+     AND kp.village_id = k.village_id
+     AND kp.khata_no = k.khata_no
+
+    LEFT JOIN (
+      SELECT
+        pl.project_id,
+        pl.type,
+        v.id AS village_id,
+        pl.khata_no,
+        COUNT(DISTINCT NULLIF(TRIM(pl.plot_no), '')) AS plot_count
+      FROM plots pl
+      JOIN villages v
+        ON v.village_name = pl.village_name
+       AND v.project_id = pl.project_id
+       AND v.type = pl.type
+      WHERE pl.is_deleted = 0
+      GROUP BY pl.project_id, pl.type, v.id, pl.khata_no
     ) pc
       ON pc.project_id = k.project_id
      AND pc.type = k.type
+     AND pc.village_id = k.village_id
      AND pc.khata_no = k.khata_no
 
 
@@ -558,11 +589,28 @@ const Khata = {
     return rows;
   },
 
-  async getKhataByNumber(khata_no) {
-    const [rows] = await db.query(
-      `SELECT * FROM khatas WHERE khata_no = ? LIMIT 1`,
-      [khata_no]
-    );
+  async getKhataByNumber(khata_no, project_id = null, type = null, village_id = null) {
+    let query = `SELECT * FROM khatas WHERE khata_no = ?`;
+    const params = [khata_no];
+
+    if (project_id) {
+      query += ` AND project_id = ?`;
+      params.push(project_id);
+    }
+
+    if (type) {
+      query += ` AND type = ?`;
+      params.push(type);
+    }
+
+    if (village_id) {
+      query += ` AND village_id = ?`;
+      params.push(village_id);
+    }
+
+    query += ` LIMIT 1`;
+
+    const [rows] = await db.query(query, params);
     return rows[0];
   },
 
@@ -888,7 +936,11 @@ const Khata = {
       pl.khata_no,
       pl.type,
 
-      GROUP_CONCAT(pl.plot_no SEPARATOR ', ') AS plot_no,
+      GROUP_CONCAT(
+        DISTINCT NULLIF(TRIM(pl.plot_no), '')
+        ORDER BY TRIM(pl.plot_no)
+        SEPARATOR ', '
+      ) AS plot_no,
       GROUP_CONCAT(DISTINCT pl.kissam_of_land SEPARATOR ', ') AS kissam_of_land,
       GROUP_CONCAT(DISTINCT pl.land_category SEPARATOR ', ') AS land_category,
 
@@ -952,15 +1004,24 @@ const Khata = {
     };
 
     const normalize = (s) => s?.replace(/\s+/g, " ").trim();
+    const getCodeValue = (row, code) => {
+      if (!row || !code) return null;
+      const target = normalize(code)?.toLowerCase();
+      for (const key of Object.keys(row)) {
+        const normalizedKey = normalize(key)?.toLowerCase();
+        if (normalizedKey === target || normalizedKey?.startsWith(`${target} `)) {
+          const value = row[key];
+          if (value !== undefined && value !== null && value !== "") {
+            return value;
+          }
+        }
+      }
+      return null;
+    };
     const rrByKhata = {};
     // console.log(Object.keys(data[0]));
     for (const row of data) {
-      const normalizedRow = {};
-      for (const key in row) {
-        normalizedRow[normalize(key)] = row[key];
-      }
-
-      const khataNo = row["LD06"] || row["Khata No."] || row["Khata No"] || null;
+      const khataNo = getCodeValue(row, "LD06");
       if (!khataNo) continue;
 
       if (!rrByKhata[khataNo]) {
@@ -983,89 +1044,20 @@ const Khata = {
       }
 
       const r = rrByKhata[khataNo];
-      addIfValid(
-        r.rr_employment,
-        row["RR01"] ||
-          normalizedRow["RR Assistance (Rehab) - Employment in the Project"]
-      );
-
-      addIfValid(
-        r.rr_cash_in_lieu,
-        row["RR02"] ||
-          row["RR Assistance (Rehab) - Cash in lieu of Employment"]
-      );
-
-      addIfValid(
-        r.rr_training_skill_upgradation,
-        row["RR03"] ||
-          row["RR Assistance (Rehab) - Training for Skill Upgradation"]
-      );
-
-      addIfValid(
-        r.rr_self_employment,
-        row["RR04"] ||
-          row["RR Assistance (Rehab) - Assistance for Self Employment"]
-      );
-
-      addIfValid(
-        r.rr_special_allowance_st_ntfp,
-        row["RR05"] ||
-          row["RR Assistance (Rehab) - Special Allowance to STs for loss of NTFP"]
-      );
-
-      addIfValid(
-        r.rr_homestead_allotment,
-        row["RR06"] ||
-          row["RR Assistance (Resettle) - Homested Land Alloted/Self Relocation"]
-      );
-
-      addIfValid(
-        r.rr_house_building_assistance,
-        row["RR07"] ||
-          row["RR Assistance (Resettle) - House Building Assistance"]
-      );
-
-      addIfValid(
-        r.rr_constructed_by,
-        row["RR08"] ||
-          row["RR Assistance (Resettle) - Constructed by Project Authority/Self"]
-      );
-
-      addIfValid(
-        r.rr_transit_shed,
-        row["RR09"] ||
-          row["RR Assistance (Resettle) - Assistance for Transit Shed"]
-      );
-
-      addIfValid(
-        r.rr_transport_allowance,
-        row["RR10"] ||
-          row["RR Assistance (Resettle) - Transportation Allowance"]
-      );
-
-      addIfValid(
-        r.rr_maintenance_allowance,
-        row["RR11"] ||
-          row["RR Assistance (Resettle) - Maintenance Allowance"]
-      );
-
-      addIfValid(
-        r.rr_multiple_displacement_allowance,
-        row["RR12"] ||
-          row[
-            "RR Assistance (Other) - Special Allowance for Multiple Displacement"
-          ]
-      );
-
-      addIfValid(
-        r.rr_exgratia,
-        row["RR13"] || row["RR Assistance (Other) - Ex-Gratia (if any)"]
-      );
-
-      addIfValid(
-        r.rr_other_benefits,
-        row["RR14"] || row["RR Assistance (Other) - Other Benefits (if any)"]
-      );
+      addIfValid(r.rr_employment, getCodeValue(row, "RR01"));
+      addIfValid(r.rr_cash_in_lieu, getCodeValue(row, "RR02"));
+      addIfValid(r.rr_training_skill_upgradation, getCodeValue(row, "RR03"));
+      addIfValid(r.rr_self_employment, getCodeValue(row, "RR04"));
+      addIfValid(r.rr_special_allowance_st_ntfp, getCodeValue(row, "RR05"));
+      addIfValid(r.rr_homestead_allotment, getCodeValue(row, "RR06"));
+      addIfValid(r.rr_house_building_assistance, getCodeValue(row, "RR07"));
+      addIfValid(r.rr_constructed_by, getCodeValue(row, "RR08"));
+      addIfValid(r.rr_transit_shed, getCodeValue(row, "RR09"));
+      addIfValid(r.rr_transport_allowance, getCodeValue(row, "RR10"));
+      addIfValid(r.rr_maintenance_allowance, getCodeValue(row, "RR11"));
+      addIfValid(r.rr_multiple_displacement_allowance, getCodeValue(row, "RR12"));
+      addIfValid(r.rr_exgratia, getCodeValue(row, "RR13"));
+      addIfValid(r.rr_other_benefits, getCodeValue(row, "RR14"));
     }
 
     for (const [khataNo, rr] of Object.entries(rrByKhata)) {
@@ -1113,7 +1105,12 @@ const Khata = {
       );
     }
   },
-  async insertKhataFromManualPlot({ project_id, type, khata_no }) {
+  async insertKhataFromManualPlot({
+    project_id,
+    type,
+    khata_no,
+    village_name = null,
+  }) {
     if (!project_id || !type || !khata_no) return;
 
     await db.query(
@@ -1192,6 +1189,8 @@ const Khata = {
     WHERE pl.project_id = ?
       AND pl.type = ?
       AND pl.khata_no = ?
+      AND pl.is_deleted = 0
+      ${village_name ? "AND pl.village_name = ?" : ""}
     GROUP BY pl.project_id, v.id, pl.khata_no, pl.type
     ON DUPLICATE KEY UPDATE
       plot_no = VALUES(plot_no),
@@ -1213,8 +1212,34 @@ const Khata = {
       full_part = VALUES(full_part),
       updated_at = NOW()
     `,
-      [project_id, type, khata_no]
+      village_name
+        ? [project_id, type, khata_no, village_name]
+        : [project_id, type, khata_no]
     );
+
+    if (village_name) {
+      await db.query(
+        `
+        DELETE k
+        FROM khatas k
+        JOIN villages v ON v.id = k.village_id
+        WHERE k.project_id = ?
+          AND k.type = ?
+          AND k.khata_no = ?
+          AND v.village_name = ?
+          AND NOT EXISTS (
+            SELECT 1
+            FROM plots pl
+            WHERE pl.project_id = k.project_id
+              AND pl.type = k.type
+              AND pl.khata_no = k.khata_no
+              AND pl.village_name = v.village_name
+              AND pl.is_deleted = 0
+          )
+      `,
+        [project_id, type, khata_no, village_name],
+      );
+    }
   },
 
   // async countAll(projectId = null) {

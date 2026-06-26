@@ -323,16 +323,6 @@ const updateKhata = async (req, res) => {
       });
     }
 
-    if (
-      displaced_affected_project &&
-      !["PDF", "PAF"].includes(displaced_affected_project)
-    ) {
-      return res.status(400).json({
-        success: false,
-        message: "Invalid displaced_affected_project value",
-      });
-    }
-
     const updatedKhata = await Khata.update({
       khataId,
       project_id,
@@ -596,19 +586,11 @@ const deleteKhataFileById = async (req, res) => {
 
 const viewPlotsByKhata = async (req, res) => {
   const khata_id = req.params.id;
-  const { type } = req.query;
   try {
     if (!khata_id) {
       return res.status(400).json({
         success: false,
         message: "Khata ID is required",
-      });
-    }
-
-    if (!type) {
-      return res.status(400).json({
-        success: false,
-        message: "Plot type is required",
       });
     }
 
@@ -619,14 +601,23 @@ const viewPlotsByKhata = async (req, res) => {
         message: "Khata not found",
       });
     }
-    const { khata_no, project_id } = khataData;
+    const { khata_no, project_id, type, village_id } = khataData;
+    const villageData = village_id ? await Village.findById(village_id) : null;
+    const villageName = villageData?.village_name || null;
 
-    const plots = await Plot.findByKhataNo(khata_no, type, project_id);
+    const plots = await Plot.findByKhataNo(
+      khata_no,
+      type,
+      project_id,
+      villageName
+    );
     return res.status(200).json({
       success: true,
       message: "Plots fetched successfully",
       data: {
         khata_no,
+        village_name: villageName,
+        type,
         total_plots: plots.length,
         plots,
       },
