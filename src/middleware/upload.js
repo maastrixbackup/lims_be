@@ -17,7 +17,7 @@ const excelStorage = multer.diskStorage({
 const excelFileFilter = (req, file, cb) => {
   if (
     file.mimetype ===
-    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" ||
+      "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" ||
     file.mimetype === "application/vnd.ms-excel"
   ) {
     cb(null, true);
@@ -45,14 +45,24 @@ const profileStorage = multer.diskStorage({
 });
 
 const imageFileFilter = (req, file, cb) => {
-  const allowedTypes = /jpeg|jpg|png|gif/;
-  const extname = allowedTypes.test(
-    path.extname(file.originalname).toLowerCase()
+  const allowedExtensions = /jpeg|jpg|png|gif|webp/;
+  const allowedMimeTypes = /^image\/(jpeg|png|gif|webp)$/;
+
+  const extName = allowedExtensions.test(
+    path.extname(file.originalname).toLowerCase(),
   );
-  const mimetype = allowedTypes.test(file.mimetype);
-  if (extname && mimetype) cb(null, true);
-  else
-    cb(new Error("Only image files (jpeg, jpg, png, gif) are allowed"), false);
+  const mimeType = allowedMimeTypes.test(file.mimetype);
+
+  if (extName && mimeType) {
+    cb(null, true);
+  } else {
+    cb(
+      new Error(
+        "Invalid image format! Only JPG, JPEG, PNG, GIF, and WEBP images are allowed.",
+      ),
+      false,
+    );
+  }
 };
 
 const uploadProfilePic = multer({
@@ -154,7 +164,7 @@ const paymentFileFilter = (req, file, cb) => {
   } else {
     cb(
       new Error("Only PDF or image files (jpg, jpeg, png) are allowed"),
-      false
+      false,
     );
   }
 };
@@ -189,7 +199,7 @@ const govtPaymentFileFilter = (req, file, cb) => {
   } else {
     cb(
       new Error("Only PDF or image files (jpg, jpeg, png) are allowed"),
-      false
+      false,
     );
   }
 };
@@ -418,7 +428,7 @@ const stageDocumentExtensions = new Set([
   ".png",
   ".jpg",
   ".jpeg",
-  ".txt"
+  ".txt",
 ]);
 
 const stageDocumentFileFilter = (req, file, cb) => {
@@ -430,8 +440,10 @@ const stageDocumentFileFilter = (req, file, cb) => {
     cb(null, true);
   } else {
     cb(
-      new Error("Only PDF, DOC, DOCX, XLS, XLSX, JPG, JPEG, PNG files are allowed"),
-      false
+      new Error(
+        "Only PDF, DOC, DOCX, XLS, XLSX, JPG, JPEG, PNG files are allowed",
+      ),
+      false,
     );
   }
 };
@@ -450,8 +462,7 @@ const stageZeroStorage = multer.diskStorage({
     cb(null, "uploads/stage0");
   },
   filename: (req, file, cb) => {
-    const name =
-     file.originalname.replace(/\s+/g, "_");
+    const name = file.originalname.replace(/\s+/g, "_");
     cb(null, name);
   },
 });
@@ -527,5 +538,5 @@ module.exports = {
   uploadStage0,
   uploadStage1,
   uploadStage2,
-  uploadPostClearance
+  uploadPostClearance,
 };
