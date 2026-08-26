@@ -18,6 +18,7 @@ router.post(
   uploadProfilePic.single("profile_pic"),
   signup
 );
+
 router.post("/login", login);
 router.post("/forgot-password", forgotPassword);
 router.post("/reset-password", resetPassword);

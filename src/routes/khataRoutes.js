@@ -39,7 +39,7 @@ router.post(
           message: "Invalid file. Only PDF or Excel files are allowed.",
         });
       }
-      next(); // If no error → go to controller
+      next();
     });
   },
   uploadKhataDoc

@@ -142,7 +142,7 @@ async function addKhata(req, res) {
       "success",
       "Khata created successfully",
       safeRequestPayload,
-      khata
+      khata,
     );
 
     return res.status(201).json({
@@ -164,7 +164,7 @@ async function addKhata(req, res) {
       "failure",
       err.message,
       safeRequestPayload,
-      null
+      null,
     );
     console.error("Create Khata Error:", err);
     return res.status(500).json({ success: false, message: "Server error" });
@@ -233,6 +233,8 @@ const updateKhata = async (req, res) => {
   const khataId = req.params.id;
 
   const safeRequestPayload = { ...req.body };
+
+  // 1. Sanitize empty strings and undefined to null
   Object.keys(safeRequestPayload).forEach((key) => {
     if (
       safeRequestPayload[key] === "" ||
@@ -242,12 +244,14 @@ const updateKhata = async (req, res) => {
     }
   });
 
+  // 2. Safe Date Parsing (Prevents RangeError)
   if (safeRequestPayload.date_of_award) {
-    safeRequestPayload.date_of_award = new Date(
-      safeRequestPayload.date_of_award
-    )
-      .toISOString()
-      .slice(0, 10);
+    const parsedDate = new Date(safeRequestPayload.date_of_award);
+    if (!isNaN(parsedDate.getTime())) {
+      safeRequestPayload.date_of_award = parsedDate.toISOString().slice(0, 10);
+    } else {
+      safeRequestPayload.date_of_award = null;
+    }
   }
 
   const {
@@ -271,7 +275,6 @@ const updateKhata = async (req, res) => {
     name_of_present_tenant,
     present_address,
     displaced_affected_project,
-
     rr_employment,
     rr_cash_in_lieu,
     rr_training_skill_upgradation,
@@ -286,10 +289,8 @@ const updateKhata = async (req, res) => {
     rr_multiple_displacement_allowance,
     rr_exgratia,
     rr_other_benefits,
-
     full_part,
   } = safeRequestPayload;
-  // const safeRequestPayload = req.body;
 
   try {
     const existingKhata = await Khata.findById(khataId);
@@ -300,20 +301,28 @@ const updateKhata = async (req, res) => {
       });
     }
 
-    const project = await Project.findById(project_id);
+    // Cast IDs to Number to avoid strict type mismatch issues
+    const numericProjectId = project_id ? Number(project_id) : null;
+    const numericVillageId = village_id ? Number(village_id) : null;
+
+    const project = await Project.findById(numericProjectId);
     if (!project) {
-      return res.status(404).json({ message: "Project not found" });
+      return res
+        .status(404)
+        .json({ success: false, message: "Project not found" });
     }
 
-    const village = await Village.findById(village_id);
+    const village = await Village.findById(numericVillageId);
     if (!village) {
-      return res.status(404).json({ message: "Village not found" });
+      return res
+        .status(404)
+        .json({ success: false, message: "Village not found" });
     }
 
     const unique_id = `${project.client_code}/${village.village_code}/${khata_no}`;
     const existsUniqueId = await Khata.existsByUniqueIdExcept(
       unique_id,
-      khataId
+      khataId,
     );
 
     if (existsUniqueId) {
@@ -335,11 +344,10 @@ const updateKhata = async (req, res) => {
 
     const updatedKhata = await Khata.update({
       khataId,
-      project_id,
-      village_id,
+      project_id: numericProjectId,
+      village_id: numericVillageId,
       khata_no,
-      type,
-
+      type: type ? Number(type) : null,
       plot_no,
       kissam_of_land,
       land_category,
@@ -356,7 +364,6 @@ const updateKhata = async (req, res) => {
       name_of_present_tenant,
       present_address,
       displaced_affected_project,
-
       rr_employment,
       rr_cash_in_lieu,
       rr_training_skill_upgradation,
@@ -371,16 +378,16 @@ const updateKhata = async (req, res) => {
       rr_multiple_displacement_allowance,
       rr_exgratia,
       rr_other_benefits,
-
       full_part,
     });
+
     await logAction(
       userId,
       "update khata",
       "success",
       "Khata updated successfully",
       safeRequestPayload,
-      updatedKhata
+      updatedKhata,
     );
 
     return res.status(200).json({
@@ -395,7 +402,7 @@ const updateKhata = async (req, res) => {
       "failure",
       err.message,
       safeRequestPayload,
-      null
+      null,
     );
     console.error("Update Khata Error:", err);
     return res.status(500).json({ success: false, message: "Server error" });
@@ -421,7 +428,7 @@ const deleteKhata = async (req, res) => {
       "success",
       "Khata deleted successfully",
       { id: khataId },
-      null
+      null,
     );
 
     return res.status(200).json({
@@ -435,7 +442,7 @@ const deleteKhata = async (req, res) => {
       "failure",
       err.message,
       { id: khataId },
-      null
+      null,
     );
     console.error("Delete Khata Error:", err);
     return res.status(500).json({ success: false, message: "Server error" });
@@ -474,7 +481,7 @@ const uploadKhataDoc = async (req, res) => {
       req.file.filename,
       `uploads/khata/${req.file.filename}`,
       type,
-      document_type
+      document_type,
     );
 
     await logAction(
@@ -483,7 +490,7 @@ const uploadKhataDoc = async (req, res) => {
       "success",
       "Khata uploaded successfully",
       safeRequestPayload,
-      uploadedDocument
+      uploadedDocument,
     );
     return res.status(200).json({
       success: true,
@@ -497,7 +504,7 @@ const uploadKhataDoc = async (req, res) => {
       "failure",
       err.message,
       safeRequestPayload,
-      null
+      null,
     );
 
     return res.status(500).json({
@@ -523,8 +530,9 @@ const getKhataFilesByKhataId = async (req, res) => {
       // url: `${req.protocol}://${req.get("host")}${prefix}/uploads/khata/${
       //   doc.file_name
       // }`,
-      url: `${req.protocol}://${req.get("host")}${req.get("host").includes("localhost") ? "" : "/api"
-        }/uploads/khata/${doc.file_name}`,
+      url: `${req.protocol}://${req.get("host")}${
+        req.get("host").includes("localhost") ? "" : "/api"
+      }/uploads/khata/${doc.file_name}`,
     }));
     res.status(200).json({
       success: true,
@@ -560,7 +568,7 @@ const deleteKhataFileById = async (req, res) => {
     const filePath = path.join(
       __dirname,
       "../../uploads/khata",
-      document.file_name
+      document.file_name,
     );
     if (fs.existsSync(filePath)) {
       fs.unlinkSync(filePath);
@@ -571,7 +579,7 @@ const deleteKhataFileById = async (req, res) => {
       "success",
       "Document deleted successfully",
       { file_id },
-      deleted
+      deleted,
     );
     return res.status(200).json({
       success: true,
@@ -584,7 +592,7 @@ const deleteKhataFileById = async (req, res) => {
       "failure",
       err.message,
       { file_id },
-      null
+      null,
     );
     console.error(err);
     res.status(500).json({
@@ -693,11 +701,11 @@ const exportKhata = async (req, res) => {
 
     res.setHeader(
       "Content-Type",
-      "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+      "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
     );
     res.setHeader(
       "Content-Disposition",
-      "attachment; filename=khata_report.xlsx"
+      "attachment; filename=khata_report.xlsx",
     );
     await workbook.xlsx.write(res);
     res.end();
@@ -707,7 +715,7 @@ const exportKhata = async (req, res) => {
       "success",
       "Khata exported successfully",
       null,
-      null
+      null,
     );
   } catch (err) {
     await logAction(userId, "export khata", "failure", err.message, null, null);
@@ -859,7 +867,7 @@ const printKhata = async (req, res) => {
         y,
         {
           width: colWidths[i],
-        }
+        },
       );
     });
 
@@ -889,7 +897,7 @@ const printKhata = async (req, res) => {
           currentY,
           {
             width: colWidths[i],
-          }
+          },
         );
       });
 
@@ -904,7 +912,7 @@ const printKhata = async (req, res) => {
       "success",
       "Khata list printed successfully",
       { project_id, village_id, type },
-      null
+      null,
     );
   } catch (err) {
     await logAction(
@@ -913,7 +921,7 @@ const printKhata = async (req, res) => {
       "failure",
       err.message,
       null,
-      null
+      null,
     );
 
     console.error("Print Khata List Error:", err);
@@ -960,7 +968,7 @@ const uploadMapDoc = async (req, res) => {
     const uploadedDocument = await Khata.addMapDocument(
       khata_id,
       type,
-      req.file.filename
+      req.file.filename,
     );
 
     await logAction(
@@ -969,7 +977,7 @@ const uploadMapDoc = async (req, res) => {
       "success",
       "Map file uploaded successfully",
       { khata_id },
-      uploadedDocument
+      uploadedDocument,
     );
 
     res.status(200).json({
@@ -984,7 +992,7 @@ const uploadMapDoc = async (req, res) => {
       "failure",
       err.message,
       null,
-      null
+      null,
     );
     res.status(500).json({
       success: false,
@@ -1013,8 +1021,9 @@ const getMapFiles = async (req, res) => {
     }
 
     const documents = await Khata.getMapDocumentsByKhataId(khata_id);
-    const baseURL = `${req.protocol}://${req.get("host")}${req.get("host").includes("localhost") ? "" : "/api"
-      }`;
+    const baseURL = `${req.protocol}://${req.get("host")}${
+      req.get("host").includes("localhost") ? "" : "/api"
+    }`;
     const formatted = documents.map((doc) => ({
       id: doc.id,
       khata_id: doc.khata_id,
