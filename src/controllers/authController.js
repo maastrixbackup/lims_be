@@ -13,30 +13,40 @@ const fs = require("fs");
 const path = require("path");
 
 const signup = async (req, res) => {
-  const safeRequestPayload = {
-    name: req.body?.name,
-    username: req.body?.username,
-    email: req.body?.email,
-    phone_number: req.body?.phone_number,
-    role_id: req.body?.role_id,
-    profile_pic: req.file ? req.file.filename : null,
-    accessed_projects: req.body?.accessed_projects,
-  };
   const { name, username, email, phone_number, password, role_id } = req.body;
+  const profile_pic = req.file ? req.file.filename : null;
+
+  // 1. Parse accessed_projects safely from FormData string/array
   let accessed_projects = req.body.accessed_projects;
   if (typeof accessed_projects === "string") {
     try {
-      accessed_projects = JSON.parse(accessed_projects); // converts string to array
+      accessed_projects = JSON.parse(accessed_projects);
     } catch (err) {
       accessed_projects = [];
     }
   }
-  const profile_pic = req.file ? req.file.filename : null;
+  if (!Array.isArray(accessed_projects)) {
+    accessed_projects = [];
+  }
+
+  // 2. Prepare logged safe payload after sanitization
+  const safeRequestPayload = {
+    name,
+    username: username || null,
+    email,
+    phone_number,
+    role_id: role_id ? Number(role_id) : null,
+    profile_pic,
+    accessed_projects,
+  };
+
   try {
+    // 3. Validation
     if (!name || !email || !phone_number || !password || !role_id) {
       return res.status(400).json({
         success: false,
-        message: "All fields are required",
+        message:
+          "All fields (name, email, phone_number, password, role_id) are required",
       });
     }
 
@@ -48,7 +58,8 @@ const signup = async (req, res) => {
       });
     }
 
-    const role = await Role.findById(role_id);
+    const numericRoleId = Number(role_id);
+    const role = await Role.findById(numericRoleId);
     if (!role) {
       return res.status(400).json({
         success: false,
@@ -56,18 +67,19 @@ const signup = async (req, res) => {
       });
     }
 
+    // 4. Creation Logic
     const hashedPassword = await bcrypt.hash(password, 10);
     const newUser = await User.create(
       name,
-      username,
+      username || null,
       email,
       phone_number,
       hashedPassword,
-      role_id,
-      profile_pic
+      numericRoleId,
+      profile_pic,
     );
 
-    if (Array.isArray(accessed_projects) && accessed_projects.length > 0) {
+    if (accessed_projects.length > 0) {
       await UserProject.assignProjects(newUser.id, accessed_projects);
     }
 
@@ -81,13 +93,14 @@ const signup = async (req, res) => {
       profile_pic: newUser.profile_pic,
       accessed_projects: assignedProjects,
     };
+
     await logAction(
       newUser.id,
       "signup",
       "success",
       "User registered successfully",
       safeRequestPayload,
-      responsePayload
+      responsePayload,
     );
 
     return res.status(201).json({
@@ -103,10 +116,10 @@ const signup = async (req, res) => {
       "failure",
       error.message,
       safeRequestPayload,
-      null
+      null,
     );
     console.error("Signup Error:", error);
-    res.status(500).json({ message: "Server error" });
+    return res.status(500).json({ success: false, message: "Server error" });
   }
 };
 
@@ -157,14 +170,14 @@ const updateUserByAdmin = async (req, res) => {
       const oldPicPath = path.join(
         __dirname,
         "../../uploads/profile_pics",
-        existingUser.profile_pic
+        existingUser.profile_pic,
       );
       try {
         await fs.promises.unlink(oldPicPath);
       } catch (err) {
         console.warn(
           "Old profile pic not found or already deleted:",
-          err.message
+          err.message,
         );
       }
     }
@@ -178,7 +191,7 @@ const updateUserByAdmin = async (req, res) => {
       email || existingUser.email,
       phone_number || existingUser.phone_number,
       role_id || existingUser.role_id,
-      nextProfilePic
+      nextProfilePic,
     );
     await UserProject.deleteByUserId(getUserId);
 
@@ -199,7 +212,7 @@ const updateUserByAdmin = async (req, res) => {
       "success",
       "User updated successfully",
       safeRequestPayload,
-      responsePayload
+      responsePayload,
     );
 
     return res.status(200).json({
@@ -214,7 +227,7 @@ const updateUserByAdmin = async (req, res) => {
       "failure",
       err.message,
       safeRequestPayload,
-      null
+      null,
     );
     console.error("Update User Error:", err);
     return res.status(500).json({ success: false, message: "Server error" });
@@ -238,13 +251,13 @@ const deleteUser = async (req, res) => {
       const picPath = path.join(
         __dirname,
         "../../uploads/profile_pics",
-        existingUser.profile_pic
+        existingUser.profile_pic,
       );
       fs.unlink(picPath, (err) => {
         if (err) {
           console.warn(
             "Warning: Unable to delete user image (might not exist):",
-            err.message
+            err.message,
           );
         }
       });
@@ -258,7 +271,7 @@ const deleteUser = async (req, res) => {
       "success",
       "User deleted successfully",
       safeRequestPayload,
-      null
+      null,
     );
 
     return res.status(200).json({
@@ -272,7 +285,7 @@ const deleteUser = async (req, res) => {
       "failure",
       err.message,
       safeRequestPayload,
-      null
+      null,
     );
     console.error("Delete User Error:", err);
     return res.status(500).json({
@@ -303,7 +316,7 @@ const login = async (req, res) => {
         "failure",
         "Invalid email or password",
         safeRequestPayload,
-        null
+        null,
       );
       return res.status(400).json({
         success: false,
@@ -319,7 +332,7 @@ const login = async (req, res) => {
         "failure",
         "Invalid email or password",
         safeRequestPayload,
-        null
+        null,
       );
 
       return res.status(400).json({
@@ -369,7 +382,7 @@ const login = async (req, res) => {
       "success",
       "Login successful",
       safeRequestPayload,
-      userResponse
+      userResponse,
     );
 
     res.status(200).json({
@@ -386,7 +399,7 @@ const login = async (req, res) => {
       "failure",
       error.message,
       safeRequestPayload,
-      null
+      null,
     );
     console.error("Login Error:", error);
     return res.status(500).json({ message: "Server error" });
@@ -414,7 +427,7 @@ const forgotPassword = async (req, res) => {
         "failure",
         "User not found",
         safeRequestPayload,
-        null
+        null,
       );
       return res.status(404).json({
         success: false,
@@ -447,7 +460,7 @@ const forgotPassword = async (req, res) => {
       "success",
       "Password reset link sent",
       safeRequestPayload,
-      null
+      null,
     );
 
     return res.status(200).json({
@@ -461,7 +474,7 @@ const forgotPassword = async (req, res) => {
       "failure",
       err.message,
       safeRequestPayload,
-      null
+      null,
     );
     console.error("Forgot Password Error:", err);
     return res.status(500).json({
@@ -495,7 +508,7 @@ const resetPassword = async (req, res) => {
           "failure",
           "Invalid or expired token",
           safeRequestPayload,
-          null
+          null,
         );
 
         return res.status(400).json({
@@ -510,7 +523,7 @@ const resetPassword = async (req, res) => {
         "failure",
         "Invalid or expired token",
         safeRequestPayload,
-        null
+        null,
       );
 
       return res.status(400).json({
@@ -535,7 +548,7 @@ const resetPassword = async (req, res) => {
         "failure",
         "Invalid reset token",
         safeRequestPayload,
-        null
+        null,
       );
 
       return res.status(400).json({
@@ -555,7 +568,7 @@ const resetPassword = async (req, res) => {
       "success",
       "Password reset successfully",
       safeRequestPayload,
-      null
+      null,
     );
 
     return res.status(200).json({
@@ -569,7 +582,7 @@ const resetPassword = async (req, res) => {
       "failure",
       err.message,
       safeRequestPayload,
-      null
+      null,
     );
     console.error("Reset Password Error:", err);
     return res.status(500).json({

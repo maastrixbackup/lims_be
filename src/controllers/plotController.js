@@ -94,7 +94,9 @@ const syncKhataFromPlot = async (plotData, previousPlot = null) => {
     );
   }
   if (plotData.khata_no) {
-    khatasToSync.add(`${plotData.project_id}::${plotData.type}::${plotData.khata_no}`);
+    khatasToSync.add(
+      `${plotData.project_id}::${plotData.type}::${plotData.khata_no}`,
+    );
   }
 
   for (const item of khatasToSync) {
@@ -240,10 +242,10 @@ const uploadPlots = async (req, res) => {
       type: req.body?.type || null,
       file: req.file
         ? {
-          originalname: req.file.originalname,
-          filename: req.file.filename,
-          path: req.file.path,
-        }
+            originalname: req.file.originalname,
+            filename: req.file.filename,
+            path: req.file.path,
+          }
         : null,
     });
     // return res.status(500).json({ success: false, message: "Server error" });
@@ -255,7 +257,6 @@ const uploadPlots = async (req, res) => {
     });
   }
 };
-
 
 const plotList = async (req, res) => {
   try {
@@ -368,8 +369,9 @@ const plotDocumentList = async (req, res) => {
       district: r.district,
       no_days_interest: r.no_days_interest,
       uploadedAt: r.created_at,
-      documentUrl: `${req.protocol}://${req.get("host")}${req.get("host").includes("localhost") ? "" : "/api"
-        }/uploads/excels/${r.filename}`,
+      documentUrl: `${req.protocol}://${req.get("host")}${
+        req.get("host").includes("localhost") ? "" : "/api"
+      }/uploads/excels/${r.filename}`,
     }));
 
     return res.json({
@@ -589,15 +591,11 @@ const downloadPlotDocument = async (req, res) => {
       ".png": "image/png",
     };
 
-    res.setHeader(
-      "Content-Type",
-      mimeTypes[ext] || "application/octet-stream"
-    );
+    res.setHeader("Content-Type", mimeTypes[ext] || "application/octet-stream");
 
     res.setHeader(
       "Content-Disposition",
-      `attachment; filename="${doc.original_filename || doc.filename
-      }"`
+      `attachment; filename="${doc.original_filename || doc.filename}"`,
     );
 
     fs.createReadStream(filePath).pipe(res);
@@ -609,7 +607,6 @@ const downloadPlotDocument = async (req, res) => {
     });
   }
 };
-
 
 const createPlot = async (req, res) => {
   const userId = req.user.id;
@@ -701,7 +698,9 @@ const createPlot = async (req, res) => {
       safeRequestPayload.family_with_orphan_members !== null &&
       safeRequestPayload.family_with_orphan_members !== undefined
     ) {
-      const orphanMembers = Number(safeRequestPayload.family_with_orphan_members);
+      const orphanMembers = Number(
+        safeRequestPayload.family_with_orphan_members,
+      );
       if (!Number.isInteger(orphanMembers)) {
         return res.status(400).json({
           success: false,
@@ -739,7 +738,8 @@ const createPlot = async (req, res) => {
         safeRequestPayload.plot_no,
         safeRequestPayload,
       );
-      message = "Plot updated successfully (existing LA Case File No. and Plot No.)";
+      message =
+        "Plot updated successfully (existing LA Case File No. and Plot No.)";
       await logAction(
         userId,
         "update plot (via create)",
@@ -794,8 +794,7 @@ const updatePlot = async (req, res) => {
         message: "Plot not found",
       });
     }
-    const nextProjectId =
-      safeRequestPayload.project_id ?? existing.project_id;
+    const nextProjectId = safeRequestPayload.project_id ?? existing.project_id;
     const nextType = safeRequestPayload.type ?? existing.type;
     const nextCaseFileNo =
       safeRequestPayload.la_case_file_no ?? existing.la_case_file_no;
@@ -820,7 +819,9 @@ const updatePlot = async (req, res) => {
       safeRequestPayload.family_with_orphan_members !== undefined &&
       safeRequestPayload.family_with_orphan_members !== null
     ) {
-      const orphanMembers = Number(safeRequestPayload.family_with_orphan_members);
+      const orphanMembers = Number(
+        safeRequestPayload.family_with_orphan_members,
+      );
       if (!Number.isInteger(orphanMembers)) {
         return res.status(400).json({
           success: false,
@@ -913,20 +914,14 @@ const getDeletedPlots = async (req, res) => {
   const userId = req.user.id;
   try {
     const deletedPlots = await Plot.getDeletedPlots();
-    if (!deletedPlots.length) {
-      return res.status(400).json({
-        success: false,
-        message: "No deleted plots found",
-      });
-    }
 
     return res.status(200).json({
       success: true,
-      message: "Deleted plots fetched successfully",
+      message:  "Deleted plots fetched successfully",
       data: deletedPlots,
     });
   } catch (err) {
-    res.status(500).json({
+    return res.status(500).json({
       success: false,
       message: err.message,
     });
@@ -1325,8 +1320,9 @@ const getAllPaymentReady = async (req, res) => {
         // file_url: `${req.protocol}://${req.get("host")}${req.get("host").includes("localhost") ? "" : "/api"
         //   }/uploads/land_cost_payments/${row.payment_proof}`,
         file_url: row.payment_proof
-          ? `${req.protocol}://${req.get("host")}${req.get("host").includes("localhost") ? "" : "/api"
-          }/uploads/land_cost_payments/${row.payment_proof}`
+          ? `${req.protocol}://${req.get("host")}${
+              req.get("host").includes("localhost") ? "" : "/api"
+            }/uploads/land_cost_payments/${row.payment_proof}`
           : null,
       });
     }
