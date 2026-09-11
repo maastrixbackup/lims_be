@@ -123,7 +123,7 @@ const Khata = {
         rr_other_benefits,
 
         full_part,
-      ]
+      ],
     );
     return {
       id: result.insertId,
@@ -134,7 +134,7 @@ const Khata = {
   async existsByUniqueId(unique_id) {
     const [rows] = await db.query(
       "SELECT id FROM khatas WHERE unique_id = ? LIMIT 1",
-      [unique_id]
+      [unique_id],
     );
     return rows.length > 0;
   },
@@ -251,7 +251,7 @@ const Khata = {
   //   offset = 0,
   // }) {
   //   let query = `
-  //   SELECT 
+  //   SELECT
   //     k.id,
   //     k.unique_id,
   //     k.project_id,
@@ -333,8 +333,6 @@ const Khata = {
   //     ON pc.project_id = k.project_id
   //    AND pc.type = k.type
   //    AND pc.khata_no = k.khata_no
-
-
 
   //   LEFT JOIN (
   //     SELECT khata_id, COUNT(*) AS doc_count
@@ -553,7 +551,7 @@ const Khata = {
   async findKhataNo(project_id, type) {
     const [rows] = await db.query(
       "SELECT id,khata_no FROM khatas WHERE project_id = ? AND type = ?",
-      [project_id, type]
+      [project_id, type],
     );
     return rows;
   },
@@ -561,7 +559,7 @@ const Khata = {
   async getKhataByNumber(khata_no) {
     const [rows] = await db.query(
       `SELECT * FROM khatas WHERE khata_no = ? LIMIT 1`,
-      [khata_no]
+      [khata_no],
     );
     return rows[0];
   },
@@ -690,7 +688,7 @@ const Khata = {
         full_part,
 
         khataId,
-      ]
+      ],
     );
     return { khataId, ...data };
   },
@@ -704,7 +702,7 @@ const Khata = {
       AND id <> ?
     LIMIT 1
     `,
-      [unique_id, excludeId]
+      [unique_id, excludeId],
     );
 
     return rows.length > 0;
@@ -720,11 +718,11 @@ const Khata = {
     file_name,
     file_path,
     type,
-    document_type
+    document_type,
   ) {
     const [result] = await db.query(
       "INSERT INTO khata_documents(khata_id, unique_id, file_name, file_path, type, document_type) VALUES (?,?,?,?,?,?)",
-      [khata_id, unique_id, file_name, file_path, type, document_type]
+      [khata_id, unique_id, file_name, file_path, type, document_type],
     );
     return result;
   },
@@ -732,7 +730,7 @@ const Khata = {
   async getFilesByKhataId(khata_id) {
     const [rows] = await db.query(
       "SELECT * FROM khata_documents WHERE khata_id = ? AND type = 1 ORDER BY created_at DESC",
-      [khata_id]
+      [khata_id],
     );
     return rows;
   },
@@ -740,7 +738,7 @@ const Khata = {
   async findFileById(id) {
     const [rows] = await db.query(
       "SELECT * FROM khata_documents WHERE id = ? AND type = 1",
-      [id]
+      [id],
     );
     return rows[0];
   },
@@ -748,7 +746,7 @@ const Khata = {
   async deleteFileById(file_id) {
     const [result] = await db.query(
       "DELETE FROM khata_documents WHERE id = ? AND type = 1",
-      [file_id]
+      [file_id],
     );
     return result.affectedRows > 0;
   },
@@ -937,7 +935,7 @@ const Khata = {
       displaced_affected_project = VALUES(displaced_affected_project),
       updated_at = NOW()
     `,
-      [project_id, type]
+      [project_id, type],
     );
 
     const addIfValid = (set, value) => {
@@ -960,7 +958,8 @@ const Khata = {
         normalizedRow[normalize(key)] = row[key];
       }
 
-      const khataNo = row["LD06"] || row["Khata No."] || row["Khata No"] || null;
+      const khataNo =
+        row["LD06"] || row["Khata No."] || row["Khata No"] || null;
       if (!khataNo) continue;
 
       if (!rrByKhata[khataNo]) {
@@ -986,67 +985,72 @@ const Khata = {
       addIfValid(
         r.rr_employment,
         row["RR01"] ||
-          normalizedRow["RR Assistance (Rehab) - Employment in the Project"]
+          normalizedRow["RR Assistance (Rehab) - Employment in the Project"],
       );
 
       addIfValid(
         r.rr_cash_in_lieu,
         row["RR02"] ||
-          row["RR Assistance (Rehab) - Cash in lieu of Employment"]
+          row["RR Assistance (Rehab) - Cash in lieu of Employment"],
       );
 
       addIfValid(
         r.rr_training_skill_upgradation,
         row["RR03"] ||
-          row["RR Assistance (Rehab) - Training for Skill Upgradation"]
+          row["RR Assistance (Rehab) - Training for Skill Upgradation"],
       );
 
       addIfValid(
         r.rr_self_employment,
         row["RR04"] ||
-          row["RR Assistance (Rehab) - Assistance for Self Employment"]
+          row["RR Assistance (Rehab) - Assistance for Self Employment"],
       );
 
       addIfValid(
         r.rr_special_allowance_st_ntfp,
         row["RR05"] ||
-          row["RR Assistance (Rehab) - Special Allowance to STs for loss of NTFP"]
+          row[
+            "RR Assistance (Rehab) - Special Allowance to STs for loss of NTFP"
+          ],
       );
 
       addIfValid(
         r.rr_homestead_allotment,
         row["RR06"] ||
-          row["RR Assistance (Resettle) - Homested Land Alloted/Self Relocation"]
+          row[
+            "RR Assistance (Resettle) - Homested Land Alloted/Self Relocation"
+          ],
       );
 
       addIfValid(
         r.rr_house_building_assistance,
         row["RR07"] ||
-          row["RR Assistance (Resettle) - House Building Assistance"]
+          row["RR Assistance (Resettle) - House Building Assistance"],
       );
 
       addIfValid(
         r.rr_constructed_by,
         row["RR08"] ||
-          row["RR Assistance (Resettle) - Constructed by Project Authority/Self"]
+          row[
+            "RR Assistance (Resettle) - Constructed by Project Authority/Self"
+          ],
       );
 
       addIfValid(
         r.rr_transit_shed,
         row["RR09"] ||
-          row["RR Assistance (Resettle) - Assistance for Transit Shed"]
+          row["RR Assistance (Resettle) - Assistance for Transit Shed"],
       );
 
       addIfValid(
         r.rr_transport_allowance,
         row["RR10"] ||
-          row["RR Assistance (Resettle) - Transportation Allowance"]
+          row["RR Assistance (Resettle) - Transportation Allowance"],
       );
 
       addIfValid(
         r.rr_maintenance_allowance,
-        row["RR11"] ||
-          row["RR Assistance (Resettle) - Maintenance Allowance"]
+        row["RR11"] || row["RR Assistance (Resettle) - Maintenance Allowance"],
       );
 
       addIfValid(
@@ -1054,17 +1058,17 @@ const Khata = {
         row["RR12"] ||
           row[
             "RR Assistance (Other) - Special Allowance for Multiple Displacement"
-          ]
+          ],
       );
 
       addIfValid(
         r.rr_exgratia,
-        row["RR13"] || row["RR Assistance (Other) - Ex-Gratia (if any)"]
+        row["RR13"] || row["RR Assistance (Other) - Ex-Gratia (if any)"],
       );
 
       addIfValid(
         r.rr_other_benefits,
-        row["RR14"] || row["RR Assistance (Other) - Other Benefits (if any)"]
+        row["RR14"] || row["RR Assistance (Other) - Other Benefits (if any)"],
       );
     }
 
@@ -1109,7 +1113,7 @@ const Khata = {
           project_id,
           type,
           khataNo,
-        ]
+        ],
       );
     }
   },
@@ -1213,22 +1217,9 @@ const Khata = {
       full_part = VALUES(full_part),
       updated_at = NOW()
     `,
-      [project_id, type, khata_no]
+      [project_id, type, khata_no],
     );
   },
-
-  // async countAll(projectId = null) {
-  //   let query = "SELECT COUNT(*) AS total FROM khatas";
-  //   let params = [];
-
-  //   if (projectId) {
-  //     query += " WHERE project_id = ?";
-  //     params.push(projectId);
-  //   }
-
-  //   const [rows] = await db.query(query, params);
-  //   return rows[0].total;
-  // },
 
   async countAll(projectIds = null) {
     let query = "SELECT COUNT(*) AS total FROM khatas";
@@ -1244,24 +1235,26 @@ const Khata = {
     return rows[0].total;
   },
 
-  async addMapDocument(khata_id, land_type, file_name) {
+  async addMapDocument(khata_id, land_type, file_name, file_url) {
     return db.query(
-      `INSERT INTO khata_map_documents (khata_id, land_type, file_name)
-     VALUES (?, ?, ?)`,
-      [khata_id, land_type, file_name]
+      `INSERT INTO khata_map_documents (khata_id, land_type, file_name, file_url)
+     VALUES (?, ?, ?, ?)`,
+      [khata_id, land_type, file_name, file_url],
     );
   },
 
   async getMapDocumentsByKhataId(khata_id) {
     const [rows] = await db.query(
-      `SELECT id, khata_id, land_type, file_name, created_at
-      FROM khata_map_documents
-      WHERE khata_id = ? AND land_type = 1
-      ORDER BY id DESC`,
-      [khata_id]
+      `SELECT id, khata_id, land_type, file_name, file_url, created_at
+     FROM khata_map_documents
+     WHERE khata_id = ? AND land_type = 1
+     ORDER BY id DESC`,
+      [khata_id],
     );
     return rows;
   },
+
+  
 };
 
 module.exports = Khata;

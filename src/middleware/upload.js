@@ -110,7 +110,11 @@ const uploadKhata = multer({
 // Upload map document (KMZ files)
 const mapStorage = multer.diskStorage({
   destination: (req, file, cb) => {
-    cb(null, "uploads/maps");
+    const dir = "uploads/maps";
+    if (!fs.existsSync(dir)) {
+      fs.mkdirSync(dir, { recursive: true });
+    }
+    cb(null, dir);
   },
   filename: (req, file, cb) => {
     const originalname = file.originalname.replace(/\s+/g, "_");
@@ -330,7 +334,11 @@ const uploadGovtKhata = multer({
 //upload govt map document (KMZ files)
 const govtMapStorage = multer.diskStorage({
   destination: (req, file, cb) => {
-    cb(null, "uploads/govt_maps");
+    const dir = "uploads/govt_maps";
+    if (!fs.existsSync(dir)) {
+      fs.mkdirSync(dir, { recursive: true });
+    }
+    cb(null, dir);
   },
   filename: (req, file, cb) => {
     const originalname = file.originalname.replace(/\s+/g, "_");

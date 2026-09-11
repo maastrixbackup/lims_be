@@ -158,6 +158,11 @@ const Project = {
       status_text: statusMap[project.status],
     }));
   },
+
+  async findById(id) {
+    const [rows] = await db.query(`SELECT * FROM projects WHERE id = ?`, [id]);
+    return rows.length ? rows[0] : null;
+  },
 };
 
 module.exports = Project;

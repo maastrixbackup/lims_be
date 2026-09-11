@@ -10,6 +10,7 @@ const path = require("path");
 const ExcelJS = require("exceljs");
 const PDFDocument = require("pdfkit");
 const GovtKhata = require("../models/govtKhataModel");
+const { uploadToDrive } = require("../services/googleDrive");
 
 const addGovtKhata = async (req, res) => {
   const userId = req.user.id;
@@ -34,11 +35,12 @@ const addGovtKhata = async (req, res) => {
     present_status,
     case_details,
     name_of_ror,
-    land_category
+    land_category,
   } = safeRequestPayload;
 
   try {
-    if (!project_id || !type) { //village_id,khata_no changed to null in table
+    if (!project_id || !type) {
+      //village_id,khata_no changed to null in table
       return res.status(400).json({
         success: false,
         message: "All fields are required",
@@ -72,7 +74,7 @@ const addGovtKhata = async (req, res) => {
       present_status,
       case_details,
       name_of_ror,
-      land_category
+      land_category,
     });
     await logAction(
       userId,
@@ -383,7 +385,7 @@ const uploadGovtKhataDoc = async (req, res) => {
       req.file.filename,
       `uploads/govt_khata/${req.file.filename}`,
       type,
-      document_type
+      document_type,
     );
 
     await logAction(
@@ -392,7 +394,7 @@ const uploadGovtKhataDoc = async (req, res) => {
       "success",
       "Govt Khata uploaded successfully",
       safeRequestPayload,
-      uploadedDocument
+      uploadedDocument,
     );
     return res.status(200).json({
       success: true,
@@ -406,7 +408,7 @@ const uploadGovtKhataDoc = async (req, res) => {
       "failure",
       err.message,
       safeRequestPayload,
-      null
+      null,
     );
 
     return res.status(500).json({
@@ -432,8 +434,9 @@ const getKhataFilesByKhataId = async (req, res) => {
       // url: `${req.protocol}://${req.get("host")}${prefix}/uploads/khata/${
       //   doc.file_name
       // }`,
-      url: `${req.protocol}://${req.get("host")}${req.get("host").includes("localhost") ? "" : "/api"
-        }/uploads/govt_khata/${doc.file_name}`,
+      url: `${req.protocol}://${req.get("host")}${
+        req.get("host").includes("localhost") ? "" : "/api"
+      }/uploads/govt_khata/${doc.file_name}`,
     }));
     res.status(200).json({
       success: true,
@@ -445,7 +448,6 @@ const getKhataFilesByKhataId = async (req, res) => {
     console.error(err);
     res.status(500).json({ success: false, message: err.message });
   }
-
 };
 
 const deleteGovtKhataFileById = async (req, res) => {
@@ -470,7 +472,7 @@ const deleteGovtKhataFileById = async (req, res) => {
     const filePath = path.join(
       __dirname,
       "../../uploads/govt_khata",
-      document.file_name
+      document.file_name,
     );
     if (fs.existsSync(filePath)) {
       fs.unlinkSync(filePath);
@@ -481,7 +483,7 @@ const deleteGovtKhataFileById = async (req, res) => {
       "success",
       "Document deleted successfully",
       { file_id },
-      deleted
+      deleted,
     );
     return res.status(200).json({
       success: true,
@@ -494,7 +496,7 @@ const deleteGovtKhataFileById = async (req, res) => {
       "failure",
       err.message,
       { file_id },
-      null
+      null,
     );
     console.error(err);
     res.status(500).json({
@@ -523,6 +525,7 @@ const uploadGovtMapDoc = async (req, res) => {
       });
     }
 
+    // 1. Fetch Govt Khata Data
     const khataData = await govtKhata.findById(khata_id);
     if (!khataData) {
       return res.status(404).json({
@@ -530,12 +533,53 @@ const uploadGovtMapDoc = async (req, res) => {
         message: "Khata not found",
       });
     }
-    const { type } = khataData;
 
+    // 2. Fetch Project Data using project_id from Govt Khata
+    const projectData = await Project.findById(khataData.project_id);
+    if (!projectData) {
+      return res.status(404).json({
+        success: false,
+        message: "Associated project not found",
+      });
+    }
+
+    // 3. Map Project Type to Folder Category (1=Private, 2=Government, 3=Forest)
+    const categoryMap = {
+      1: "private",
+      2: "government",
+      3: "forest",
+    };
+    const categoryFolder = categoryMap[projectData.type] || "government";
+
+    // 4. Sanitize folder names for safe pathing
+    const sanitizedProjectName = projectData.project_name
+      .replace(/[/\\?%*:|"<>]/g, "-")
+      .trim();
+    const khataFolderName = `Khata_${khataData.khata_no}`;
+
+    // 5. Construct folder hierarchy: ['government', 'Project_Name', 'Khata_101']
+    const folderPathArray = [
+      categoryFolder,
+      sanitizedProjectName,
+      khataFolderName,
+    ];
+
+    // 6. Upload file to Google Drive under the calculated path
+    const driveResult = await uploadToDrive(
+      req.file.path,
+      req.file.originalname,
+      req.file.mimetype || "application/vnd.google-earth.kmz",
+      folderPathArray,
+    );
+
+    const fileNameToSave = driveResult.fileName || req.file.originalname;
+
+    // 7. Save document entry to Database with download URL
     const uploadedDocument = await Khata.addMapDocument(
       khata_id,
-      type,
-      req.file.filename
+      khataData.type,
+      fileNameToSave,
+      driveResult.downloadLink,
     );
 
     await logAction(
@@ -543,13 +587,17 @@ const uploadGovtMapDoc = async (req, res) => {
       "upload govt khata map document",
       "success",
       "Govt Map file uploaded successfully",
-      { khata_id },
-      uploadedDocument
+      { khata_id, drive_file_id: driveResult.fileId },
+      uploadedDocument,
     );
 
     res.status(200).json({
       success: true,
       message: "Govt Map file uploaded successfully",
+      data: {
+        file_name: fileNameToSave,
+        file_url: driveResult.downloadLink,
+      },
     });
   } catch (err) {
     console.error("UPLOAD ERROR:", err);
@@ -559,7 +607,7 @@ const uploadGovtMapDoc = async (req, res) => {
       "failure",
       err.message,
       null,
-      null
+      null,
     );
     res.status(500).json({
       success: false,
@@ -588,26 +636,64 @@ const getGovtMapFiles = async (req, res) => {
     }
 
     const documents = await govtKhata.getMapDocumentsByKhataId(khata_id);
-    const baseURL = `${req.protocol}://${req.get("host")}${req.get("host").includes("localhost") ? "" : "/api"
-      }`;
-    const formatted = documents.map((doc) => ({
-      id: doc.id,
-      khata_id: doc.khata_id,
-      land_type: doc.land_type,
-      file_name: doc.file_name,
-      url: `${baseURL}/uploads/govt_maps/${doc.file_name}`,
-      uploaded_at: doc.created_at,
-    }));
+
+    const baseURL = `${req.protocol}://${req.get("host")}${
+      req.get("host").includes("localhost") ? "" : "/api"
+    }`;
+
+    // Helper function to extract or structure a Google Drive URL
+    const getGoogleDriveUrl = (input) => {
+      if (!input) return null;
+
+      // 1. If it's already a full Google Drive link, return it as-is
+      if (/drive\.google\.com|docs\.google\.com/i.test(input)) {
+        return input;
+      }
+
+      // 2. If it's an raw Drive File ID (alphanumeric string ~25-50 chars with - or _)
+      const isDriveIdPattern = /^[a-zA-Z0-9_-]{25,50}$/.test(input);
+      if (isDriveIdPattern) {
+        return `https://drive.google.com/file/d/${input}/view?usp=sharing`;
+      }
+
+      return null;
+    };
+
+    const formatted = documents.map((doc) => {
+      // Check file_url, then file_name for Google Drive formats
+      let finalUrl =
+        getGoogleDriveUrl(doc.file_url) || getGoogleDriveUrl(doc.file_name);
+
+      // Fallback 1: Any external HTTP/HTTPS URL
+      if (!finalUrl && /^https?:\/\//i.test(doc.file_name)) {
+        finalUrl = doc.file_name;
+      }
+
+      // Fallback 2: Local uploaded file path
+      if (!finalUrl) {
+        finalUrl = `${baseURL}/uploads/govt_maps/${doc.file_name}`;
+      }
+
+      return {
+        id: doc.id,
+        khata_id: doc.khata_id,
+        land_type: doc.land_type,
+        file_name: doc.file_name,
+        file_url: finalUrl,
+        uploaded_at: doc.created_at,
+      };
+    });
+
     return res.status(200).json({
       success: true,
       message: "Map documents fetched successfully",
       data: formatted,
     });
   } catch (err) {
-    console.error("Fetch map doc error:", err);
+    console.error("Fetch govt map doc error:", err);
     return res.status(500).json({
       success: false,
-      message: "Server error while fetching map files",
+      message: "Server error while fetching govt map files",
     });
   }
 };
@@ -723,7 +809,7 @@ const downloadKhataDocument = async (req, res) => {
     res.setHeader("Content-Type", contentType);
     res.setHeader(
       "Content-Disposition",
-      `attachment; filename="${doc.file_name}"`
+      `attachment; filename="${doc.file_name}"`,
     );
 
     //Stream file
@@ -748,5 +834,5 @@ module.exports = {
   deleteGovtKhataFileById,
   uploadGovtMapDoc,
   getGovtMapFiles,
-  downloadKhataDocument
+  downloadKhataDocument,
 };

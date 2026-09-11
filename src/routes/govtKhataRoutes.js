@@ -52,6 +52,7 @@ router.post(
   uploadGovtMapDocument.single("file"),
   uploadGovtMapDoc
 );
+
 router.get("/getGovtMapFiles/:khata_id", getGovtMapFiles);
 
 router.get("/downloadKhataDocument/:filename", downloadKhataDocument);

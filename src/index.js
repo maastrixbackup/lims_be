@@ -1,5 +1,30 @@
+//const express = require("express");
+//require("dotenv").config();
+
 const express = require("express");
+const fs = require("fs");
+const path = require("path");
 require("dotenv").config();
+
+const logFile = path.join(__dirname, "../logs/app.log");
+
+function writeLog(message) {
+    const timestamp = new Date().toISOString();
+
+    fs.appendFile(
+        logFile,
+        `[${timestamp}] ${message}\n`,
+        "utf8",
+        (err) => {
+            if (err) {
+                console.error("Failed to write log:", err);
+            }
+        }
+    );
+}
+
+//end
+
 const authRoutes = require("./routes/authRoutes");
 const userRoutes = require("./routes/userRoutes");
 const roleRoutes = require("./routes/roleRoutes");
@@ -12,6 +37,7 @@ const khataRoutes = require("./routes/khataRoutes");
 const govtkhataRoutes = require("./routes/govtKhataRoutes");
 const dashboardRoutes = require("./routes/dashboardRoutes");
 const reportRoutes = require("./routes/reportRoutes");
+const kmzRoutes = require("./routes/kmzMapRoutes");
 
 const forestLandRoutes = require("./routes/forestLandRoutes");
 
@@ -20,9 +46,20 @@ const cors = require("cors");
 
 const app = express();
 app.enable("trust proxy");
-const path = require("path");
 app.use(express.json());
+//app.use((req, res, next) => {
+//  console.log(`${req.method} ${req.originalUrl}`);
+//  next();
 
+app.use((req, res, next) => {
+    const message = `${req.method} ${req.originalUrl}`;
+
+    console.log(message);
+    writeLog(message);
+
+    next();
+
+});
 app.use(
   cors({
     origin: "*",
@@ -34,9 +71,11 @@ app.use(
 );
 
 // Serve static files from uploads folder
-app.use("/uploads", express.static(path.join(__dirname, "..", "uploads")));
+
+app.use("/api/uploads", express.static(path.join(__dirname, "uploads")));
 
 // routes
+app.use("/maps", kmzRoutes);
 app.use("/api/auth", authRoutes);
 app.use("/api/user", authMiddleware, userRoutes);
 app.use("/api/role", authMiddleware, roleRoutes);
@@ -51,8 +90,37 @@ app.use("/api", authMiddleware, dashboardRoutes);
 app.use("/api/report", authMiddleware, reportRoutes);
 
 app.use("/api/forestland", authMiddleware, forestLandRoutes);
+app.get("/api/test", (req, res) => {
+ res.send("Hello");
+});
 
 const PORT = process.env.PORT || 3000;
+//app.use((err, req, res, next) => {
+//    console.error("Unhandled Error:", err);
+//    res.status(500).json({
+//        error: err.message,
+//        stack: err.stack
+//    });
+//});
+app.use((err, req, res, next) => {
+    console.error("Unhandled Error:", err);
+
+    writeLog(
+        `ERROR: ${err.stack || err.message || err}`
+    );
+
+    res.status(500).json({
+        error: err.message,
+        stack: err.stack
+    });
+});
+//app.listen(PORT, () => {
+//  console.log(`Server running on http://localhost:${PORT}`);
+//});
+
 app.listen(PORT, () => {
-  console.log(`Server running on http://localhost:${PORT}`);
+    const message = `Server running on http://localhost:${PORT}`;
+
+    console.log(message);
+    writeLog(message);
 });

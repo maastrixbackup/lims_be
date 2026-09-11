@@ -558,7 +558,7 @@ const GovtKhata = {
 
   async getMapDocumentsByKhataId(khata_id) {
     const [rows] = await db.query(
-      `SELECT id, khata_id, land_type, file_name, created_at
+      `SELECT id, khata_id, land_type, file_name, file_url, created_at
       FROM khata_map_documents
       WHERE khata_id = ? AND land_type = 2
       ORDER BY id DESC`,

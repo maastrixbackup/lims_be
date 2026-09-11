@@ -42,7 +42,7 @@ router.post(
       next();
     });
   },
-  uploadKhataDoc
+  uploadKhataDoc,
 );
 
 router.get("/getKhataFiles/:id", getKhataFilesByKhataId);
@@ -55,8 +55,9 @@ router.get("/printKhata", printKhata);
 router.post(
   "/uploadMapDocument",
   uploadMapDocument.single("file"),
-  uploadMapDoc
+  uploadMapDoc,
 );
+
 router.get("/getMapFiles/:khata_id", getMapFiles);
 router.get("/getMasterData", getMasterData);
 

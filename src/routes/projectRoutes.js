@@ -9,6 +9,7 @@ const {
   deleteProject,
 } = require("../controllers/projectController");
 
+
 router.post("/createProject", createProject);
 router.get("/projectList", projectList);
 router.get("/getActiveProjects", getActiveProjects);

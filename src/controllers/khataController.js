@@ -7,6 +7,7 @@ const fs = require("fs");
 const path = require("path");
 const ExcelJS = require("exceljs");
 const PDFDocument = require("pdfkit");
+const { uploadToDrive } = require("../services/googleDrive");
 
 async function addKhata(req, res) {
   const userId = req.user.id;
@@ -727,85 +728,6 @@ const exportKhata = async (req, res) => {
   }
 };
 
-// const printKhata = async (req, res) => {
-//   const userId = req.user.id;
-//   try {
-//     let { project_id, village_id, type } = req.query;
-
-//     if (village_id) {
-//       village_id = village_id.split(",").map((id) => parseInt(id.trim()));
-//     }
-
-//     const khata = await Khata.findAll({
-//       project_id,
-//       village_id,
-//       type,
-//       limit: 999999,
-//       offset: 0,
-//     });
-
-//     const khataTypeMap = {
-//       1: "Private Land",
-//       2: "Govt Land",
-//       3: "Forest Land",
-//     };
-
-//     const doc = new PDFDocument({ margin: 40 });
-//     res.setHeader("Content-Type", "application/pdf");
-//     res.setHeader("Content-Disposition", "attachment; filename=khata_list.pdf");
-
-//     doc.pipe(res);
-
-//     doc.fontSize(20).text("Khata List", { align: "center" });
-//     doc.moveDown();
-
-//     doc
-//       .fontSize(12)
-//       .text(
-//         "Sl/No | Project Name | Village Name | Khata No | Khata Type | Unique ID | Plot Count | Created At | Updated At",
-//         {
-//           underline: true,
-//         }
-//       );
-//     doc.moveDown(0.5);
-
-//     khata.forEach((k, index) => {
-//       doc.text(
-//         `${index + 1} | ${k.project_name} | ${k.village_name} | ${
-//           k.khata_no
-//         } | ${khataTypeMap[k.type]} | ${k.unique_id} | ${k.plot_count} | ${
-//           k.created_at
-//         } | ${k.updated_at}`
-//       );
-//     });
-
-//     doc.end();
-
-//     await logAction(
-//       userId,
-//       "print khata list",
-//       "success",
-//       "Khata list printed successfully",
-//       { project_id, village_id, type },
-//       null
-//     );
-//   } catch (err) {
-//     await logAction(
-//       userId,
-//       "print khata list",
-//       "failure",
-//       err.message,
-//       null,
-//       null
-//     );
-
-//     console.error("Print Khata List Error:", err);
-//     return res.status(500).json({
-//       success: false,
-//       message: "Failed to generate Khata List PDF",
-//     });
-//   }
-// };
 
 const printKhata = async (req, res) => {
   const userId = req.user.id;
@@ -956,6 +878,7 @@ const uploadMapDoc = async (req, res) => {
       });
     }
 
+    // 1. Fetch Khata Data
     const khataData = await Khata.findById(khata_id);
     if (!khataData) {
       return res.status(404).json({
@@ -963,12 +886,46 @@ const uploadMapDoc = async (req, res) => {
         message: "Khata not found",
       });
     }
-    const { type } = khataData;
+
+    // 2. Fetch Project Data using project_id from Khata
+    const projectData = await Project.findById(khataData.project_id);
+    if (!projectData) {
+      return res.status(404).json({
+        success: false,
+        message: "Associated project not found",
+      });
+    }
+
+    // 3. Map Project Type to Folder Category
+    const categoryMap = {
+      1: "private",
+      2: "government",
+      3: "forest",
+    };
+    const categoryFolder = categoryMap[projectData.type] || "other";
+
+    // 4. Sanitize folder names (remove unsafe characters for Google Drive/File paths)
+    const sanitizedProjectName = projectData.project_name.replace(/[/\\?%*:|"<>]/g, "-").trim();
+    const khataFolderName = `Khata_${khataData.khata_no}`;
+
+    // 5. Construct path array: ['private', 'Project_Alpha', 'Khata_101']
+    const folderPathArray = [categoryFolder, sanitizedProjectName, khataFolderName];
+
+    // 6. Upload file to Google Drive under the nested path
+    const driveResult = await uploadToDrive(
+      req.file.path,
+      req.file.originalname,
+      req.file.mimetype || "application/vnd.google-earth.kmz",
+      folderPathArray
+    );
+
+    const fileNameToSave = driveResult.fileName || req.file.originalname;
 
     const uploadedDocument = await Khata.addMapDocument(
       khata_id,
-      type,
-      req.file.filename,
+      khataData.type,
+      fileNameToSave,
+      driveResult.downloadLink
     );
 
     await logAction(
@@ -976,13 +933,17 @@ const uploadMapDoc = async (req, res) => {
       "upload khata map document",
       "success",
       "Map file uploaded successfully",
-      { khata_id },
-      uploadedDocument,
+      { khata_id, drive_file_id: driveResult.fileId },
+      uploadedDocument
     );
 
     res.status(200).json({
       success: true,
       message: "Map file uploaded successfully",
+      data: {
+        file_name: fileNameToSave,
+        file_url: driveResult.downloadLink,
+      },
     });
   } catch (err) {
     console.error("UPLOAD ERROR:", err);
@@ -992,7 +953,7 @@ const uploadMapDoc = async (req, res) => {
       "failure",
       err.message,
       null,
-      null,
+      null
     );
     res.status(500).json({
       success: false,
@@ -1021,17 +982,34 @@ const getMapFiles = async (req, res) => {
     }
 
     const documents = await Khata.getMapDocumentsByKhataId(khata_id);
+
     const baseURL = `${req.protocol}://${req.get("host")}${
       req.get("host").includes("localhost") ? "" : "/api"
     }`;
-    const formatted = documents.map((doc) => ({
-      id: doc.id,
-      khata_id: doc.khata_id,
-      land_type: doc.land_type,
-      file_name: doc.file_name,
-      url: `${baseURL}/uploads/maps/${doc.file_name}`,
-      uploaded_at: doc.created_at,
-    }));
+
+    const formatted = documents.map((doc) => {
+      // 1. Check if file_url exists in DB (new Google Drive uploads)
+      // 2. Fallback to checking if file_name is a full URL (legacy records)
+      // 3. Fallback to local server path (older local uploads)
+      let finalUrl = doc.file_url;
+
+      if (!finalUrl) {
+        const isDriveLink = /^https?:\/\//i.test(doc.file_name);
+        finalUrl = isDriveLink
+          ? doc.file_name
+          : `${baseURL}/uploads/maps/${doc.file_name}`;
+      }
+
+      return {
+        id: doc.id,
+        khata_id: doc.khata_id,
+        land_type: doc.land_type,
+        file_name: doc.file_name,
+        file_url: finalUrl,
+        uploaded_at: doc.created_at,
+      };
+    });
+
     return res.status(200).json({
       success: true,
       message: "Map documents fetched successfully",
