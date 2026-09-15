@@ -1254,7 +1254,21 @@ const Khata = {
     return rows;
   },
 
-  
+  async getMapDocumentById(id) {
+    const [rows] = await db.query(
+      "SELECT * FROM khata_map_documents WHERE id = ?",
+      [id],
+    );
+    return rows[0] || null;
+  },
+
+  async deleteMapDocumentById(id) {
+    const [result] = await db.query(
+      "DELETE FROM khata_map_documents WHERE id = ?",
+      [id],
+    );
+    return result;
+  },
 };
 
 module.exports = Khata;

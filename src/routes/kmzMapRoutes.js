@@ -1,6 +1,6 @@
 const express = require("express");
 const router = express.Router();
-const { streamKmzFile } = require("../controllers/kmzMapController");
+const { streamKmzFile, deleteMapDocument } = require("../controllers/kmzMapController");
 const authMiddleware = require("../middleware/authMiddleware");
 
 // Public test route
@@ -10,5 +10,6 @@ router.get("/test", (req, res) => {
 
 // Protected proxy route
 router.get("/proxy/:fileId", authMiddleware, streamKmzFile);
+router.delete("/deleteMapDocument/:id", authMiddleware, deleteMapDocument);
 
 module.exports = router;

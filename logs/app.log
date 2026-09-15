@@ -1,1 +1,329 @@
 [2026-09-11T09:40:32.999Z] Server running on http://localhost:5000
+[2026-09-11T09:49:54.066Z] OPTIONS /api/project/projectList
+[2026-09-11T09:49:54.070Z] GET /api/project/projectList
+[2026-09-11T09:49:54.080Z] OPTIONS /api/village/villageList
+[2026-09-11T09:49:54.081Z] OPTIONS /api/project/projectList
+[2026-09-11T09:49:54.084Z] GET /api/village/villageList
+[2026-09-11T09:49:54.110Z] GET /api/project/projectList
+[2026-09-11T09:49:56.932Z] OPTIONS /api/getDashboardData
+[2026-09-11T09:49:56.934Z] GET /api/getDashboardData
+[2026-09-11T09:50:02.451Z] OPTIONS /api/govtkhata/govtKhataList?project_id=1&type=2&page=1&limit=500
+[2026-09-11T09:50:02.454Z] GET /api/govtkhata/govtKhataList?project_id=1&type=2&page=1&limit=500
+[2026-09-11T09:50:06.516Z] OPTIONS /api/govtkhata/getGovtMapFiles/4
+[2026-09-11T09:50:06.518Z] GET /api/govtkhata/getGovtMapFiles/4
+[2026-09-11T09:50:07.840Z] OPTIONS /maps/proxy/1eUnY3_RI_bFq4YNjGhUTIb6Ey9vRMDgm
+[2026-09-11T09:50:07.842Z] GET /maps/proxy/1eUnY3_RI_bFq4YNjGhUTIb6Ey9vRMDgm
+[2026-09-11T10:12:21.518Z] OPTIONS /api/project/projectList
+[2026-09-11T10:12:21.519Z] OPTIONS /api/village/villageList
+[2026-09-11T10:12:21.521Z] OPTIONS /api/project/projectList
+[2026-09-11T10:12:21.522Z] GET /api/project/projectList
+[2026-09-11T10:12:21.526Z] GET /api/village/villageList
+[2026-09-11T10:12:21.532Z] GET /api/project/projectList
+[2026-09-11T10:12:21.535Z] GET /api/village/villageList
+[2026-09-11T10:12:26.937Z] OPTIONS /api/village/villageList?project_id=1&type=1
+[2026-09-11T10:12:26.938Z] OPTIONS /api/khata/khataList?page=1&limit=500&project_id=1&village_id=&type=1
+[2026-09-11T10:12:26.941Z] GET /api/village/villageList?project_id=1&type=1
+[2026-09-11T10:12:26.944Z] GET /api/khata/khataList?page=1&limit=500&project_id=1&village_id=&type=1
+[2026-09-11T10:12:31.929Z] OPTIONS /api/khata/getMapFiles/1
+[2026-09-11T10:12:31.929Z] OPTIONS /api/khata/getMapFiles/1
+[2026-09-11T10:12:31.931Z] GET /api/khata/getMapFiles/1
+[2026-09-11T10:12:31.937Z] GET /api/khata/getMapFiles/1
+[2026-09-11T10:12:33.556Z] OPTIONS /maps/proxy/1n-FWkhfGvciJ532Pl0y8RfAz5Dap0qcq
+[2026-09-11T10:12:33.556Z] OPTIONS /maps/proxy/1n-FWkhfGvciJ532Pl0y8RfAz5Dap0qcq
+[2026-09-11T10:12:54.433Z] OPTIONS /maps/proxy/10zse7PvZMq-18Dsiyh1eIxPmBhdJp8hc
+[2026-09-11T10:12:54.433Z] OPTIONS /maps/proxy/10zse7PvZMq-18Dsiyh1eIxPmBhdJp8hc
+[2026-09-11T11:01:42.067Z] OPTIONS /api/auth/login
+[2026-09-11T11:01:42.078Z] POST /api/auth/login
+[2026-09-11T11:01:42.188Z] OPTIONS /api/project/projectList
+[2026-09-11T11:01:42.190Z] OPTIONS /api/village/villageList
+[2026-09-11T11:01:42.192Z] GET /api/project/projectList
+[2026-09-11T11:01:42.196Z] GET /uploads/profile_pics/hero-bg.png
+[2026-09-11T11:01:42.199Z] GET /api/village/villageList
+[2026-09-11T11:01:42.249Z] GET /uploads/profile_pics/hero-bg.png
+[2026-09-11T11:01:42.260Z] OPTIONS /api/getDashboardData
+[2026-09-11T11:01:42.262Z] OPTIONS /api/getDashboardData
+[2026-09-11T11:01:42.262Z] GET /api/getDashboardData
+[2026-09-11T11:01:42.268Z] GET /api/getDashboardData
+[2026-09-11T11:01:45.316Z] OPTIONS /api/govtDashboardData?project_id=2
+[2026-09-11T11:01:45.316Z] OPTIONS /api/govtplots/govtPlotList?project_id=2&type=2&page=1&limit=500
+[2026-09-11T11:01:45.318Z] GET /api/govtDashboardData?project_id=2
+[2026-09-11T11:01:45.321Z] GET /api/govtplots/govtPlotList?project_id=2&type=2&page=1&limit=500
+[2026-09-11T11:01:49.155Z] OPTIONS /api/govtkhata/govtKhataList?project_id=2&type=2&page=1&limit=500
+[2026-09-11T11:01:49.156Z] OPTIONS /api/govtkhata/govtKhataList?project_id=2&type=2&page=1&limit=500
+[2026-09-11T11:01:49.157Z] GET /api/govtkhata/govtKhataList?project_id=2&type=2&page=1&limit=500
+[2026-09-11T11:01:49.169Z] GET /api/govtkhata/govtKhataList?project_id=2&type=2&page=1&limit=500
+[2026-09-11T11:01:51.529Z] OPTIONS /api/govtkhata/getGovtMapFiles/8
+[2026-09-11T11:01:51.530Z] OPTIONS /api/govtkhata/getGovtMapFiles/8
+[2026-09-11T11:01:51.532Z] GET /api/govtkhata/getGovtMapFiles/8
+[2026-09-11T11:01:51.535Z] GET /api/govtkhata/getGovtMapFiles/8
+[2026-09-11T11:01:52.704Z] OPTIONS /maps/proxy/188Uy8wxSbFO0nFqWZ2UMmJixJ5zXJ4-C
+[2026-09-11T11:01:52.705Z] OPTIONS /maps/proxy/188Uy8wxSbFO0nFqWZ2UMmJixJ5zXJ4-C
+[2026-09-15T05:48:24.172Z] Server running on http://localhost:5000
+[2026-09-15T05:49:55.270Z] OPTIONS /api/project/projectList
+[2026-09-15T05:49:55.274Z] OPTIONS /api/village/villageList
+[2026-09-15T05:49:55.276Z] OPTIONS /api/village/villageList
+[2026-09-15T05:49:55.275Z] OPTIONS /api/project/projectList
+[2026-09-15T05:49:55.277Z] GET /api/project/projectList
+[2026-09-15T05:49:55.289Z] GET /api/village/villageList
+[2026-09-15T05:49:55.542Z] GET /api/village/villageList
+[2026-09-15T05:49:55.544Z] GET /api/project/projectList
+[2026-09-15T05:50:00.710Z] OPTIONS /api/village/villageList?project_id=1&type=1
+[2026-09-15T05:50:00.712Z] OPTIONS /api/khata/khataList?page=1&limit=500&project_id=1&village_id=&type=1
+[2026-09-15T05:50:00.713Z] GET /api/village/villageList?project_id=1&type=1
+[2026-09-15T05:50:00.715Z] GET /api/khata/khataList?page=1&limit=500&project_id=1&village_id=&type=1
+[2026-09-15T05:50:02.882Z] OPTIONS /api/khata/getMapFiles/1
+[2026-09-15T05:50:02.883Z] OPTIONS /api/khata/getMapFiles/1
+[2026-09-15T05:50:02.883Z] GET /api/khata/getMapFiles/1
+[2026-09-15T05:50:02.889Z] GET /api/khata/getMapFiles/1
+[2026-09-15T05:52:44.699Z] Server running on http://localhost:5000
+[2026-09-15T05:53:04.475Z] Server running on http://localhost:5000
+[2026-09-15T05:53:17.637Z] Server running on http://localhost:5000
+[2026-09-15T05:53:40.788Z] Server running on http://localhost:5000
+[2026-09-15T05:54:20.795Z] Server running on http://localhost:5000
+[2026-09-15T05:54:22.807Z] Server running on http://localhost:5000
+[2026-09-15T05:54:28.706Z] Server running on http://localhost:5000
+[2026-09-15T05:54:44.617Z] Server running on http://localhost:5000
+[2026-09-15T05:54:58.588Z] Server running on http://localhost:5000
+[2026-09-15T05:55:30.052Z] Server running on http://localhost:5000
+[2026-09-15T05:55:57.808Z] Server running on http://localhost:5000
+[2026-09-15T05:59:56.707Z] Server running on http://localhost:5000
+[2026-09-15T06:00:03.199Z] Server running on http://localhost:5000
+[2026-09-15T06:00:06.079Z] Server running on http://localhost:5000
+[2026-09-15T06:00:08.365Z] Server running on http://localhost:5000
+[2026-09-15T06:00:12.257Z] Server running on http://localhost:5000
+[2026-09-15T06:00:17.094Z] Server running on http://localhost:5000
+[2026-09-15T06:00:36.363Z] Server running on http://localhost:5000
+[2026-09-15T06:00:41.174Z] Server running on http://localhost:5000
+[2026-09-15T06:01:08.967Z] Server running on http://localhost:5000
+[2026-09-15T06:01:13.872Z] Server running on http://localhost:5000
+[2026-09-15T06:01:23.084Z] Server running on http://localhost:5000
+[2026-09-15T06:01:27.605Z] Server running on http://localhost:5000
+[2026-09-15T06:01:45.297Z] Server running on http://localhost:5000
+[2026-09-15T06:02:03.452Z] Server running on http://localhost:5000
+[2026-09-15T06:02:19.428Z] Server running on http://localhost:5000
+[2026-09-15T06:02:30.829Z] Server running on http://localhost:5000
+[2026-09-15T06:08:10.229Z] Server running on http://localhost:5000
+[2026-09-15T06:08:12.834Z] Server running on http://localhost:5000
+[2026-09-15T06:08:18.426Z] Server running on http://localhost:5000
+[2026-09-15T06:08:21.494Z] Server running on http://localhost:5000
+[2026-09-15T06:09:11.616Z] Server running on http://localhost:5000
+[2026-09-15T06:09:41.460Z] Server running on http://localhost:5000
+[2026-09-15T06:09:43.499Z] Server running on http://localhost:5000
+[2026-09-15T06:10:22.874Z] Server running on http://localhost:5000
+[2026-09-15T06:10:30.806Z] Server running on http://localhost:5000
+[2026-09-15T06:10:40.533Z] Server running on http://localhost:5000
+[2026-09-15T06:10:53.476Z] Server running on http://localhost:5000
+[2026-09-15T06:10:56.477Z] Server running on http://localhost:5000
+[2026-09-15T06:10:59.151Z] Server running on http://localhost:5000
+[2026-09-15T06:11:02.160Z] Server running on http://localhost:5000
+[2026-09-15T06:11:04.094Z] Server running on http://localhost:5000
+[2026-09-15T06:11:06.403Z] Server running on http://localhost:5000
+[2026-09-15T06:11:13.634Z] Server running on http://localhost:5000
+[2026-09-15T06:11:39.792Z] Server running on http://localhost:5000
+[2026-09-15T06:19:00.799Z] GET /api/maps/deleteMapDocument/1
+[2026-09-15T06:19:10.755Z] OPTIONS /api/auth/login
+[2026-09-15T06:19:10.935Z] POST /api/auth/login
+[2026-09-15T06:19:11.064Z] OPTIONS /api/project/projectList
+[2026-09-15T06:19:11.066Z] OPTIONS /api/village/villageList
+[2026-09-15T06:19:11.067Z] GET /api/project/projectList
+[2026-09-15T06:19:11.070Z] GET /api/village/villageList
+[2026-09-15T06:19:11.074Z] GET /uploads/profile_pics/hero-bg.png
+[2026-09-15T06:19:11.151Z] GET /uploads/profile_pics/hero-bg.png
+[2026-09-15T06:19:11.158Z] OPTIONS /api/getDashboardData
+[2026-09-15T06:19:11.159Z] OPTIONS /api/getDashboardData
+[2026-09-15T06:19:11.161Z] GET /api/getDashboardData
+[2026-09-15T06:19:11.189Z] GET /api/getDashboardData
+[2026-09-15T06:19:46.931Z] GET /api/maps/deleteMapDocument/1
+[2026-09-15T06:19:53.008Z] DELETE /api/maps/deleteMapDocument/1
+[2026-09-15T06:20:32.287Z] DELETE /api/maps/deleteMapDocument/11
+[2026-09-15T06:20:43.994Z] DELETE /maps/deleteMapDocument/11
+[2026-09-15T06:22:19.637Z] DELETE /maps/deleteMapDocument/11
+[2026-09-15T06:22:23.359Z] DELETE /maps/deleteMapDocument/10
+[2026-09-15T06:24:07.297Z] DELETE /maps/deleteMapDocument/13
+[2026-09-15T06:24:11.588Z] DELETE /maps/deleteMapDocument/14
+[2026-09-15T06:25:33.923Z] OPTIONS /api/village/villageList?project_id=1&type=1
+[2026-09-15T06:25:33.924Z] OPTIONS /api/khata/khataList?page=1&limit=500&project_id=1&village_id=&type=1
+[2026-09-15T06:25:33.927Z] GET /api/village/villageList?project_id=1&type=1
+[2026-09-15T06:25:33.929Z] GET /api/khata/khataList?page=1&limit=500&project_id=1&village_id=&type=1
+[2026-09-15T06:25:39.173Z] OPTIONS /api/khata/getMapFiles/1
+[2026-09-15T06:25:39.173Z] OPTIONS /api/khata/getMapFiles/1
+[2026-09-15T06:25:39.175Z] GET /api/khata/getMapFiles/1
+[2026-09-15T06:25:39.179Z] GET /api/khata/getMapFiles/1
+[2026-09-15T06:25:42.757Z] OPTIONS /api/project/projectList
+[2026-09-15T06:25:42.758Z] OPTIONS /api/village/villageList
+[2026-09-15T06:25:42.759Z] OPTIONS /api/project/projectList
+[2026-09-15T06:25:42.760Z] OPTIONS /api/village/villageList
+[2026-09-15T06:25:42.761Z] GET /api/project/projectList
+[2026-09-15T06:25:42.763Z] GET /api/village/villageList
+[2026-09-15T06:25:42.769Z] GET /api/project/projectList
+[2026-09-15T06:25:42.771Z] GET /api/village/villageList
+[2026-09-15T06:25:42.808Z] GET /uploads/profile_pics/hero-bg.png
+[2026-09-15T06:25:42.870Z] GET /uploads/profile_pics/hero-bg.png
+[2026-09-15T06:25:43.071Z] GET /uploads/profile_pics/hero-bg.png
+[2026-09-15T06:25:45.138Z] OPTIONS /api/village/villageList?project_id=1&type=1
+[2026-09-15T06:25:45.139Z] OPTIONS /api/khata/khataList?page=1&limit=500&project_id=1&village_id=&type=1
+[2026-09-15T06:25:45.140Z] GET /api/village/villageList?project_id=1&type=1
+[2026-09-15T06:25:45.142Z] GET /api/khata/khataList?page=1&limit=500&project_id=1&village_id=&type=1
+[2026-09-15T06:25:47.108Z] OPTIONS /api/khata/getMapFiles/1
+[2026-09-15T06:25:47.109Z] OPTIONS /api/khata/getMapFiles/1
+[2026-09-15T06:25:47.110Z] GET /api/khata/getMapFiles/1
+[2026-09-15T06:25:47.114Z] GET /api/khata/getMapFiles/1
+[2026-09-15T06:26:07.117Z] OPTIONS /api/khata/getMapFiles/1
+[2026-09-15T06:26:07.118Z] OPTIONS /api/khata/getMapFiles/1
+[2026-09-15T06:26:07.119Z] GET /api/khata/getMapFiles/1
+[2026-09-15T06:26:07.123Z] GET /api/khata/getMapFiles/1
+[2026-09-15T06:28:59.085Z] OPTIONS /api/khata/getMapFiles/1
+[2026-09-15T06:28:59.086Z] GET /api/khata/getMapFiles/1
+[2026-09-15T06:31:35.351Z] OPTIONS /maps/deleteMapDocument/8
+[2026-09-15T06:31:35.353Z] DELETE /maps/deleteMapDocument/8
+[2026-09-15T06:31:36.459Z] OPTIONS /api/khata/getMapFiles/1
+[2026-09-15T06:31:36.462Z] GET /api/khata/getMapFiles/1
+[2026-09-15T06:36:13.587Z] OPTIONS /api/khata/getMapFiles/1
+[2026-09-15T06:36:13.588Z] OPTIONS /api/khata/getMapFiles/1
+[2026-09-15T06:36:13.589Z] GET /api/khata/getMapFiles/1
+[2026-09-15T06:36:13.593Z] GET /api/khata/getMapFiles/1
+[2026-09-15T06:36:16.427Z] OPTIONS /maps/deleteMapDocument/12
+[2026-09-15T06:36:16.430Z] DELETE /maps/deleteMapDocument/12
+[2026-09-15T06:36:17.445Z] GET /api/khata/getMapFiles/1
+[2026-09-15T06:36:23.240Z] OPTIONS /api/khata/uploadMapDocument
+[2026-09-15T06:36:23.244Z] POST /api/khata/uploadMapDocument
+[2026-09-15T06:36:28.362Z] OPTIONS /api/khata/getMapFiles/1
+[2026-09-15T06:36:28.364Z] OPTIONS /api/khata/khataList?page=1&limit=500&project_id=1&village_id=&type=1
+[2026-09-15T06:36:28.364Z] GET /api/khata/getMapFiles/1
+[2026-09-15T06:36:28.366Z] GET /api/khata/khataList?page=1&limit=500&project_id=1&village_id=&type=1
+[2026-09-15T06:36:28.421Z] GET /api/khata/getMapFiles/1
+[2026-09-15T06:36:28.425Z] GET /api/khata/getMapFiles/1
+[2026-09-15T06:36:33.343Z] OPTIONS /api/govtkhata/govtKhataList?project_id=1&type=2&page=1&limit=500
+[2026-09-15T06:36:33.343Z] OPTIONS /api/govtkhata/govtKhataList?project_id=1&type=2&page=1&limit=500
+[2026-09-15T06:36:33.345Z] GET /api/govtkhata/govtKhataList?project_id=1&type=2&page=1&limit=500
+[2026-09-15T06:36:33.360Z] GET /api/govtkhata/govtKhataList?project_id=1&type=2&page=1&limit=500
+[2026-09-15T06:36:35.631Z] OPTIONS /api/govtkhata/govtKhataList?project_id=2&type=2&page=1&limit=500
+[2026-09-15T06:36:35.634Z] GET /api/govtkhata/govtKhataList?project_id=2&type=2&page=1&limit=500
+[2026-09-15T06:36:38.634Z] OPTIONS /api/govtkhata/getGovtMapFiles/8
+[2026-09-15T06:36:38.635Z] OPTIONS /api/govtkhata/getGovtMapFiles/8
+[2026-09-15T06:36:38.637Z] GET /api/govtkhata/getGovtMapFiles/8
+[2026-09-15T06:36:38.643Z] GET /api/govtkhata/getGovtMapFiles/8
+[2026-09-15T06:36:43.269Z] OPTIONS /api/govtkhata/uploadMapDocument
+[2026-09-15T06:36:43.273Z] POST /api/govtkhata/uploadMapDocument
+[2026-09-15T06:36:47.833Z] OPTIONS /api/govtkhata/getGovtMapFiles/8
+[2026-09-15T06:36:47.834Z] OPTIONS /api/govtkhata/govtKhataList?project_id=2&type=2&page=1&limit=500
+[2026-09-15T06:36:47.835Z] GET /api/govtkhata/getGovtMapFiles/8
+[2026-09-15T06:36:47.837Z] GET /api/govtkhata/govtKhataList?project_id=2&type=2&page=1&limit=500
+[2026-09-15T06:36:53.465Z] OPTIONS /api/project/projectList
+[2026-09-15T06:36:53.466Z] OPTIONS /api/village/villageList
+[2026-09-15T06:36:53.467Z] OPTIONS /api/project/projectList
+[2026-09-15T06:36:53.468Z] OPTIONS /api/village/villageList
+[2026-09-15T06:36:53.469Z] GET /api/project/projectList
+[2026-09-15T06:36:53.472Z] GET /api/village/villageList
+[2026-09-15T06:36:53.477Z] GET /api/project/projectList
+[2026-09-15T06:36:53.479Z] GET /api/village/villageList
+[2026-09-15T06:36:53.522Z] GET /uploads/profile_pics/hero-bg.png
+[2026-09-15T06:36:53.576Z] GET /uploads/profile_pics/hero-bg.png
+[2026-09-15T06:36:53.773Z] GET /uploads/profile_pics/hero-bg.png
+[2026-09-15T06:36:56.750Z] OPTIONS /api/govtkhata/govtKhataList?project_id=2&type=2&page=1&limit=500
+[2026-09-15T06:36:56.752Z] GET /api/govtkhata/govtKhataList?project_id=2&type=2&page=1&limit=500
+[2026-09-15T06:36:58.622Z] OPTIONS /api/govtkhata/getGovtMapFiles/8
+[2026-09-15T06:36:58.623Z] OPTIONS /api/govtkhata/getGovtMapFiles/8
+[2026-09-15T06:36:58.624Z] GET /api/govtkhata/getGovtMapFiles/8
+[2026-09-15T06:36:58.627Z] GET /api/govtkhata/getGovtMapFiles/8
+[2026-09-15T06:37:00.694Z] OPTIONS /api/project/projectList
+[2026-09-15T06:37:00.694Z] OPTIONS /api/village/villageList
+[2026-09-15T06:37:00.695Z] OPTIONS /api/project/projectList
+[2026-09-15T06:37:00.696Z] OPTIONS /api/village/villageList
+[2026-09-15T06:37:00.698Z] GET /api/project/projectList
+[2026-09-15T06:37:00.700Z] GET /api/village/villageList
+[2026-09-15T06:37:00.703Z] GET /api/project/projectList
+[2026-09-15T06:37:00.706Z] GET /api/village/villageList
+[2026-09-15T06:37:00.732Z] GET /uploads/profile_pics/hero-bg.png
+[2026-09-15T06:37:00.768Z] GET /uploads/profile_pics/hero-bg.png
+[2026-09-15T06:37:00.998Z] GET /uploads/profile_pics/hero-bg.png
+[2026-09-15T06:37:04.258Z] OPTIONS /api/govtkhata/govtKhataList?project_id=2&type=2&page=1&limit=500
+[2026-09-15T06:37:04.260Z] GET /api/govtkhata/govtKhataList?project_id=2&type=2&page=1&limit=500
+[2026-09-15T06:37:09.163Z] OPTIONS /api/govtkhata/getGovtMapFiles/8
+[2026-09-15T06:37:09.163Z] OPTIONS /api/govtkhata/getGovtMapFiles/8
+[2026-09-15T06:37:09.165Z] GET /api/govtkhata/getGovtMapFiles/8
+[2026-09-15T06:37:09.169Z] GET /api/govtkhata/getGovtMapFiles/8
+[2026-09-15T06:37:13.307Z] OPTIONS /api/project/projectList
+[2026-09-15T06:37:13.308Z] OPTIONS /api/village/villageList
+[2026-09-15T06:37:13.309Z] OPTIONS /api/project/projectList
+[2026-09-15T06:37:13.309Z] OPTIONS /api/village/villageList
+[2026-09-15T06:37:13.310Z] GET /api/project/projectList
+[2026-09-15T06:37:13.312Z] GET /api/village/villageList
+[2026-09-15T06:37:13.316Z] GET /api/project/projectList
+[2026-09-15T06:37:13.319Z] GET /api/village/villageList
+[2026-09-15T06:37:13.346Z] GET /uploads/profile_pics/hero-bg.png
+[2026-09-15T06:37:13.380Z] GET /uploads/profile_pics/hero-bg.png
+[2026-09-15T06:37:13.612Z] GET /uploads/profile_pics/hero-bg.png
+[2026-09-15T06:37:33.131Z] OPTIONS /api/govtkhata/govtKhataList?project_id=2&type=2&page=1&limit=500
+[2026-09-15T06:37:33.133Z] GET /api/govtkhata/govtKhataList?project_id=2&type=2&page=1&limit=500
+[2026-09-15T06:37:42.655Z] OPTIONS /api/govtkhata/getGovtMapFiles/8
+[2026-09-15T06:37:42.656Z] OPTIONS /api/govtkhata/getGovtMapFiles/8
+[2026-09-15T06:37:42.658Z] GET /api/govtkhata/getGovtMapFiles/8
+[2026-09-15T06:37:42.661Z] GET /api/govtkhata/getGovtMapFiles/8
+[2026-09-15T06:38:12.122Z] OPTIONS /api/project/projectList
+[2026-09-15T06:38:12.124Z] OPTIONS /api/village/villageList
+[2026-09-15T06:38:12.125Z] OPTIONS /api/project/projectList
+[2026-09-15T06:38:12.126Z] OPTIONS /api/village/villageList
+[2026-09-15T06:38:12.127Z] GET /api/project/projectList
+[2026-09-15T06:38:12.129Z] GET /api/village/villageList
+[2026-09-15T06:38:12.133Z] GET /api/project/projectList
+[2026-09-15T06:38:12.135Z] GET /api/village/villageList
+[2026-09-15T06:38:12.139Z] GET /uploads/profile_pics/hero-bg.png
+[2026-09-15T06:38:12.245Z] GET /uploads/profile_pics/hero-bg.png
+[2026-09-15T06:38:12.309Z] GET /uploads/profile_pics/hero-bg.png
+[2026-09-15T06:38:12.434Z] GET /uploads/profile_pics/hero-bg.png
+[2026-09-15T06:38:12.437Z] OPTIONS /api/village/villageList?project_id=2&type=1
+[2026-09-15T06:38:12.439Z] OPTIONS /api/khata/khataList?page=1&limit=500&project_id=2&village_id=&type=1
+[2026-09-15T06:38:12.441Z] GET /api/village/villageList?project_id=2&type=1
+[2026-09-15T06:38:12.444Z] GET /api/khata/khataList?page=1&limit=500&project_id=2&village_id=&type=1
+[2026-09-15T06:38:12.448Z] GET /api/village/villageList?project_id=2&type=1
+[2026-09-15T06:38:12.451Z] GET /api/khata/khataList?page=1&limit=500&project_id=2&village_id=&type=1
+[2026-09-15T06:38:24.450Z] OPTIONS /api/govtkhata/govtKhataList?project_id=2&type=2&page=1&limit=500
+[2026-09-15T06:38:24.451Z] OPTIONS /api/govtkhata/govtKhataList?project_id=2&type=2&page=1&limit=500
+[2026-09-15T06:38:24.453Z] GET /api/govtkhata/govtKhataList?project_id=2&type=2&page=1&limit=500
+[2026-09-15T06:38:24.465Z] GET /api/govtkhata/govtKhataList?project_id=2&type=2&page=1&limit=500
+[2026-09-15T06:38:26.954Z] OPTIONS /api/govtkhata/getGovtMapFiles/8
+[2026-09-15T06:38:26.955Z] OPTIONS /api/govtkhata/getGovtMapFiles/8
+[2026-09-15T06:38:26.957Z] GET /api/govtkhata/getGovtMapFiles/8
+[2026-09-15T06:38:26.961Z] GET /api/govtkhata/getGovtMapFiles/8
+[2026-09-15T06:38:32.591Z] OPTIONS /maps/deleteMapDocument/16
+[2026-09-15T06:38:32.593Z] DELETE /maps/deleteMapDocument/16
+[2026-09-15T06:38:33.509Z] OPTIONS /api/govtkhata/getGovtMapFiles/8
+[2026-09-15T06:38:33.510Z] GET /api/govtkhata/getGovtMapFiles/8
+[2026-09-15T06:38:55.317Z] GET /uploads/profile_pics/hero-bg.png
+[2026-09-15T06:38:55.381Z] GET /uploads/profile_pics/hero-bg.png
+[2026-09-15T06:38:56.061Z] GET /uploads/profile_pics/hero-bg.png
+[2026-09-15T06:43:17.279Z] OPTIONS /api/auth/login
+[2026-09-15T06:43:17.282Z] POST /api/auth/login
+[2026-09-15T06:43:17.374Z] OPTIONS /api/project/projectList
+[2026-09-15T06:43:17.375Z] OPTIONS /api/village/villageList
+[2026-09-15T06:43:17.379Z] GET /api/village/villageList
+[2026-09-15T06:43:17.377Z] GET /api/project/projectList
+[2026-09-15T06:43:17.561Z] OPTIONS /api/getDashboardData
+[2026-09-15T06:43:17.563Z] GET /api/getDashboardData
+[2026-09-15T06:43:20.181Z] OPTIONS /api/user/getProfile
+[2026-09-15T06:43:20.183Z] GET /api/user/getProfile
+[2026-09-15T06:43:33.455Z] OPTIONS /api/getDashboardData
+[2026-09-15T06:43:33.457Z] GET /api/getDashboardData
+[2026-09-15T06:43:36.690Z] OPTIONS /api/user/getProfile
+[2026-09-15T06:43:36.692Z] GET /api/user/getProfile
+[2026-09-15T06:43:39.440Z] OPTIONS /api/project/projectList
+[2026-09-15T06:43:39.442Z] GET /api/project/projectList
+[2026-09-15T06:43:43.361Z] GET /api/project/projectList
+[2026-09-15T06:43:43.362Z] OPTIONS /api/village/villageList
+[2026-09-15T06:43:43.364Z] GET /api/village/villageList
+[2026-09-15T06:43:43.669Z] GET /api/project/projectList
+[2026-09-15T06:43:44.431Z] GET /api/project/projectList
+[2026-09-15T06:43:44.432Z] GET /api/village/villageList
+[2026-09-15T06:43:44.735Z] OPTIONS /api/project/projectList
+[2026-09-15T06:43:44.737Z] GET /api/project/projectList
+[2026-09-15T07:23:03.202Z] Server running on http://localhost:5000
+[2026-09-15T07:23:11.192Z] POST /maps/deleteMapDocument/14
+[2026-09-15T07:32:17.759Z] POST /maps/deleteMapDocument/29
+[2026-09-15T07:32:19.876Z] POST /maps/deleteMapDocument/29
+[2026-09-15T07:32:21.055Z] POST /maps/deleteMapDocument/29
+[2026-09-15T07:32:21.478Z] POST /maps/deleteMapDocument/29
+[2026-09-15T07:32:50.069Z] POST /maps/deleteMapDocument/15
+[2026-09-15T07:40:45.168Z] Server running on http://localhost:5000
+[2026-09-15T07:41:07.843Z] Server running on http://localhost:5000
+[2026-09-15T07:49:01.777Z] Server running on http://localhost:5000
