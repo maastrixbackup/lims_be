@@ -38,6 +38,7 @@ const govtkhataRoutes = require("./routes/govtKhataRoutes");
 const dashboardRoutes = require("./routes/dashboardRoutes");
 const reportRoutes = require("./routes/reportRoutes");
 const kmzRoutes = require("./routes/kmzMapRoutes");
+const masterRoutes = require("./routes/masterRoutes");
 
 const forestLandRoutes = require("./routes/forestLandRoutes");
 
@@ -88,6 +89,7 @@ app.use("/api/khata", authMiddleware, khataRoutes);
 app.use("/api/govtkhata", authMiddleware, govtkhataRoutes);
 app.use("/api", authMiddleware, dashboardRoutes);
 app.use("/api/report", authMiddleware, reportRoutes);
+app.use("/api/master", authMiddleware, masterRoutes);
 
 app.use("/api/forestland", authMiddleware, forestLandRoutes);
 app.get("/api/test", (req, res) => {
