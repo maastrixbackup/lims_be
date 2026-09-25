@@ -1,7 +1,10 @@
 const express = require('express');
-const { deleteProjectData } = require('../controllers/masterController');
+const { deletePrivateProjectData, throwError, test, deleteForestProject } = require('../controllers/masterController');
 const router = express.Router();
 
-router.delete('/deleteProject/:id', deleteProjectData);
+router.get("/test", test);
+router.get("/error/:type", throwError);
+router.delete('/deletePrivateProject/:id', deletePrivateProjectData);
+router.delete('/deleteForestProject/:id', deleteForestProject);
 
 module.exports = router;
