@@ -85,14 +85,10 @@ const ForestLand = {
     const [rows] = await db.query(sql, [filename]);
     return rows[0] || null;
   },
-async bulkInsertFromExcel(
-  rows,
-  project_master_id,
-  schedule_type,
-) {
-  if (!rows || rows.length === 0) return 0;
+  async bulkInsertFromExcel(rows, project_master_id, schedule_type) {
+    if (!rows || rows.length === 0) return 0;
 
-  const sql = `
+    const sql = `
     INSERT INTO forest_land_schedule
     (
       project_master_id,
@@ -136,36 +132,36 @@ async bulkInsertFromExcel(
       is_deleted = 0
   `;
 
-  const values = rows.map((data) => [
-    project_master_id,
-    schedule_type,
-    emptyToNull(data.district),
-    emptyToNull(data.ri_circle),
-    emptyToNull(data.tahasil),
-    emptyToNull(data.village),
-    emptyToNull(data.forest_division),
-    emptyToNull(data.forest_range),
-    emptyToNull(data.khata_no),
-    emptyToNull(data.plot_no),
-    emptyToNull(data.kisam),
-    emptyToNull(data.forest_category_id),
-    emptyToNull(data.ownership),
-    emptyToNull(data.fra_allotted),
-    emptyToNull(data.total_area_ha),
-    emptyToNull(data.proposed_acquired_area_ha),
-    emptyToNull(data.digital_area_ha),
-    emptyToNull(data.ca_area_ha),
-    emptyToNull(data.patch_name),
-    emptyToNull(data.remarks),
-  ]);
+    const values = rows.map((data) => [
+      project_master_id,
+      schedule_type,
+      emptyToNull(data.district),
+      emptyToNull(data.ri_circle),
+      emptyToNull(data.tahasil),
+      emptyToNull(data.village),
+      emptyToNull(data.forest_division),
+      emptyToNull(data.forest_range),
+      emptyToNull(data.khata_no),
+      emptyToNull(data.plot_no),
+      emptyToNull(data.kisam),
+      emptyToNull(data.forest_category_id),
+      emptyToNull(data.ownership),
+      emptyToNull(data.fra_allotted),
+      emptyToNull(data.total_area_ha),
+      emptyToNull(data.proposed_acquired_area_ha),
+      emptyToNull(data.digital_area_ha),
+      emptyToNull(data.ca_area_ha),
+      emptyToNull(data.patch_name),
+      emptyToNull(data.remarks),
+    ]);
 
-  const [result] = await db.query(sql, [values]);
+    const [result] = await db.query(sql, [values]);
 
-  return result.affectedRows || 0;
-},
+    return result.affectedRows || 0;
+  },
 
-async findById(id) {
-  const sql = `
+  async findById(id) {
+    const sql = `
     SELECT *
     FROM forest_land_schedule
     WHERE id = ?
@@ -173,32 +169,27 @@ async findById(id) {
     LIMIT 1
   `;
 
-  const [rows] = await db.query(sql, [id]);
+    const [rows] = await db.query(sql, [id]);
 
-  return rows[0] || null;
-},
+    return rows[0] || null;
+  },
 
-async list({
-  project_master_id,
-  schedule_type,
-  limit,
-  offset,
-}) {
-  let whereClause = `
+  async list({ project_master_id, schedule_type, limit, offset }) {
+    let whereClause = `
     WHERE project_master_id = ?
       AND is_deleted = 0
   `;
 
-  const params = [project_master_id];
+    const params = [project_master_id];
 
-  if (schedule_type) {
-    whereClause += `
+    if (schedule_type) {
+      whereClause += `
       AND schedule_type = ?
     `;
-    params.push(schedule_type);
-  }
+      params.push(schedule_type);
+    }
 
-  const listSql = `
+    const listSql = `
     SELECT *
     FROM forest_land_schedule
     ${whereClause}
@@ -206,27 +197,21 @@ async list({
     LIMIT ? OFFSET ?
   `;
 
-  const countSql = `
+    const countSql = `
     SELECT COUNT(*) AS total
     FROM forest_land_schedule
     ${whereClause}
   `;
 
-  const [rows] = await db.query(
-    listSql,
-    [...params, limit, offset],
-  );
+    const [rows] = await db.query(listSql, [...params, limit, offset]);
 
-  const [[count]] = await db.query(
-    countSql,
-    params,
-  );
+    const [[count]] = await db.query(countSql, params);
 
-  return {
-    data: rows,
-    total: count.total,
-  };
-},
+    return {
+      data: rows,
+      total: count.total,
+    };
+  },
 
   async update(id, data) {
     const sql = `
@@ -289,7 +274,7 @@ async list({
     // Fetch updated row
     const [rows] = await db.query(
       `SELECT * FROM forest_land_schedule WHERE id = ?`,
-      [id]
+      [id],
     );
 
     return rows[0];
@@ -389,7 +374,7 @@ async list({
 
     const [rows] = await db.query(
       `SELECT * FROM forest_project_master WHERE id = ?`,
-      [result.insertId]
+      [result.insertId],
     );
 
     return rows[0];
@@ -426,7 +411,6 @@ async list({
   //   ]);
   // },
 
-
   async createEds(data) {
     const sql = `
     INSERT INTO forest_eds_master (
@@ -444,21 +428,33 @@ async list({
     VALUES (?,?,?,?,?,?,?,?,?,?)
   `;
 
+    // Helper to safely parse numeric fields, retaining 0
+    const parseNum = (val) => {
+      if (val === "" || val === null || val === undefined) return null;
+      const parsed = parseInt(val, 10);
+      return isNaN(parsed) ? null : parsed;
+    };
+
+    // Helper to convert empty string dates or text to NULL
+    const parseValue = (val) => {
+      if (val === "" || val === undefined) return null;
+      return val;
+    };
+
     const values = [
-      // 1,
       data.project_master_id,
-      data.eds_ref_no,
-      data.issuing_authority,
-      data.eds_issue_date,
-      data.eds_due_date,
-      data.total_issues,
-      data.issues_closed,
-      data.issues_pending,
-      data.eds_reply_document,
-      data.eds_status,
+      parseValue(data.eds_ref_no),
+      parseValue(data.issuing_authority),
+      parseValue(data.eds_issue_date),
+      parseValue(data.eds_due_date),
+      parseNum(data.total_issues),
+      parseNum(data.issues_closed),
+      parseNum(data.issues_pending),
+      parseValue(data.eds_reply_document),
+      parseValue(data.eds_status),
     ];
 
-    console.log("EDS INSERT VALUES:", values); // 🔥 debug
+    console.log("EDS INSERT VALUES:", values);
 
     await db.query(sql, values);
   },
@@ -466,11 +462,10 @@ async list({
   async getProjectByProjectId(projectId) {
     const [rows] = await db.query(
       `SELECT * FROM forest_project_master WHERE project_id = ?`,
-      [projectId]
+      [projectId],
     );
     return rows[0] || null;
   },
-
 
   async updateForestProject(id, data) {
     const sql = `
@@ -520,11 +515,10 @@ async list({
     ]);
   },
 
-
   async deleteEdsByMasterId(masterId) {
     await db.query(
       `DELETE FROM forest_eds_master WHERE project_master_id = ?`,
-      [masterId]
+      [masterId],
     );
   },
 
@@ -592,7 +586,7 @@ async list({
       FROM forest_project_master
       WHERE id = ? AND is_deleted = 0
       `,
-      [id]
+      [id],
     );
 
     return rows.length ? rows[0] : null;
@@ -651,7 +645,7 @@ async list({
 
     const [rows] = await db.query(
       `SELECT * FROM forest_project_master WHERE id = ?`,
-      [id]
+      [id],
     );
 
     return rows[0];
@@ -660,7 +654,7 @@ async list({
   async getProjectWithEds(projectId) {
     const [masterRows] = await db.query(
       `SELECT * FROM forest_project_master WHERE project_id = ? AND is_deleted = 0`,
-      [projectId]
+      [projectId],
     );
 
     if (!masterRows.length) return null;
@@ -671,7 +665,7 @@ async list({
       `SELECT * FROM forest_eds_master 
      WHERE project_master_id = ? AND is_deleted = 0
      ORDER BY id ASC`,
-      [master.id]
+      [master.id],
     );
 
     return {
@@ -692,15 +686,13 @@ async list({
   },
 
   async createStage0(payload) {
-    const [result] = await db.query(
-      "INSERT INTO forest_stage_0 SET ?",
-      [payload]
-    );
+    const [result] = await db.query("INSERT INTO forest_stage_0 SET ?", [
+      payload,
+    ]);
 
-    const [rows] = await db.query(
-      "SELECT * FROM forest_stage_0 WHERE id = ?",
-      [result.insertId]
-    );
+    const [rows] = await db.query("SELECT * FROM forest_stage_0 WHERE id = ?", [
+      result.insertId,
+    ]);
     return rows[0];
   },
 
@@ -714,7 +706,7 @@ async list({
 
     const [rows] = await db.query(
       `SELECT * FROM forest_stage_0 WHERE forest_project_id = ? AND is_deleted = 0`,
-      [forestProjectId]
+      [forestProjectId],
     );
 
     return rows[0] || null;
@@ -724,13 +716,13 @@ async list({
     const [existing] = await db.query(
       `SELECT id FROM forest_stage_1 
        WHERE forest_project_id = ? AND is_deleted = 0`,
-      [data.forest_project_id]
+      [data.forest_project_id],
     );
 
     if (existing.length > 0) {
       await db.query(
         `UPDATE forest_stage_1 SET ? WHERE forest_project_id = ?`,
-        [data, data.forest_project_id]
+        [data, data.forest_project_id],
       );
     } else {
       await db.query(`INSERT INTO forest_stage_1 SET ?`, [data]);
@@ -738,7 +730,7 @@ async list({
 
     const [rows] = await db.query(
       `SELECT * FROM forest_stage_1 WHERE forest_project_id = ?`,
-      [data.forest_project_id]
+      [data.forest_project_id],
     );
 
     return rows[0];
@@ -792,10 +784,9 @@ async list({
 
     const [result] = await db.query(sql, values);
 
-    const [rows] = await db.query(
-      `SELECT * FROM forest_stage_2 WHERE id = ?`,
-      [result.insertId]
-    );
+    const [rows] = await db.query(`SELECT * FROM forest_stage_2 WHERE id = ?`, [
+      result.insertId,
+    ]);
 
     return rows[0];
   },
@@ -810,7 +801,7 @@ async list({
 
     const [rows] = await db.query(
       `SELECT * FROM forest_stage_2 WHERE forest_project_id = ? AND is_deleted = 0`,
-      [forestProjectId]
+      [forestProjectId],
     );
 
     return rows[0] || null;
@@ -862,7 +853,7 @@ async list({
 
     const [rows] = await db.query(
       `SELECT * FROM forest_post_clearance WHERE id = ?`,
-      [result.insertId]
+      [result.insertId],
     );
 
     return rows[0];
@@ -878,7 +869,7 @@ async list({
 
     const [rows] = await db.query(
       `SELECT * FROM forest_post_clearance WHERE forest_project_id = ? AND is_deleted = 0`,
-      [forestProjectId]
+      [forestProjectId],
     );
 
     return rows[0] || null;
@@ -887,7 +878,7 @@ async list({
   async getStage0ByProjectId(forestProjectId) {
     const [rows] = await db.query(
       `SELECT * FROM forest_stage_0 WHERE forest_project_id = ? AND is_deleted = 0 LIMIT 1`,
-      [forestProjectId]
+      [forestProjectId],
     );
     return rows[0] || null;
   },
@@ -895,7 +886,7 @@ async list({
   async getStage1ByProjectId(forestProjectId) {
     const [rows] = await db.query(
       `SELECT * FROM forest_stage_1 WHERE forest_project_id = ? AND is_deleted = 0 LIMIT 1`,
-      [forestProjectId]
+      [forestProjectId],
     );
     return rows[0] || null;
   },
@@ -903,7 +894,7 @@ async list({
   async getStage2ByProjectId(forestProjectId) {
     const [rows] = await db.query(
       `SELECT * FROM forest_stage_2 WHERE forest_project_id = ? AND is_deleted = 0 LIMIT 1`,
-      [forestProjectId]
+      [forestProjectId],
     );
     return rows[0] || null;
   },
@@ -911,7 +902,7 @@ async list({
   async getPostClearanceByProjectId(forestProjectId) {
     const [rows] = await db.query(
       `SELECT * FROM forest_post_clearance WHERE forest_project_id = ? AND is_deleted = 0 LIMIT 1`,
-      [forestProjectId]
+      [forestProjectId],
     );
     return rows[0] || null;
   },
@@ -1010,7 +1001,6 @@ async list({
   },
 
   async getDashboardSummary() {
-
     // TOTAL PROJECTS
     const [[totalProjects]] = await db.query(`
     SELECT COUNT(*) AS total
@@ -1140,10 +1130,9 @@ async list({
       npv_payment_pending: 0,
       ca_land_issue_pending: 0,
       fra_compliance_pending: 0,
-      ec_nbwl_pending: 0
+      ec_nbwl_pending: 0,
     };
   },
-
 };
 
 module.exports = ForestLand;

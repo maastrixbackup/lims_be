@@ -463,7 +463,7 @@ const edsFileFilter = (req, file, cb) => {
 const uploadEdsDocuments = multer({
   storage: edsStorage,
   fileFilter: edsFileFilter,
-  limits: { fileSize: 10 * 1024 * 1024 },
+  limits: { fileSize: 15 * 1024 * 1024 },
 });
 const stageZeroStorage = multer.diskStorage({
   destination: (req, file, cb) => {

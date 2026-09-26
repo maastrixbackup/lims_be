@@ -1375,43 +1375,11 @@ const addForestProjectWithEds = async (req, res) => {
 
     const masterId = master.id;
 
-    // Multiple EDS handling
-    // if (edsFlag === 1 && body.eds_list) {
-    //   const edsList =
-    //     typeof body.eds_list === "string"
-    //       ? JSON.parse(body.eds_list)
-    //       : body.eds_list;
-
-    //   for (let i = 0; i < edsList.length; i++) {
-    //     const eds = edsList[i];
-
-    //     //find matching file
-    //     const fileField = `eds_reply_document_${i}`;
-    //     const fileObj = files.find(f => f.fieldname === fileField);
-
-    //     await ForestLand.createEds({
-    //       project_master_id: masterId,
-    //       eds_ref_no: eds.eds_ref_no,
-    //       issuing_authority: eds.issuing_authority,
-    //       eds_issue_date: eds.eds_issue_date,
-    //       eds_due_date: eds.eds_due_date,
-    //       total_issues: eds.total_issues,
-    //       issues_closed: eds.issues_closed,
-    //       issues_pending: eds.issues_pending,
-    //       eds_reply_document: fileObj?.filename || null,
-    //       eds_status: eds.eds_status,
-    //     });
-    //   }
-    // }
-
-    const getFile = (field) => {
-      if (!req.files) return null;
-
-      if (Array.isArray(req.files)) {
-        return req.files.find(f => f.fieldname === field);
-      }
-
-      return req.files[field]?.[0] || null;
+    // Helper function to safely parse integer fields without converting 0 to null/empty string
+    const parseInteger = (val) => {
+      if (val === "" || val === null || val === undefined) return null;
+      const parsed = parseInt(val, 10);
+      return isNaN(parsed) ? null : parsed;
     };
 
     if (edsFlag === 1 && body.eds_list) {
@@ -1422,22 +1390,20 @@ const addForestProjectWithEds = async (req, res) => {
 
       for (let i = 0; i < edsList.length; i++) {
         const eds = edsList[i];
-
-        // const fileField = `eds_reply_document_${i}`;
-        // const fileObj = getFile(fileField);
         const fileObj = files[i];
 
         await ForestLand.createEds({
           project_master_id: masterId,
-          eds_ref_no: eds.eds_ref_no,
-          issuing_authority: eds.issuing_authority,
-          eds_issue_date: eds.eds_issue_date,
-          eds_due_date: eds.eds_due_date,
-          total_issues: eds.total_issues,
-          issues_closed: eds.issues_closed,
-          issues_pending: eds.issues_pending,
+          eds_ref_no: eds.eds_ref_no || null,
+          issuing_authority: eds.issuing_authority || null,
+          eds_issue_date: eds.eds_issue_date || null,
+          eds_due_date: eds.eds_due_date || null,
+          // Safe integer parsing prevents 0 from coercing into '' or null
+          total_issues: parseInteger(eds.total_issues),
+          issues_closed: parseInteger(eds.issues_closed),
+          issues_pending: parseInteger(eds.issues_pending),
           eds_reply_document: fileObj?.filename || null,
-          eds_status: eds.eds_status,
+          eds_status: eds.eds_status || null,
         });
       }
     }
