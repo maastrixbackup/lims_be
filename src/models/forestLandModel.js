@@ -467,53 +467,6 @@ const ForestLand = {
     return rows[0] || null;
   },
 
-  async updateForestProject(id, data) {
-    const sql = `
-    UPDATE forest_project_master
-    SET
-      proposal_no = ?,
-      project_name = ?,
-      user_agency = ?,
-      project_category = ?,
-      project_sub_category = ?,
-      project_nature = ?,
-      state = ?,
-      district = ?,
-      tahasil = ?,
-      mouza = ?,
-      range_division = ?,
-      forest_type = ?,
-      total_project_area_ha = ?,
-      forest_area_ha = ?,
-      non_forest_area_ha = ?,
-      project_status = ?,
-      current_stage = ?,
-      eds_flag = ?
-    WHERE id = ?
-  `;
-
-    await db.query(sql, [
-      data.proposal_no,
-      data.project_name,
-      data.user_agency,
-      data.project_category,
-      data.project_sub_category,
-      data.project_nature,
-      data.state,
-      data.district,
-      data.tahasil,
-      data.mouza,
-      data.range_division,
-      data.forest_type,
-      data.total_project_area_ha,
-      data.forest_area_ha,
-      data.non_forest_area_ha,
-      data.project_status,
-      data.current_stage,
-      data.eds_flag,
-      id,
-    ]);
-  },
 
   async deleteEdsByMasterId(masterId) {
     await db.query(

@@ -1564,7 +1564,7 @@ const updateForestProject = async (req, res) => {
   try {
     const masterProjectId = req.params.id;
     const body = req.body || {};
-    const files = req.files || [];
+    const files = req.files || []; // Array of newly uploaded files from Multer
 
     // Fetch existing project
     const existing = await ForestLand.getForestProjectById(masterProjectId);
@@ -1581,54 +1581,25 @@ const updateForestProject = async (req, res) => {
         : Number(existing.eds_flag || 0);
 
     const payload = {
-      proposal_no:
-        body.proposal_no !== undefined ? body.proposal_no : existing.proposal_no,
-      project_name:
-        body.project_name !== undefined ? body.project_name : existing.project_name,
-      project_category:
-        body.project_category !== undefined
-          ? body.project_category
-          : existing.project_category,
-      project_sub_category:
-        body.project_sub_category !== undefined
-          ? body.project_sub_category
-          : existing.project_sub_category,
-      project_nature:
-        body.project_nature !== undefined
-          ? body.project_nature
-          : existing.project_nature,
-      user_agency:
-        body.user_agency !== undefined ? body.user_agency : existing.user_agency,
+      proposal_no: body.proposal_no !== undefined ? body.proposal_no : existing.proposal_no,
+      project_name: body.project_name !== undefined ? body.project_name : existing.project_name,
+      project_category: body.project_category !== undefined ? body.project_category : existing.project_category,
+      project_sub_category: body.project_sub_category !== undefined ? body.project_sub_category : existing.project_sub_category,
+      project_nature: body.project_nature !== undefined ? body.project_nature : existing.project_nature,
+      user_agency: body.user_agency !== undefined ? body.user_agency : existing.user_agency,
       state: body.state !== undefined ? body.state : existing.state,
       district: body.district !== undefined ? body.district : existing.district,
       tahasil: body.tahasil !== undefined ? body.tahasil : existing.tahasil,
       mouza: body.mouza !== undefined ? body.mouza : existing.mouza,
-      range_division:
-        body.range_division !== undefined
-          ? body.range_division
-          : existing.range_division,
-      forest_type:
-        body.forest_type !== undefined ? body.forest_type : existing.forest_type,
-      total_project_area_ha:
-        body.total_project_area_ha !== undefined
-          ? body.total_project_area_ha
-          : existing.total_project_area_ha,
-      forest_area_ha:
-        body.forest_area_ha !== undefined
-          ? body.forest_area_ha
-          : existing.forest_area_ha,
-      non_forest_area_ha:
-        body.non_forest_area_ha !== undefined
-          ? body.non_forest_area_ha
-          : existing.non_forest_area_ha,
-      project_status:
-        body.project_status !== undefined
-          ? body.project_status
-          : existing.project_status,
-      current_stage:
-        body.current_stage !== undefined ? body.current_stage : existing.current_stage,
+      range_division: body.range_division !== undefined ? body.range_division : existing.range_division,
+      forest_type: body.forest_type !== undefined ? body.forest_type : existing.forest_type,
+      total_project_area_ha: body.total_project_area_ha !== undefined ? body.total_project_area_ha : existing.total_project_area_ha,
+      forest_area_ha: body.forest_area_ha !== undefined ? body.forest_area_ha : existing.forest_area_ha,
+      non_forest_area_ha: body.non_forest_area_ha !== undefined ? body.non_forest_area_ha : existing.non_forest_area_ha,
+      project_status: body.project_status !== undefined ? body.project_status : existing.project_status,
+      current_stage: body.current_stage !== undefined ? body.current_stage : existing.current_stage,
       eds_flag: edsFlag,
-      eds_document_path: null,
+      eds_document_path: existing.eds_document_path || null,
     };
 
     const updatedProject = await ForestLand.updateForestProject(
@@ -1636,6 +1607,7 @@ const updateForestProject = async (req, res) => {
       payload
     );
 
+    // Delete existing EDS rows before re-inserting updated set
     await ForestLand.deleteEdsByMasterId(masterProjectId);
 
     if (edsFlag === 1 && body.eds_list) {
@@ -1644,21 +1616,41 @@ const updateForestProject = async (req, res) => {
           ? JSON.parse(body.eds_list)
           : body.eds_list;
 
+      let fileUploadCounter = 0;
+
       for (let i = 0; i < edsList.length; i++) {
         const eds = edsList[i];
-        const fileObj = files[i];
+        let documentFileName = eds.eds_reply_document || null;
+
+        // Check if a new file was uploaded for this specific row entry
+        if (eds.fileIndex !== undefined && eds.fileIndex !== null) {
+          if (files[fileUploadCounter]) {
+            documentFileName = files[fileUploadCounter].filename;
+            fileUploadCounter++;
+          }
+        } else if (files[i] && !eds.eds_reply_document) {
+          // Fallback positional check if fileIndex is not explicitly sent
+          documentFileName = files[i].filename;
+        }
+
+        // Helper to cleanly handle integers
+        const parseNum = (val) => {
+          if (val === "" || val === null || val === undefined) return null;
+          const parsed = parseInt(val, 10);
+          return isNaN(parsed) ? null : parsed;
+        };
 
         await ForestLand.createEds({
           project_master_id: masterProjectId,
-          eds_ref_no: eds.eds_ref_no,
-          issuing_authority: eds.issuing_authority,
-          eds_issue_date: eds.eds_issue_date,
-          eds_due_date: eds.eds_due_date,
-          total_issues: eds.total_issues,
-          issues_closed: eds.issues_closed,
-          issues_pending: eds.issues_pending,
-          eds_reply_document: fileObj?.filename || null,
-          eds_status: eds.eds_status,
+          eds_ref_no: eds.eds_ref_no || null,
+          issuing_authority: eds.issuing_authority || null,
+          eds_issue_date: eds.eds_issue_date || null,
+          eds_due_date: eds.eds_due_date || null,
+          total_issues: parseNum(eds.total_issues),
+          issues_closed: parseNum(eds.issues_closed),
+          issues_pending: parseNum(eds.issues_pending),
+          eds_reply_document: documentFileName, // Preserves old filename or assigns newly uploaded file
+          eds_status: eds.eds_status || null,
         });
       }
     }
@@ -1678,7 +1670,7 @@ const updateForestProject = async (req, res) => {
       data: updatedProject,
     });
   } catch (err) {
-    console.error(err);
+    console.error("Update Error:", err);
 
     await logAction(
       userId,
