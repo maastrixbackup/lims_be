@@ -449,6 +449,7 @@ const Khata = {
         khata_no,
         COUNT(*) AS plot_count
       FROM plots
+      WHERE is_deleted = 0
       GROUP BY project_id, type, khata_no
     ) pc
       ON pc.project_id = k.project_id
