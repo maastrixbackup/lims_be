@@ -4,6 +4,8 @@ const GovtVillage = require("../models/govtVillageModel");
 const GovtKhata = require("../models/govtKhataModel");
 const path = require("path");
 const fs = require("fs");
+const db = require("../config/db");
+
 
 const logAction = require("../utils/logger");
 // const Village = require("../models/villageModel");
@@ -11,7 +13,12 @@ const logAction = require("../utils/logger");
 const ExcelJS = require("exceljs");
 
 const normalizeHeaderKey = (key) =>
-  key?.toString().replace(/\r?\n/g, " ").replace(/\s+/g, " ").trim().toLowerCase();
+  key
+    ?.toString()
+    .replace(/\r?\n/g, " ")
+    .replace(/\s+/g, " ")
+    .trim()
+    .toLowerCase();
 
 const toTrimmedString = (value) =>
   value === null || value === undefined ? "" : value.toString().trim();
@@ -334,6 +341,9 @@ const syncGovtKhataFromPlot = async (plotData) => {
 
 const uploadGovtPlot = async (req, res) => {
   const userId = req.user.id;
+
+  let connection;
+
   try {
     const { project_id, type } = req.body;
 
@@ -352,8 +362,10 @@ const uploadGovtPlot = async (req, res) => {
     }
 
     const workbook = xlsx.readFile(req.file.path);
+
     if (!workbook.SheetNames.length) {
       fs.unlinkSync(req.file.path);
+
       return res.status(400).json({
         success: false,
         message: "Invalid Excel format. No sheet found inside file.",
@@ -362,9 +374,11 @@ const uploadGovtPlot = async (req, res) => {
 
     if (workbook.SheetNames.length > 2) {
       fs.unlinkSync(req.file.path);
+
       return res.status(400).json({
         success: false,
-        message: "Invalid Excel format. Maximum 2 sheets are allowed inside file.",
+        message:
+          "Invalid Excel format. Maximum 2 sheets are allowed inside file.",
       });
     }
 
@@ -374,6 +388,7 @@ const uploadGovtPlot = async (req, res) => {
 
     if (!rows.length) {
       fs.unlinkSync(req.file.path);
+
       return res.status(400).json({
         success: false,
         message: "Excel file is empty",
@@ -387,12 +402,14 @@ const uploadGovtPlot = async (req, res) => {
       ["LD06", "khata no", "khata_no"],
       ["LD09", "plot no", "plot_no", "plot", "plot number", "plot no."],
     ];
+
     const missingGroups = requiredGroups.filter(
       (group) => !rows.some((row) => hasAnyValueByHeader(row, group)),
     );
 
     if (missingGroups.length) {
       fs.unlinkSync(req.file.path);
+
       return res.status(400).json({
         success: false,
         message: `Invalid Excel format. Missing required columns for: ${missingGroups
@@ -400,32 +417,77 @@ const uploadGovtPlot = async (req, res) => {
           .join(", ")}`,
       });
     }
-    // console.log("Header name", rows);
+
+    // ==========================================
+    // START DATABASE TRANSACTION
+    // ==========================================
+
+    connection = await db.getConnection();
+
+    await connection.beginTransaction();
+
+    // Delete old data
+    await GovtPlot.deleteByProjectAndType(
+      project_id,
+      type,
+      connection,
+    );
+
+    await GovtKhata.deleteByProjectAndType(
+      project_id,
+      type,
+      connection,
+    );
+
+    await GovtVillage.deleteByProjectAndType(
+      project_id,
+      type,
+      connection,
+    );
+
+    // Insert new villages
     const villageMap = await GovtVillage.upsertFromExcel(
       rows,
       project_id,
       type,
+      connection,
     );
 
-    // govt_khata
+    // Insert new khata
     const khataMap = await GovtKhata.upsertFromExcel(
       rows,
       villageMap,
       project_id,
       type,
+      connection,
     );
 
-    await GovtPlot.bulkInsertFromExcel(rows, project_id, type);
-    // await GovtKhata.upsertFromExcel(rows);
-
-    await GovtPlot.insertDocument({
+    // Insert new plots
+    await GovtPlot.bulkInsertFromExcel(
+      rows,
       project_id,
       type,
-      filename: req.file.filename,
-      original_filename: req.file.originalname,
-      file_path: `uploads/govt_plot_excels/${req.file.filename}`,
-      uploaded_by: userId,
-    });
+      connection,
+    );
+
+    // Insert uploaded document record
+    await GovtPlot.insertDocument(
+      {
+        project_id,
+        type,
+        filename: req.file.filename,
+        original_filename: req.file.originalname,
+        file_path: `uploads/govt_plot_excels/${req.file.filename}`,
+        uploaded_by: userId,
+      },
+      connection,
+    );
+
+    // ==========================================
+    // EVERYTHING SUCCESSFUL
+    // ==========================================
+
+    await connection.commit();
 
     await logAction(
       userId,
@@ -441,6 +503,18 @@ const uploadGovtPlot = async (req, res) => {
       message: "Govt plot excel uploaded successfully",
     });
   } catch (err) {
+    // ==========================================
+    // ROLLBACK EVERYTHING
+    // ==========================================
+
+    if (connection) {
+      try {
+        await connection.rollback();
+      } catch (rollbackError) {
+        console.error("Transaction rollback failed:", rollbackError);
+      }
+    }
+
     await logAction(
       userId,
       "Govt plot excel upload",
@@ -449,6 +523,7 @@ const uploadGovtPlot = async (req, res) => {
       null,
       null,
     );
+
     console.error("Govt Plot Excel Upload Error:", {
       message: err.message,
       stack: err.stack,
@@ -458,16 +533,27 @@ const uploadGovtPlot = async (req, res) => {
       type: req.body?.type || null,
       file: req.file
         ? {
-          originalname: req.file.originalname,
-          filename: req.file.filename,
-          path: req.file.path,
-        }
+            originalname: req.file.originalname,
+            filename: req.file.filename,
+            path: req.file.path,
+          }
         : null,
     });
+
+    const errorMessage =
+      err.sqlMessage ||
+      err.message ||
+      "Failed to upload government plot Excel file";
+
     return res.status(500).json({
       success: false,
-      message: "Server error",
+      message: errorMessage,
+      code: err.code || null,
     });
+  } finally {
+    if (connection) {
+      connection.release();
+    }
   }
 };
 
@@ -637,34 +723,34 @@ const govtPlotList = async (req, res) => {
 
       ri_report_attachment: plot.ri_report_attachment
         ? {
-          file_name: plot.ri_report_attachment,
-          url: buildFileUrl(req, "govt_plots", plot.ri_report_attachment),
-        }
+            file_name: plot.ri_report_attachment,
+            url: buildFileUrl(req, "govt_plots", plot.ri_report_attachment),
+          }
         : null,
 
       tree_enumeration_attachment: plot.tree_enumeration_attachment
         ? {
-          file_name: plot.tree_enumeration_attachment,
-          url: buildFileUrl(
-            req,
-            "govt_plots",
-            plot.tree_enumeration_attachment,
-          ),
-        }
+            file_name: plot.tree_enumeration_attachment,
+            url: buildFileUrl(
+              req,
+              "govt_plots",
+              plot.tree_enumeration_attachment,
+            ),
+          }
         : null,
 
       lease_to_idco_attachment: plot.lease_to_idco_attachment
         ? {
-          file_name: plot.lease_to_idco_attachment,
-          url: buildFileUrl(req, "govt_plots", plot.lease_to_idco_attachment),
-        }
+            file_name: plot.lease_to_idco_attachment,
+            url: buildFileUrl(req, "govt_plots", plot.lease_to_idco_attachment),
+          }
         : null,
 
       lease_to_ua_attachment: plot.lease_to_ua_attachment
         ? {
-          file_name: plot.lease_to_ua_attachment,
-          url: buildFileUrl(req, "govt_plots", plot.lease_to_ua_attachment),
-        }
+            file_name: plot.lease_to_ua_attachment,
+            url: buildFileUrl(req, "govt_plots", plot.lease_to_ua_attachment),
+          }
         : null,
     }));
 
@@ -796,8 +882,9 @@ const govtPlotDocumentList = async (req, res) => {
       //   req.get("host").includes("localhost") ? "" : "/api"
       // }/plot-documents/download/${r.filename}`,
 
-      documentUrl: `${req.protocol}://${req.get("host")}${req.get("host").includes("localhost") ? "" : "/api"
-        }/uploads/govt_plot_excels/${r.filename}`,
+      documentUrl: `${req.protocol}://${req.get("host")}${
+        req.get("host").includes("localhost") ? "" : "/api"
+      }/uploads/govt_plot_excels/${r.filename}`,
     }));
 
     return res.json({
@@ -1197,7 +1284,7 @@ const paymentReady = async (req, res) => {
     const leaseCount = await GovtKhata.countLeaseCases(
       plot.project_id,
       plot.type,
-      plot.khata_no
+      plot.khata_no,
     );
 
     if (leaseCount === 0) {
@@ -1334,9 +1421,10 @@ const getAllPaymentReady = async (req, res) => {
         status: row.status,
         filename: row.payment_proof,
         file_url: row.payment_proof
-          ? `${req.protocol}://${req.get("host")}${req.get("host").includes("localhost") ? "" : "/api"
-          }/uploads/land_cost_payments/${row.payment_proof}`
-          : null
+          ? `${req.protocol}://${req.get("host")}${
+              req.get("host").includes("localhost") ? "" : "/api"
+            }/uploads/land_cost_payments/${row.payment_proof}`
+          : null,
       });
     }
 
@@ -1383,7 +1471,8 @@ const landCostPaymentUpload = async (req, res) => {
 
     const paymentProof = req.files?.payment_proof?.[0]?.filename || null;
 
-    const demandNoteAttachment = req.files?.demand_note_attachment?.[0]?.filename || null;
+    const demandNoteAttachment =
+      req.files?.demand_note_attachment?.[0]?.filename || null;
     if (!paymentProof && !demandNoteAttachment) {
       return res.status(400).json({
         success: false,
@@ -1393,7 +1482,11 @@ const landCostPaymentUpload = async (req, res) => {
 
     // const filePath = `uploads/land_cost_payments/${req.file.filename}`;
 
-    await GovtPlot.addPaymentProof(land_cost_id, paymentProof, demandNoteAttachment);
+    await GovtPlot.addPaymentProof(
+      land_cost_id,
+      paymentProof,
+      demandNoteAttachment,
+    );
 
     await logAction(
       userId,
@@ -1581,5 +1674,5 @@ module.exports = {
   getAllPaymentReady,
   landCostPaymentUpload,
   updatePlotPayment,
-  markPaymentCompleted
+  markPaymentCompleted,
 };

@@ -16,7 +16,7 @@ const getCaseDetailsValue = (row) => {
 };
 
 const GovtKhata = {
-  async upsertFromExcel(rows, villageMap, project_id, type) {
+  async upsertFromExcel(rows, villageMap, project_id, type, connection = db) {
     const khataMap = new Map();
     const normalizeCompareKey = (key) =>
       key
@@ -41,7 +41,11 @@ const GovtKhata = {
         const normalized = normalizeCompareKey(key);
         if (normalized === codeKey || normalized.startsWith(`${codeKey} `)) {
           const value = row[key];
-          if (value !== undefined && value !== null && `${value}`.trim() !== "") {
+          if (
+            value !== undefined &&
+            value !== null &&
+            `${value}`.trim() !== ""
+          ) {
             return value;
           }
         }
@@ -52,7 +56,11 @@ const GovtKhata = {
         for (const key of Object.keys(row || {})) {
           if (normalizeCompareKey(key) === fbKey) {
             const value = row[key];
-            if (value !== undefined && value !== null && `${value}`.trim() !== "") {
+            if (
+              value !== undefined &&
+              value !== null &&
+              `${value}`.trim() !== ""
+            ) {
               return value;
             }
           }
@@ -91,7 +99,13 @@ const GovtKhata = {
 
     rows.forEach((r) => {
       const khataRaw = getValue(r, "LD06", "khata no", "khata_no");
-      const mouzaRaw = getValue(r, "LD02", "mouza", "village", "name of village");
+      const mouzaRaw = getValue(
+        r,
+        "LD02",
+        "mouza",
+        "village",
+        "name of village",
+      );
       const tahasilRaw = getValue(r, "LD03", "tahasil");
       if (!khataRaw || !mouzaRaw) return;
 
@@ -102,7 +116,12 @@ const GovtKhata = {
       if (!tahasil) return;
       if (
         isHeaderLikeValue(khataNo, "khata no", "khata_no") ||
-        isHeaderLikeValue(String(mouzaRaw).trim(), "mouza", "village", "name of village") ||
+        isHeaderLikeValue(
+          String(mouzaRaw).trim(),
+          "mouza",
+          "village",
+          "name of village",
+        ) ||
         isHeaderLikeValue(tahasil, "tahasil")
       ) {
         return;
@@ -118,8 +137,7 @@ const GovtKhata = {
         getValue(r, "LD08", "name of ror", "name_of_ror", "name of khata") ||
         null;
       const rowLandCategory =
-        getValue(r, "LD07", "land category", "land_category", "kissam") ||
-        null;
+        getValue(r, "LD07", "land category", "land_category", "kissam") || null;
 
       khataMap.set(key, {
         project_id,
@@ -169,7 +187,7 @@ const GovtKhata = {
     //   [values]
     // );
 
-    await db.query(
+    await connection.query(
       `
       INSERT INTO govt_khata
         (project_id, type, khata_no, village_id,
@@ -186,11 +204,11 @@ const GovtKhata = {
         land_category = COALESCE(VALUES(land_category), land_category),
         updated_at = NOW()
       `,
-      [values]
+      [values],
     );
 
     //Update unique_id (derived field)
-    await db.query(
+    await connection.query(
       `
       UPDATE govt_khata g
       JOIN projects p ON p.id = g.project_id
@@ -199,14 +217,14 @@ const GovtKhata = {
       WHERE g.project_id = ?
         AND g.type = ?
       `,
-      [project_id, type]
+      [project_id, type],
     );
 
     //Fetch inserted / updated IDs
     const resultMap = {};
 
     for (const v of values) {
-      const [rows] = await db.query(
+      const [rows] = await connection.query(
         `
         SELECT id
         FROM govt_khata
@@ -215,7 +233,7 @@ const GovtKhata = {
           AND khata_no = ?
           AND village_id = ?
         `,
-        [v[0], v[1], v[2], v[3]]
+        [v[0], v[1], v[2], v[3]],
       );
 
       if (rows.length) {
@@ -224,6 +242,19 @@ const GovtKhata = {
     }
 
     return resultMap;
+  },
+
+  async deleteByProjectAndType(project_id, type, connection = db) {
+    const [result] = await connection.query(
+      `
+      DELETE FROM govt_khata
+      WHERE project_id = ?
+      AND type = ?
+    `,
+      [project_id, type],
+    );
+
+    return result.affectedRows;
   },
 
   // async create(data) {
@@ -279,7 +310,8 @@ const GovtKhata = {
   //   };
   // },
 
-  async create(data) { //This is for khata_no and village_id null handles
+  async create(data) {
+    //This is for khata_no and village_id null handles
     const {
       project_id,
       type,
@@ -291,7 +323,7 @@ const GovtKhata = {
       present_status,
       case_details,
       name_of_ror,
-      land_category
+      land_category,
     } = data;
 
     const [result] = await db.query(
@@ -338,7 +370,7 @@ const GovtKhata = {
         land_category,
         village_id,
         project_id,
-      ]
+      ],
     );
 
     if (result.affectedRows === 0) {
@@ -443,7 +475,10 @@ const GovtKhata = {
       name_of_ror: row.name_of_ror || null,
       plot_numbers: row.plot_numbers || null,
       plot_no_list: row.plot_numbers
-        ? row.plot_numbers.split(",").map((n) => n.trim()).filter(Boolean)
+        ? row.plot_numbers
+            .split(",")
+            .map((n) => n.trim())
+            .filter(Boolean)
         : [],
     }));
     const [countRows] = await db.query(countSql, params);
@@ -513,7 +548,7 @@ const GovtKhata = {
   async getKhataByNumber(khata_no) {
     const [rows] = await db.query(
       `SELECT * FROM govt_khata WHERE khata_no = ? LIMIT 1`,
-      [khata_no]
+      [khata_no],
     );
     return rows[0];
   },
@@ -535,7 +570,7 @@ const GovtKhata = {
   async getFilesByKhataId(khata_id) {
     const [rows] = await db.query(
       "SELECT * FROM khata_documents WHERE khata_id = ? AND type = 2 ORDER BY created_at DESC",
-      [khata_id]
+      [khata_id],
     );
     return rows;
   },
@@ -543,7 +578,7 @@ const GovtKhata = {
   async findFileById(id) {
     const [rows] = await db.query(
       "SELECT * FROM khata_documents WHERE id = ? AND type = 2",
-      [id]
+      [id],
     );
     return rows[0];
   },
@@ -551,7 +586,7 @@ const GovtKhata = {
   async deleteFileById(file_id) {
     const [result] = await db.query(
       "DELETE FROM khata_documents WHERE id = ? AND type = 2",
-      [file_id]
+      [file_id],
     );
     return result.affectedRows > 0;
   },
@@ -562,7 +597,7 @@ const GovtKhata = {
       FROM khata_map_documents
       WHERE khata_id = ? AND land_type = 2
       ORDER BY id DESC`,
-      [khata_id]
+      [khata_id],
     );
     return rows;
   },
@@ -578,7 +613,7 @@ const GovtKhata = {
       AND lease_case_no IS NOT NULL
       AND lease_case_no <> ''
     `,
-      [project_id, type, khata_no]
+      [project_id, type, khata_no],
     );
 
     return rows[0]?.total || 0;
@@ -607,8 +642,7 @@ const GovtKhata = {
 
     const [rows] = await db.query(sql, [filename]);
     return rows[0];
-  }
-
+  },
 };
 
 module.exports = GovtKhata;

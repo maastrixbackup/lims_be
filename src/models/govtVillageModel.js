@@ -1,7 +1,7 @@
 const db = require("../config/db");
 
 const govtVillage = {
-  async upsertFromExcel(rows, project_id, type) {
+ async upsertFromExcel(rows, project_id, type, connection = db) {
     const normalizeText = (value) =>
       value === undefined || value === null ? "" : String(value).trim();
     const normalizeCompareKey = (key) =>
@@ -48,7 +48,7 @@ const govtVillage = {
         "District",
         "district name",
         "District",
-        "DISTRICT"
+        "DISTRICT",
       );
 
       const normalized = normalizeText(district);
@@ -72,7 +72,13 @@ const govtVillage = {
     const villageMap = new Map();
 
     rows.forEach((r) => {
-      const mouzaRaw = getValue(r, "LD02", "mouza", "village", "name of village");
+      const mouzaRaw = getValue(
+        r,
+        "LD02",
+        "mouza",
+        "village",
+        "name of village",
+      );
       if (!mouzaRaw) return;
 
       const mouza = normalizeText(mouzaRaw);
@@ -113,7 +119,7 @@ const govtVillage = {
       v.thana_no,
     ]);
 
-    await db.query(
+    await connection.query(
       `
     INSERT INTO villages
       (village_name, village_code, tahasil, district, project_id, type, thana_name_no)
@@ -124,16 +130,16 @@ const govtVillage = {
       thana_name_no = COALESCE(NULLIF(VALUES(thana_name_no), ''), thana_name_no),
       updated_at = NOW()
     `,
-      [values]
+      [values],
     );
 
-    const [villages] = await db.query(
+    const [villages] = await connection.query(
       `
     SELECT id, village_name, tahasil
     FROM villages
     WHERE project_id = ? AND type = ?
     `,
-      [project_id, type]
+      [project_id, type],
     );
 
     // return map => { "mouza_tahasil" : village_id }
@@ -144,6 +150,18 @@ const govtVillage = {
     });
 
     return resultMap;
+  },
+  async deleteByProjectAndType(project_id, type, connection = db) {
+    const [result] = await connection.query(
+      `
+      DELETE FROM villages
+      WHERE project_id = ?
+      AND type = ?
+    `,
+      [project_id, type],
+    );
+
+    return result.affectedRows;
   },
 };
 
