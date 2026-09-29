@@ -2,6 +2,7 @@ const xlsx = require("xlsx");
 const Plot = require("../models/plotModel");
 const path = require("path");
 const fs = require("fs");
+const db = require("../config/db");
 
 const logAction = require("../utils/logger");
 const Village = require("../models/villageModel");
@@ -917,7 +918,7 @@ const getDeletedPlots = async (req, res) => {
 
     return res.status(200).json({
       success: true,
-      message:  "Deleted plots fetched successfully",
+      message: "Deleted plots fetched successfully",
       data: deletedPlots,
     });
   } catch (err) {
@@ -1036,7 +1037,14 @@ const paymentReady = async (req, res) => {
   const { plot_id, payment_status } = req.body;
   const userId = req.user.id;
 
+  let connection;
+  let paymentRecordIds = [];
+
   try {
+    // =========================================================
+    // 1. BASIC VALIDATION
+    // =========================================================
+
     if (!plot_id) {
       return res.status(400).json({
         success: false,
@@ -1052,6 +1060,7 @@ const paymentReady = async (req, res) => {
     }
 
     const allowedStatuses = ["ready", "processing"];
+
     if (!allowedStatuses.includes(payment_status)) {
       return res.status(400).json({
         success: false,
@@ -1059,7 +1068,12 @@ const paymentReady = async (req, res) => {
       });
     }
 
+    // =========================================================
+    // 2. GET PLOT
+    // =========================================================
+
     const plot = await Plot.findById(plot_id);
+
     if (!plot) {
       return res.status(404).json({
         success: false,
@@ -1067,98 +1081,373 @@ const paymentReady = async (req, res) => {
       });
     }
 
-    if (payment_status === "processing") {
-      const existing = await Plot.hasProcessingPayments(plot_id);
-      if (existing) {
-        return res.status(400).json({
-          success: false,
-          message: "Payment already in processing state",
-        });
-      }
-    }
-
-    const khata = await Khata.getKhataByNumber(plot.khata_no);
-    const unique_id = khata ? khata.unique_id : null;
-    // Update plot status
-    await Plot.updatePaymentStatus(plot_id, payment_status);
-
-    if (payment_status === "ready") {
-      await logAction(
-        userId,
-        "Payment marked ready",
-        "success",
-        "Payment marked as ready",
-        { plot_id, payment_status },
-        [],
-      );
-
-      return res.status(200).json({
-        success: true,
-        message: "Payment marked as ready",
+    if (!plot.khata_no) {
+      return res.status(400).json({
+        success: false,
+        message: "Khata no not found for this plot",
       });
     }
 
-    // Split tenant names into an array
-    const tenants = plot.name_of_present_tenant
-      ? plot.name_of_present_tenant.split(",").map((t) => t.trim())
-      : [];
+    // =========================================================
+    // 3. READY FLOW
+    // =========================================================
 
-    const records = [];
+    if (payment_status === "ready") {
+      // -------------------------------------------------------
+      // Check existing payment records
+      // -------------------------------------------------------
 
-    for (const tenant of tenants) {
-      const data = {
-        unique_id,
-        plot_id: plot.id,
-        plot_no: plot.plot_no,
-        khata_no: plot.khata_no,
-        project_id: plot.project_id,
-        present_tenant_names: tenant,
-        payment_area: plot.land_area_total_acres,
-        total_compensation: plot.total_compensation,
-        bank_ac: plot.bank_account_no,
-        bank_name: plot.bank_name,
-        ifsc: plot.branch_ifsc,
-        type: plot.type,
-        status: payment_status,
-      };
-      const rec = await Plot.addPaymentRecord(data);
-      records.push(rec);
+      const existingPayments =
+        await Plot.getPaymentRecordsByPlotId(plot_id);
+
+      if (existingPayments.length > 0) {
+        return res.status(400).json({
+          success: false,
+          message: "Payment records already exist for this plot",
+        });
+      }
+
+      // -------------------------------------------------------
+      // Get Khata
+      // -------------------------------------------------------
+
+      const khata = await Khata.getKhataByNumber(plot.khata_no);
+
+      if (!khata) {
+        return res.status(400).json({
+          success: false,
+          message: `Khata not found for Khata No. ${plot.khata_no}`,
+        });
+      }
+
+      if (!khata.unique_id) {
+        return res.status(400).json({
+          success: false,
+          message: `Unique ID not found for Khata No. ${plot.khata_no}`,
+        });
+      }
+
+      const unique_id = khata.unique_id;
+
+      // -------------------------------------------------------
+      // Validate tenants BEFORE writing anything
+      // -------------------------------------------------------
+
+      const tenants = plot.name_of_present_tenant
+        ? plot.name_of_present_tenant
+            .split(",")
+            .map((tenant) => tenant.trim())
+            .filter(Boolean)
+        : [];
+
+      if (tenants.length === 0) {
+        return res.status(400).json({
+          success: false,
+          message: "No present tenant found for this plot",
+        });
+      }
+
+      // =======================================================
+      // 4. START TRANSACTION
+      // =======================================================
+
+      connection = await db.getConnection();
+
+      await connection.beginTransaction();
+
+      try {
+        // -----------------------------------------------------
+        // 5. INSERT PAYMENT RECORDS
+        // -----------------------------------------------------
+
+        for (const tenant of tenants) {
+          const data = {
+            unique_id,
+            plot_id: plot.id,
+            plot_no: plot.plot_no,
+            khata_no: plot.khata_no,
+            project_id: plot.project_id,
+            present_tenant_names: tenant,
+            payment_area: plot.land_area_total_acres,
+            total_compensation: plot.total_compensation,
+            bank_ac: plot.bank_account_no,
+            bank_name: plot.bank_name,
+            ifsc: plot.branch_ifsc,
+            type: plot.type,
+            status: "ready",
+          };
+
+          const record = await Plot.addPaymentRecord(
+            data,
+            connection
+          );
+
+          // Store inserted IDs.
+          paymentRecordIds.push(record.id);
+        }
+
+        // -----------------------------------------------------
+        // 6. COMMIT PAYMENT RECORDS
+        // -----------------------------------------------------
+        //
+        // At this point all payment inserts succeeded.
+        //
+        // plots is MyISAM, so we intentionally DO NOT update
+        // plots inside this transaction.
+        //
+
+        await connection.commit();
+
+        connection.release();
+        connection = null;
+
+        // =====================================================
+        // 7. NOW UPDATE MYISAM PLOT
+        // =====================================================
+
+        try {
+          await Plot.updatePaymentStatus(
+            plot_id,
+            "ready"
+          );
+        } catch (plotUpdateError) {
+          // ===================================================
+          // COMPENSATING ACTION
+          // ===================================================
+          //
+          // Plot status failed.
+          //
+          // Remove the payment records that we just created.
+          //
+
+          console.error(
+            "Plot status update failed. Removing payment records:",
+            plotUpdateError
+          );
+
+          try {
+            await Plot.deletePaymentRecordsByIds(
+              paymentRecordIds
+            );
+          } catch (deleteError) {
+            console.error(
+              "CRITICAL: Failed to rollback payment records:",
+              deleteError
+            );
+          }
+
+          throw plotUpdateError;
+        }
+
+        // =====================================================
+        // 8. LOG SUCCESS
+        // =====================================================
+
+        await logAction({
+          user_id: userId,
+          action: "PAYMENT_READY",
+          module: "Plot Payment",
+          description:
+            `Payment marked ready for plot ${plot_id}`,
+        });
+
+        return res.status(200).json({
+          success: true,
+          message: "Payment marked as ready successfully",
+          data: {
+            plot_id,
+            payment_status: "ready",
+            payment_records: paymentRecordIds,
+          },
+        });
+      } catch (transactionError) {
+        // -----------------------------------------------------
+        // Rollback only if transaction is still active
+        // -----------------------------------------------------
+
+        if (connection) {
+          try {
+            await connection.rollback();
+          } catch (rollbackError) {
+            console.error(
+              "Payment transaction rollback failed:",
+              rollbackError
+            );
+          }
+        }
+
+        throw transactionError;
+      }
     }
-    // } else {
-    //   await Plot.updatePaymentRecordStatus(plot_id, payment_status);
-    // }
 
-    // let message = "Payment updated successfully";
+    // =========================================================
+    // 9. PROCESSING FLOW
+    // =========================================================
 
-    // if (payment_status === "ready") {
-    //   message = "Payment marked as ready";
-    // } else if (payment_status === "processing") {
-    //   message = "Payment processing started";
-    // } else if (payment_status === "complete") {
-    //   message = "Payment completed successfully";
-    // }
+    if (payment_status === "processing") {
+      // -------------------------------------------------------
+      // Payment records must already exist
+      // -------------------------------------------------------
 
-    await logAction(
-      userId,
-      "Payment processed",
-      "success",
-      "Payment processing started",
-      { plot_id },
-      records,
-    );
+      const paymentRecords =
+        await Plot.getPaymentRecordsByPlotId(plot_id);
 
-    return res.status(200).json({
-      success: true,
-      message: "Payment processing started",
-      data: records,
+      if (!paymentRecords || paymentRecords.length === 0) {
+        return res.status(400).json({
+          success: false,
+          message:
+            "Payment records not found. Please mark the payment as ready first.",
+        });
+      }
+
+      // -------------------------------------------------------
+      // Start transaction
+      // -------------------------------------------------------
+
+      connection = await db.getConnection();
+
+      await connection.beginTransaction();
+
+      try {
+        // -----------------------------------------------------
+        // Check if already processing
+        // -----------------------------------------------------
+
+        const existingProcessing =
+          await Plot.hasProcessingPayments(
+            plot_id,
+            connection
+          );
+
+        if (existingProcessing) {
+          await connection.rollback();
+
+          connection.release();
+          connection = null;
+
+          return res.status(400).json({
+            success: false,
+            message: "Payment is already in processing state",
+          });
+        }
+
+        // -----------------------------------------------------
+        // Update payment records
+        // -----------------------------------------------------
+
+        await Plot.updatePaymentRecordsStatus(
+          plot_id,
+          "processing",
+          connection
+        );
+
+        // -----------------------------------------------------
+        // Commit payment records
+        // -----------------------------------------------------
+
+        await connection.commit();
+
+        connection.release();
+        connection = null;
+
+        // =====================================================
+        // Update MyISAM plot AFTER payment records succeed
+        // =====================================================
+
+        try {
+          await Plot.updatePaymentStatus(
+            plot_id,
+            "processing"
+          );
+        } catch (plotUpdateError) {
+          // ===================================================
+          // COMPENSATING ACTION
+          // ===================================================
+
+          console.error(
+            "Plot processing status update failed:",
+            plotUpdateError
+          );
+
+          // Restore payment records to ready.
+          try {
+            await Plot.updatePaymentRecordsStatus(
+              plot_id,
+              "ready"
+            );
+          } catch (restoreError) {
+            console.error(
+              "CRITICAL: Failed to restore payment records:",
+              restoreError
+            );
+          }
+
+          throw plotUpdateError;
+        }
+
+        // -----------------------------------------------------
+        // Log success
+        // -----------------------------------------------------
+
+        await logAction({
+          user_id: userId,
+          action: "PAYMENT_PROCESSING",
+          module: "Plot Payment",
+          description:
+            `Payment moved to processing for plot ${plot_id}`,
+        });
+
+        return res.status(200).json({
+          success: true,
+          message:
+            "Payment moved to processing successfully",
+          data: {
+            plot_id,
+            payment_status: "processing",
+          },
+        });
+      } catch (transactionError) {
+        if (connection) {
+          try {
+            await connection.rollback();
+          } catch (rollbackError) {
+            console.error(
+              "Payment transaction rollback failed:",
+              rollbackError
+            );
+          }
+        }
+
+        throw transactionError;
+      }
+    }
+
+    return res.status(400).json({
+      success: false,
+      message: "Unsupported payment status",
     });
   } catch (err) {
-    console.error("Payment Ready Error:", err);
+    console.error("Payment Ready Error:", {
+      message: err.message,
+      stack: err.stack,
+      code: err.code || null,
+      sqlMessage: err.sqlMessage || null,
+      plot_id,
+      payment_status,
+    });
 
     return res.status(500).json({
       success: false,
-      message: "Server error",
+      message:
+        err.sqlMessage ||
+        err.message ||
+        "Failed to update payment status",
+      code: err.code || null,
     });
+  } finally {
+    if (connection) {
+      connection.release();
+    }
   }
 };
 

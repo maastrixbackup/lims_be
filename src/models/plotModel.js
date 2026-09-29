@@ -1154,6 +1154,21 @@ const Plot = {
   //   return result.affectedRows || 0;
   // },
 
+  async getPaymentRecordsByPlotId(plot_id, connection = db) {
+    const [rows] = await connection.query(
+      `
+    SELECT *
+    FROM plot_payments
+    WHERE plot_id = ?
+      AND type = 1
+    ORDER BY id ASC
+    `,
+      [plot_id],
+    );
+
+    return rows;
+  },
+
   async bulkInsert(plots, project_id, type) {
     if (!plots || plots.length === 0) return;
 
@@ -1273,7 +1288,8 @@ const Plot = {
       const getCell = (...headers) => {
         for (const header of headers) {
           const value = plot[header];
-          if (value !== undefined && value !== null && value !== "") return value;
+          if (value !== undefined && value !== null && value !== "")
+            return value;
         }
 
         const rowEntries = Object.entries(plot).map(([k, v]) => [
@@ -1284,7 +1300,8 @@ const Plot = {
         for (const header of headers) {
           const target = normalizeHeaderLoose(header);
           const matched = rowEntries.find(
-            ([k, v]) => k === target && v !== undefined && v !== null && v !== "",
+            ([k, v]) =>
+              k === target && v !== undefined && v !== null && v !== "",
           );
           if (matched) return matched[1];
         }
@@ -1294,12 +1311,17 @@ const Plot = {
 
       const get = (code, ...fallbacks) => {
         const direct = plot[code];
-        if (direct !== undefined && direct !== null && direct !== "") return direct;
+        if (direct !== undefined && direct !== null && direct !== "")
+          return direct;
 
         const canonicalCode = normalizeCode(code);
         if (canonicalCode && canonicalCode !== code) {
           const canonical = plot[canonicalCode];
-          if (canonical !== undefined && canonical !== null && canonical !== "") {
+          if (
+            canonical !== undefined &&
+            canonical !== null &&
+            canonical !== ""
+          ) {
             return canonical;
           }
         }
@@ -1321,7 +1343,9 @@ const Plot = {
       );
       const address = get("LO03", "Present Address");
       const displaced = get("LO04", "Displaced/Affected Person");
-      const awardDate = toMysqlDate(get("LO06", "Date of Award", "Date of award"));
+      const awardDate = toMysqlDate(
+        get("LO06", "Date of Award", "Date of award"),
+      );
 
       // LD - Land detail fields
       const district = get("LD01", "District", "district");
@@ -1394,8 +1418,14 @@ const Plot = {
       const totalTreeValue = get("LA09", "Total Value of Trees ");
       const noOfHouse = get("LA10", "No. of House");
       const houseValue = get("LA11", "Value of Structure (house)");
-      const otherStructureDetails = get("LA12", "Detail of Structures other than House");
-      const otherStructureValue = get("LA13", "Value of structures other than house");
+      const otherStructureDetails = get(
+        "LA12",
+        "Detail of Structures other than House",
+      );
+      const otherStructureValue = get(
+        "LA13",
+        "Value of structures other than house",
+      );
       const totalValue = get(
         "LA14",
         "Total Value  (Land-22 + Tree-24 + House-26 + Structures-28)",
@@ -1438,15 +1468,24 @@ const Plot = {
       const occupation = get("PD07", "Occupation");
       const income = get("PD08", "Annual Income");
       const skill = get("PD09", "PD09- Skill Acquired");
-      const affidavit = get("PD10", "PD10-Affidavit with subject details (if any)");
+      const affidavit = get(
+        "PD10",
+        "PD10-Affidavit with subject details (if any)",
+      );
 
       // FD - Family details
       const majorMale = get("FD01", "FD01-No. of Family Members (Major Male)");
       const majorFemale = get("FD02", "No. of Family Members (Major Female)");
       const minorMale = get("FD03", "No. of Family Members (Minor Male)");
       const minorFemale = get("FD04", "No. of Family Members (Minor Female)");
-      const majorTrans = get("FD05", "No. of Family Members (Major Transgender)");
-      const minorTrans = get("FD06", "No. of Family Members (Minor Transgender)");
+      const majorTrans = get(
+        "FD05",
+        "No. of Family Members (Major Transgender)",
+      );
+      const minorTrans = get(
+        "FD06",
+        "No. of Family Members (Minor Transgender)",
+      );
       const disability = get("FD07", "No. of Persons with Disability");
       const orphan = get("FD08", "Family with Orphan Members (Y/N)");
       const legalHeir = get("FD09", "FD09-Legal Heir Certificate No. (if any)");
@@ -1856,7 +1895,6 @@ const Plot = {
     return rows[0];
   },
 
-
   async deleteDocumentByFilename(filename) {
     await db.query(`DELETE FROM pvt_plot_documents WHERE filename = ?`, [
       filename,
@@ -2175,6 +2213,22 @@ const Plot = {
     return rows[0];
   },
 
+  async deletePaymentRecordsByIds(ids, connection = db) {
+    if (!ids || ids.length === 0) {
+      return true;
+    }
+
+    const placeholders = ids.map(() => "?").join(",");
+
+    await connection.query(
+      `DELETE FROM plot_payments
+     WHERE id IN (${placeholders})`,
+      ids,
+    );
+
+    return true;
+  },
+
   async findByCaseAndPlot(project_id, type, la_case_file_no, plot_no) {
     const [rows] = await db.query(
       `SELECT * FROM plots
@@ -2189,7 +2243,13 @@ const Plot = {
     return rows.length ? rows[0] : null;
   },
 
-  async updateByCaseAndPlot(project_id, type, la_case_file_no, plot_no, plotData) {
+  async updateByCaseAndPlot(
+    project_id,
+    type,
+    la_case_file_no,
+    plot_no,
+    plotData,
+  ) {
     const {
       project_id: nextProjectId,
       ses_survey_no,
@@ -2818,12 +2878,14 @@ const Plot = {
     return rows;
   },
 
-  async updatePaymentStatus(plot_id, status) {
-    await db.query(
-      `UPDATE plots SET payment_status = ?
-      WHERE id = ? AND is_deleted = 0`,
+  async updatePaymentStatus(plot_id, status, connection = db) {
+    await connection.query(
+      `UPDATE plots
+     SET payment_status = ?
+     WHERE id = ? AND is_deleted = 0`,
       [status, plot_id],
     );
+
     return true;
   },
 
@@ -2853,7 +2915,7 @@ const Plot = {
   //   return rows[0];
   // },
 
-  async addPaymentRecord(data) {
+  async addPaymentRecord(data, connection = db) {
     const sql = `
       INSERT INTO plot_payments 
       (unique_id, plot_id, plot_no, khata_no, project_id, present_tenant_names, payment_area, total_compensation, 
@@ -2877,18 +2939,19 @@ const Plot = {
       data.status,
     ];
 
-    const [result] = await db.query(sql, params);
+    const [result] = await connection.query(sql, params);
 
     // fetch inserted record
-    const [rows] = await db.query(`SELECT * FROM plot_payments WHERE id = ?`, [
-      result.insertId,
-    ]);
+    const [rows] = await connection.query(
+      `SELECT * FROM plot_payments WHERE id = ?`,
+      [result.insertId],
+    );
 
     return rows[0];
   },
 
-  async hasProcessingPayments(plot_id) {
-    const [rows] = await db.query(
+  async hasProcessingPayments(plot_id, connection = db) {
+    const [rows] = await connection.query(
       `
     SELECT 1
     FROM plot_payments
@@ -2903,15 +2966,19 @@ const Plot = {
     return rows.length > 0;
   },
 
-  // async updatePaymentRecordStatus(plot_id, status) {
-  //   await db.query(
-  //     `UPDATE plot_payments
-  //    SET status = ?
-  //    WHERE plot_id = ?`,
-  //     [status, plot_id]
-  //   );
-  //   return true;
-  // },
+  async updatePaymentRecordsStatus(plot_id, status, connection = db) {
+    await connection.query(
+      `
+    UPDATE plot_payments
+    SET status = ?
+    WHERE plot_id = ?
+      AND type = 1
+    `,
+      [status, plot_id],
+    );
+
+    return true;
+  },
 
   async getCompensationByPlotId(plot_id) {
     const [rows] = await db.query(
@@ -2948,9 +3015,10 @@ const Plot = {
   },
 
   async fetchLandCostById(land_cost_id) {
-    const [rows] = await db.query(`SELECT * FROM plot_payments WHERE id = ? AND type = 1`, [
-      land_cost_id,
-    ]);
+    const [rows] = await db.query(
+      `SELECT * FROM plot_payments WHERE id = ? AND type = 1`,
+      [land_cost_id],
+    );
     return rows[0];
   },
 
