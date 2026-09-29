@@ -1258,7 +1258,7 @@ const GovtPlot = {
 
   async findByKhataNo(khata_no, type, project_id) {
     const [rows] = await db.query(
-      "SELECT * FROM govt_plots WHERE khata_no = ? AND type = ? AND project_id = ?",
+      "SELECT * FROM govt_plots WHERE khata_no = ? AND type = ? AND project_id = ? AND is_deleted = 0",
       [khata_no, type, project_id],
     );
     return rows;
