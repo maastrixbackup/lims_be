@@ -1493,6 +1493,7 @@ const getForestProjectWithEds = async (req, res) => {
     const { projectId } = req.params;
 
     const data = await ForestLand.getProjectWithEds(projectId);
+    console.log(data)
 
     if (!data) {
       return res.status(404).json({

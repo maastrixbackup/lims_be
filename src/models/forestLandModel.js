@@ -467,7 +467,6 @@ const ForestLand = {
     return rows[0] || null;
   },
 
-
   async deleteEdsByMasterId(masterId) {
     await db.query(
       `DELETE FROM forest_eds_master WHERE project_master_id = ?`,
@@ -606,17 +605,34 @@ const ForestLand = {
 
   async getProjectWithEds(projectId) {
     const [masterRows] = await db.query(
-      `SELECT * FROM forest_project_master WHERE project_id = ? AND is_deleted = 0`,
+      `SELECT *
+     FROM forest_project_master
+     WHERE project_id = ?
+       AND is_deleted = 0`,
       [projectId],
     );
 
-    if (!masterRows.length) return null;
+    if (!masterRows.length) {
+      return null;
+    }
 
     const master = masterRows[0];
 
     const [edsRows] = await db.query(
-      `SELECT * FROM forest_eds_master 
-     WHERE project_master_id = ? AND is_deleted = 0
+      `SELECT
+        id,
+        project_master_id,
+        eds_ref_no,
+        issuing_authority,
+        DATE_FORMAT(eds_issue_date, '%Y-%m-%d') AS eds_issue_date,
+        DATE_FORMAT(eds_due_date, '%Y-%m-%d') AS eds_due_date,
+        total_issues,
+        issues_closed,
+        issues_pending,
+        is_deleted
+     FROM forest_eds_master
+     WHERE project_master_id = ?
+       AND is_deleted = 0
      ORDER BY id ASC`,
       [master.id],
     );
@@ -626,6 +642,7 @@ const ForestLand = {
       eds_list: edsRows,
     };
   },
+
   async deleteForestProject(projectId) {
     const sql = `
     UPDATE forest_project_master
