@@ -1037,14 +1037,7 @@ const paymentReady = async (req, res) => {
   const { plot_id, payment_status } = req.body;
   const userId = req.user.id;
 
-  let connection;
-  let paymentRecordIds = [];
-
   try {
-    // =========================================================
-    // 1. BASIC VALIDATION
-    // =========================================================
-
     if (!plot_id) {
       return res.status(400).json({
         success: false,
@@ -1068,10 +1061,6 @@ const paymentReady = async (req, res) => {
       });
     }
 
-    // =========================================================
-    // 2. GET PLOT
-    // =========================================================
-
     const plot = await Plot.findById(plot_id);
 
     if (!plot) {
@@ -1088,17 +1077,8 @@ const paymentReady = async (req, res) => {
       });
     }
 
-    // =========================================================
-    // 3. READY FLOW
-    // =========================================================
-
     if (payment_status === "ready") {
-      // -------------------------------------------------------
-      // Check existing payment records
-      // -------------------------------------------------------
-
-      const existingPayments =
-        await Plot.getPaymentRecordsByPlotId(plot_id);
+      const existingPayments = await Plot.getPaymentRecordsByPlotId(plot_id);
 
       if (existingPayments.length > 0) {
         return res.status(400).json({
@@ -1106,10 +1086,6 @@ const paymentReady = async (req, res) => {
           message: "Payment records already exist for this plot",
         });
       }
-
-      // -------------------------------------------------------
-      // Get Khata
-      // -------------------------------------------------------
 
       const khata = await Khata.getKhataByNumber(plot.khata_no);
 
@@ -1129,10 +1105,6 @@ const paymentReady = async (req, res) => {
 
       const unique_id = khata.unique_id;
 
-      // -------------------------------------------------------
-      // Validate tenants BEFORE writing anything
-      // -------------------------------------------------------
-
       const tenants = plot.name_of_present_tenant
         ? plot.name_of_present_tenant
             .split(",")
@@ -1147,150 +1119,75 @@ const paymentReady = async (req, res) => {
         });
       }
 
-      // =======================================================
-      // 4. START TRANSACTION
-      // =======================================================
+      const paymentRecordIds = [];
 
-      connection = await db.getConnection();
+      for (const tenant of tenants) {
+        const data = {
+          unique_id,
+          plot_id: plot.id,
+          plot_no: plot.plot_no,
+          khata_no: plot.khata_no,
+          project_id: plot.project_id,
+          present_tenant_names: tenant,
+          payment_area: plot.land_area_total_acres,
+          total_compensation: plot.total_compensation,
+          bank_ac: plot.bank_account_no,
+          bank_name: plot.bank_name,
+          ifsc: plot.branch_ifsc,
+          type: plot.type,
+          status: "ready",
+        };
 
-      await connection.beginTransaction();
+        console.log("Inserting payment record:", data);
 
-      try {
-        // -----------------------------------------------------
-        // 5. INSERT PAYMENT RECORDS
-        // -----------------------------------------------------
+        const record = await Plot.addPaymentRecord(data);
 
-        for (const tenant of tenants) {
-          const data = {
-            unique_id,
-            plot_id: plot.id,
-            plot_no: plot.plot_no,
-            khata_no: plot.khata_no,
-            project_id: plot.project_id,
-            present_tenant_names: tenant,
-            payment_area: plot.land_area_total_acres,
-            total_compensation: plot.total_compensation,
-            bank_ac: plot.bank_account_no,
-            bank_name: plot.bank_name,
-            ifsc: plot.branch_ifsc,
-            type: plot.type,
-            status: "ready",
-          };
-
-          const record = await Plot.addPaymentRecord(
-            data,
-            connection
+        if (!record || !record.id) {
+          throw new Error(
+            `Failed to create payment record for tenant: ${tenant}`,
           );
-
-          // Store inserted IDs.
-          paymentRecordIds.push(record.id);
         }
 
-        // -----------------------------------------------------
-        // 6. COMMIT PAYMENT RECORDS
-        // -----------------------------------------------------
-        //
-        // At this point all payment inserts succeeded.
-        //
-        // plots is MyISAM, so we intentionally DO NOT update
-        // plots inside this transaction.
-        //
-
-        await connection.commit();
-
-        connection.release();
-        connection = null;
-
-        // =====================================================
-        // 7. NOW UPDATE MYISAM PLOT
-        // =====================================================
-
-        try {
-          await Plot.updatePaymentStatus(
-            plot_id,
-            "ready"
-          );
-        } catch (plotUpdateError) {
-          // ===================================================
-          // COMPENSATING ACTION
-          // ===================================================
-          //
-          // Plot status failed.
-          //
-          // Remove the payment records that we just created.
-          //
-
-          console.error(
-            "Plot status update failed. Removing payment records:",
-            plotUpdateError
-          );
-
-          try {
-            await Plot.deletePaymentRecordsByIds(
-              paymentRecordIds
-            );
-          } catch (deleteError) {
-            console.error(
-              "CRITICAL: Failed to rollback payment records:",
-              deleteError
-            );
-          }
-
-          throw plotUpdateError;
-        }
-
-        // =====================================================
-        // 8. LOG SUCCESS
-        // =====================================================
-
-        await logAction({
-          user_id: userId,
-          action: "PAYMENT_READY",
-          module: "Plot Payment",
-          description:
-            `Payment marked ready for plot ${plot_id}`,
+        console.log("PAYMENT RECORD CREATED:", {
+          plot_id: plot.id,
+          tenant,
+          paymentRecordId: record.id,
         });
 
-        return res.status(200).json({
-          success: true,
-          message: "Payment marked as ready successfully",
-          data: {
-            plot_id,
-            payment_status: "ready",
-            payment_records: paymentRecordIds,
-          },
-        });
-      } catch (transactionError) {
-        // -----------------------------------------------------
-        // Rollback only if transaction is still active
-        // -----------------------------------------------------
-
-        if (connection) {
-          try {
-            await connection.rollback();
-          } catch (rollbackError) {
-            console.error(
-              "Payment transaction rollback failed:",
-              rollbackError
-            );
-          }
-        }
-
-        throw transactionError;
+        paymentRecordIds.push(record.id);
       }
+
+      await Plot.updatePaymentStatus(plot_id, "ready");
+
+      await logAction(
+        userId,
+        "PAYMENT_READY",
+        "success",
+        `Payment marked ready for plot ${plot_id}`,
+        {
+          plot_id,
+          payment_status: "ready",
+        },
+        {
+          plot_id,
+          payment_status: "ready",
+          payment_records: paymentRecordIds,
+        },
+      );
+
+      return res.status(200).json({
+        success: true,
+        message: "Payment marked as ready successfully",
+        data: {
+          plot_id,
+          payment_status: "ready",
+          payment_records: paymentRecordIds,
+        },
+      });
     }
 
-    // =========================================================
-    // 9. PROCESSING FLOW
-    // =========================================================
-
     if (payment_status === "processing") {
-      // -------------------------------------------------------
-      // Payment records must already exist
-      // -------------------------------------------------------
-
-      const paymentRecords =
-        await Plot.getPaymentRecordsByPlotId(plot_id);
+      const paymentRecords = await Plot.getPaymentRecordsByPlotId(plot_id);
 
       if (!paymentRecords || paymentRecords.length === 0) {
         return res.status(400).json({
@@ -1300,126 +1197,42 @@ const paymentReady = async (req, res) => {
         });
       }
 
-      // -------------------------------------------------------
-      // Start transaction
-      // -------------------------------------------------------
+      const existingProcessing = await Plot.hasProcessingPayments(plot_id);
 
-      connection = await db.getConnection();
-
-      await connection.beginTransaction();
-
-      try {
-        // -----------------------------------------------------
-        // Check if already processing
-        // -----------------------------------------------------
-
-        const existingProcessing =
-          await Plot.hasProcessingPayments(
-            plot_id,
-            connection
-          );
-
-        if (existingProcessing) {
-          await connection.rollback();
-
-          connection.release();
-          connection = null;
-
-          return res.status(400).json({
-            success: false,
-            message: "Payment is already in processing state",
-          });
-        }
-
-        // -----------------------------------------------------
-        // Update payment records
-        // -----------------------------------------------------
-
-        await Plot.updatePaymentRecordsStatus(
-          plot_id,
-          "processing",
-          connection
-        );
-
-        // -----------------------------------------------------
-        // Commit payment records
-        // -----------------------------------------------------
-
-        await connection.commit();
-
-        connection.release();
-        connection = null;
-
-        // =====================================================
-        // Update MyISAM plot AFTER payment records succeed
-        // =====================================================
-
-        try {
-          await Plot.updatePaymentStatus(
-            plot_id,
-            "processing"
-          );
-        } catch (plotUpdateError) {
-          // ===================================================
-          // COMPENSATING ACTION
-          // ===================================================
-
-          console.error(
-            "Plot processing status update failed:",
-            plotUpdateError
-          );
-
-          // Restore payment records to ready.
-          try {
-            await Plot.updatePaymentRecordsStatus(
-              plot_id,
-              "ready"
-            );
-          } catch (restoreError) {
-            console.error(
-              "CRITICAL: Failed to restore payment records:",
-              restoreError
-            );
-          }
-
-          throw plotUpdateError;
-        }
-
-        // -----------------------------------------------------
-        // Log success
-        // -----------------------------------------------------
-
-        await logAction({
-          user_id: userId,
-          action: "PAYMENT_PROCESSING",
-          module: "Plot Payment",
-          description:
-            `Payment moved to processing for plot ${plot_id}`,
+      if (existingProcessing) {
+        return res.status(400).json({
+          success: false,
+          message: "Payment is already in processing state",
         });
-
-        return res.status(200).json({
-          success: true,
-          message:
-            "Payment moved to processing successfully",
-          data: {
-            plot_id,
-            payment_status: "processing",
-          },
-        });
-      } catch (transactionError) {
-        if (connection) {
-          try {
-            await connection.rollback();
-          } catch (rollbackError) {
-            console.error(
-              "Payment transaction rollback failed:",
-              rollbackError
-            );
-          }
-        }
-
-        throw transactionError;
       }
+
+      await Plot.updatePaymentRecordsStatus(plot_id, "processing");
+
+      await Plot.updatePaymentStatus(plot_id, "processing");
+
+      await logAction(
+        userId,
+        "PAYMENT_PROCESSING",
+        "success",
+        `Payment moved to processing for plot ${plot_id}`,
+        {
+          plot_id,
+          payment_status: "processing",
+        },
+        {
+          plot_id,
+          payment_status: "processing",
+        },
+      );
+
+      return res.status(200).json({
+        success: true,
+        message: "Payment moved to processing successfully",
+        data: {
+          plot_id,
+          payment_status: "processing",
+        },
+      });
     }
 
     return res.status(400).json({
@@ -1439,15 +1252,9 @@ const paymentReady = async (req, res) => {
     return res.status(500).json({
       success: false,
       message:
-        err.sqlMessage ||
-        err.message ||
-        "Failed to update payment status",
+        err.sqlMessage || err.message || "Failed to update payment status",
       code: err.code || null,
     });
-  } finally {
-    if (connection) {
-      connection.release();
-    }
   }
 };
 

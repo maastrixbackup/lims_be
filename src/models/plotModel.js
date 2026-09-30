@@ -1154,8 +1154,8 @@ const Plot = {
   //   return result.affectedRows || 0;
   // },
 
-  async getPaymentRecordsByPlotId(plot_id, connection = db) {
-    const [rows] = await connection.query(
+  async getPaymentRecordsByPlotId(plot_id) {
+    const [rows] = await db.query(
       `
     SELECT *
     FROM plot_payments
@@ -2213,14 +2213,14 @@ const Plot = {
     return rows[0];
   },
 
-  async deletePaymentRecordsByIds(ids, connection = db) {
+  async deletePaymentRecordsByIds(ids) {
     if (!ids || ids.length === 0) {
       return true;
     }
 
     const placeholders = ids.map(() => "?").join(",");
 
-    await connection.query(
+    await db.query(
       `DELETE FROM plot_payments
      WHERE id IN (${placeholders})`,
       ids,
@@ -2878,8 +2878,8 @@ const Plot = {
     return rows;
   },
 
-  async updatePaymentStatus(plot_id, status, connection = db) {
-    await connection.query(
+  async updatePaymentStatus(plot_id, status) {
+    await db.query(
       `UPDATE plots
      SET payment_status = ?
      WHERE id = ? AND is_deleted = 0`,
@@ -2915,7 +2915,7 @@ const Plot = {
   //   return rows[0];
   // },
 
-  async addPaymentRecord(data, connection = db) {
+  async addPaymentRecord(data) {
     const sql = `
       INSERT INTO plot_payments 
       (unique_id, plot_id, plot_no, khata_no, project_id, present_tenant_names, payment_area, total_compensation, 
@@ -2939,19 +2939,26 @@ const Plot = {
       data.status,
     ];
 
-    const [result] = await connection.query(sql, params);
+    const [result] = await db.query(sql, params);
+    console.log("PAYMENT INSERT RESULT:", {
+      insertId: result.insertId,
+      affectedRows: result.affectedRows,
+      warningStatus: result.warningStatus,
+    });
 
     // fetch inserted record
-    const [rows] = await connection.query(
+    const [rows] = await db.query(
       `SELECT * FROM plot_payments WHERE id = ?`,
       [result.insertId],
     );
 
+    console.log("PAYMENT INSERTED ROW:", rows[0]);
+
     return rows[0];
   },
 
-  async hasProcessingPayments(plot_id, connection = db) {
-    const [rows] = await connection.query(
+  async hasProcessingPayments(plot_id) {
+    const [rows] = await db.query(
       `
     SELECT 1
     FROM plot_payments
@@ -2966,8 +2973,8 @@ const Plot = {
     return rows.length > 0;
   },
 
-  async updatePaymentRecordsStatus(plot_id, status, connection = db) {
-    await connection.query(
+  async updatePaymentRecordsStatus(plot_id, status) {
+    await db.query(
       `
     UPDATE plot_payments
     SET status = ?
