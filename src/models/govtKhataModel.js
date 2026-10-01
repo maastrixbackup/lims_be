@@ -136,21 +136,57 @@ const GovtKhata = {
       const rowNameOfRor =
         getValue(r, "LD08", "name of ror", "name_of_ror", "name of khata") ||
         null;
-      const rowLandCategory =
-        getValue(r, "LD07", "land category", "land_category", "kissam") || null;
+      const currentLandCategory = getValue(
+        r,
+        "LD07",
+        "land category",
+        "land_category",
+      );
+
+      const landCategoryValues = new Set();
+
+      if (existing?.land_category) {
+        existing.land_category
+          .split(",")
+          .map((value) => value.trim())
+          .filter(Boolean)
+          .forEach((value) => landCategoryValues.add(value));
+      }
+
+      if (currentLandCategory) {
+        landCategoryValues.add(String(currentLandCategory).trim());
+      }
+
+      const combinedLandCategory = [...landCategoryValues].join(", ");
+      const currentKissam = getValue(r, "LD07", "kissam");
+
+      const kissamValues = new Set();
+      if (existing?.kissam) {
+        existing.kissam
+          .split(",")
+          .map((value) => value.trim())
+          .filter(Boolean)
+          .forEach((value) => kissamValues.add(value));
+      }
+
+      if (currentKissam) {
+        kissamValues.add(String(currentKissam).trim());
+      }
+
+      const combinedKissam = [...kissamValues].join(", ");
 
       khataMap.set(key, {
         project_id,
         type,
         khata_no: khataNo,
         village_id: villageId,
-        kissam: getValue(r, "LD07", "kissam") || null,
+        kissam: combinedKissam || null,
         plot_no: getValue(r, "LD09", "plot no", "plot_no") || null,
         lease_case_no: getValue(r, "CD01", "lease case no") || null,
         present_status: presentStatusMap(getValue(r, "CD02", "present status")),
         case_details: getCaseDetailsValue(r),
         name_of_ror: rowNameOfRor || existing?.name_of_ror || null,
-        land_category: rowLandCategory || existing?.land_category || null,
+        land_category: combinedLandCategory || null,
       });
     });
 
