@@ -133,15 +133,39 @@ const GovtKhata = {
 
       const key = `${villageId}_${khataNo}`;
       const existing = khataMap.get(key);
-      const rowNameOfRor =
-        getValue(r, "LD08", "name of ror", "name_of_ror", "name of khata") ||
-        null;
+      const currentNameOfRor = getValue(
+        r,
+        "LD08",
+        "name of ror",
+        "name_of_ror",
+        "name of khata",
+      );
       const currentLandCategory = getValue(
         r,
         "LD07",
         "land category",
         "land_category",
       );
+
+      const rorNames = new Set();
+
+      if (existing?.name_of_ror) {
+        existing.name_of_ror
+          .split(",")
+          .map((value) => value.trim())
+          .filter(Boolean)
+          .forEach((value) => rorNames.add(value));
+      }
+
+      if (currentNameOfRor) {
+        String(currentNameOfRor)
+          .split(",")
+          .map((value) => value.trim())
+          .filter(Boolean)
+          .forEach((value) => rorNames.add(value));
+      }
+
+      const combinedNameOfRor = [...rorNames].join(", ");
 
       const landCategoryValues = new Set();
 
@@ -185,7 +209,7 @@ const GovtKhata = {
         lease_case_no: getValue(r, "CD01", "lease case no") || null,
         present_status: presentStatusMap(getValue(r, "CD02", "present status")),
         case_details: getCaseDetailsValue(r),
-        name_of_ror: rowNameOfRor || existing?.name_of_ror || null,
+        name_of_ror: combinedNameOfRor || null,
         land_category: combinedLandCategory || null,
       });
     });
@@ -625,6 +649,23 @@ const GovtKhata = {
       [file_id],
     );
     return result.affectedRows > 0;
+  },
+
+  async getByProjectVillageKhata(project_id, type, village_id, khata_no) {
+    const [rows] = await db.query(
+      `
+      SELECT *
+      FROM govt_khata
+      WHERE project_id = ?
+        AND type = ?
+        AND village_id = ?
+        AND khata_no = ?
+      LIMIT 1
+    `,
+      [project_id, type, village_id, khata_no],
+    );
+
+    return rows[0] || null;
   },
 
   async getMapDocumentsByKhataId(khata_id) {

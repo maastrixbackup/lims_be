@@ -6,7 +6,6 @@ const path = require("path");
 const fs = require("fs");
 const db = require("../config/db");
 
-
 const logAction = require("../utils/logger");
 // const Village = require("../models/villageModel");
 // const Khata = require("../models/khataModel");
@@ -243,50 +242,50 @@ const normalizeGovtPlotPayload = (
   return data;
 };
 
-const syncGovtKhataFromPlot = async (plotData) => {
-  const rows = [
-    {
-      district: plotData.district || null,
-      mouza: plotData.mouza,
-      tahasil: plotData.tahasil,
-      "thana no": plotData.thana_no || null,
-      "ri circle": plotData.ri_circle || null,
-      "khata no": plotData.khata_no,
-      "plot no": plotData.plot_no,
-      kissam: plotData.kissam || null,
-      "name of ror": plotData.name_of_ror || null,
-      "lease case no": plotData.lease_case_no || null,
-      "present status": plotData.present_status || null,
-      "case details/ deservation req.": plotData.case_details || null,
-    },
-  ];
+// const syncGovtKhataFromPlot = async (plotData) => {
+//   const rows = [
+//     {
+//       district: plotData.district || null,
+//       mouza: plotData.mouza,
+//       tahasil: plotData.tahasil,
+//       "thana no": plotData.thana_no || null,
+//       "ri circle": plotData.ri_circle || null,
+//       "khata no": plotData.khata_no,
+//       "plot no": plotData.plot_no,
+//       kissam: plotData.kissam || null,
+//       "name of ror": plotData.name_of_ror || null,
+//       "lease case no": plotData.lease_case_no || null,
+//       "present status": plotData.present_status || null,
+//       "case details/ deservation req.": plotData.case_details || null,
+//     },
+//   ];
 
-  const villageMap = await GovtVillage.upsertFromExcel(
-    rows,
-    plotData.project_id,
-    plotData.type,
-  );
+//   const villageMap = await GovtVillage.upsertFromExcel(
+//     rows,
+//     plotData.project_id,
+//     plotData.type,
+//   );
 
-  const villageKey = `${plotData.mouza}_${plotData.tahasil}`;
-  const villageId = villageMap[villageKey];
+//   const villageKey = `${plotData.mouza}_${plotData.tahasil}`;
+//   const villageId = villageMap[villageKey];
 
-  if (!villageId) {
-    throw new Error("Unable to create/find village");
-  }
+//   if (!villageId) {
+//     throw new Error("Unable to create/find village");
+//   }
 
-  const khataMap = await GovtKhata.upsertFromExcel(
-    rows,
-    villageMap,
-    plotData.project_id,
-    plotData.type,
-  );
+//   const khataMap = await GovtKhata.upsertFromExcel(
+//     rows,
+//     villageMap,
+//     plotData.project_id,
+//     plotData.type,
+//   );
 
-  const khataKey = `${villageId}_${plotData.khata_no}`;
-  return {
-    villageId,
-    khataId: khataMap[khataKey] || null,
-  };
-};
+//   const khataKey = `${villageId}_${plotData.khata_no}`;
+//   return {
+//     villageId,
+//     khataId: khataMap[khataKey] || null,
+//   };
+// };
 
 // const uploadGovtPlot = async (req, res) => {
 //   try {
@@ -338,6 +337,106 @@ const syncGovtKhataFromPlot = async (plotData) => {
 //     });
 //   }
 // };
+
+const syncGovtKhataFromPlot = async (plotData) => {
+  const mergeUnique = (existing, incoming) => {
+    const values = new Set();
+
+    const addValues = (value) => {
+      if (value === null || value === undefined) return;
+
+      String(value)
+        .split(",")
+        .map((item) => item.trim())
+        .filter(Boolean)
+        .forEach((item) => values.add(item));
+    };
+
+    addValues(existing);
+    addValues(incoming);
+
+    return values.size ? [...values].join(", ") : null;
+  };
+
+  const villageRows = [
+    {
+      district: plotData.district || null,
+      mouza: plotData.mouza,
+      tahasil: plotData.tahasil,
+      "thana no": plotData.thana_no || null,
+      "ri circle": plotData.ri_circle || null,
+    },
+  ];
+
+  const villageMap = await GovtVillage.upsertFromExcel(
+    villageRows,
+    plotData.project_id,
+    plotData.type,
+  );
+
+  const villageKey = `${plotData.mouza}_${plotData.tahasil}`;
+  const villageId = villageMap[villageKey];
+
+  if (!villageId) {
+    throw new Error("Unable to create/find village");
+  }
+
+  const existingKhata = await GovtKhata.getByProjectVillageKhata(
+    plotData.project_id,
+    plotData.type,
+    villageId,
+    plotData.khata_no,
+  );
+
+  const rows = [
+    {
+      district: plotData.district || null,
+      mouza: plotData.mouza,
+      tahasil: plotData.tahasil,
+      "thana no": plotData.thana_no || null,
+      "ri circle": plotData.ri_circle || null,
+
+      "khata no": plotData.khata_no,
+
+      "plot no": mergeUnique(existingKhata?.plot_no, plotData.plot_no),
+
+      kissam: mergeUnique(existingKhata?.kissam_of_land, plotData.kissam),
+
+      "name of ror": mergeUnique(
+        existingKhata?.name_of_ror,
+        plotData.name_of_ror,
+      ),
+
+      "land category": mergeUnique(
+        existingKhata?.land_category,
+        plotData.land_category,
+      ),
+
+      "lease case no":
+        plotData.lease_case_no || existingKhata?.lease_case_no || null,
+
+      "present status":
+        plotData.present_status || existingKhata?.present_status || null,
+
+      "case details/ deservation req.":
+        plotData.case_details || existingKhata?.case_details || null,
+    },
+  ];
+
+  const khataMap = await GovtKhata.upsertFromExcel(
+    rows,
+    villageMap,
+    plotData.project_id,
+    plotData.type,
+  );
+
+  const khataKey = `${villageId}_${plotData.khata_no}`;
+
+  return {
+    villageId,
+    khataId: khataMap[khataKey] || null,
+  };
+};
 
 const uploadGovtPlot = async (req, res) => {
   const userId = req.user.id;
@@ -427,23 +526,11 @@ const uploadGovtPlot = async (req, res) => {
     await connection.beginTransaction();
 
     // Delete old data
-    await GovtPlot.deleteByProjectAndType(
-      project_id,
-      type,
-      connection,
-    );
+    await GovtPlot.deleteByProjectAndType(project_id, type, connection);
 
-    await GovtKhata.deleteByProjectAndType(
-      project_id,
-      type,
-      connection,
-    );
+    await GovtKhata.deleteByProjectAndType(project_id, type, connection);
 
-    await GovtVillage.deleteByProjectAndType(
-      project_id,
-      type,
-      connection,
-    );
+    await GovtVillage.deleteByProjectAndType(project_id, type, connection);
 
     // Insert new villages
     const villageMap = await GovtVillage.upsertFromExcel(
@@ -463,12 +550,7 @@ const uploadGovtPlot = async (req, res) => {
     );
 
     // Insert new plots
-    await GovtPlot.bulkInsertFromExcel(
-      rows,
-      project_id,
-      type,
-      connection,
-    );
+    await GovtPlot.bulkInsertFromExcel(rows, project_id, type, connection);
 
     // Insert uploaded document record
     await GovtPlot.insertDocument(
@@ -561,12 +643,13 @@ const addGovtPlot = async (req, res) => {
   const userId = req.user.id;
   const files = req.files || {};
   const data = normalizeGovtPlotPayload(req.body || {}, files);
+  console.log("Normalized Data:", data);
 
   try {
-    if (!data.project_id || !data.type) {
+    if (!data.project_id || !data.type || !data.tahasil) {
       return res.status(400).json({
         success: false,
-        message: "Project id and type are required",
+        message: "Project id, tahasil and type are required",
       });
     }
 
@@ -576,10 +659,6 @@ const addGovtPlot = async (req, res) => {
         message: "RI report attachment is required when RI Report is Complete",
       });
     }
-
-    // if (data.misc_dr_case_prep == 1) {
-    //   // No validation needed for number (optional)
-    // }
 
     if (
       data.tree_enumeration === "Complete" &&
@@ -607,16 +686,12 @@ const addGovtPlot = async (req, res) => {
 
     data.ri_report_attachment =
       files?.ri_report_attachment?.[0]?.filename || null;
-
     data.tree_enumeration_attachment =
       files?.tree_enumeration_attachment?.[0]?.filename || null;
-
     data.lease_to_idco_attachment =
       files?.lease_to_idco_attachment?.[0]?.filename || null;
-
     data.lease_to_ua_attachment =
       files?.lease_to_ua_attachment?.[0]?.filename || null;
-
     const { villageId, khataId } = await syncGovtKhataFromPlot(data);
 
     // data.village_id = villageId;
