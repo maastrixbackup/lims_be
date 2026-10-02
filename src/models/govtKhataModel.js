@@ -464,6 +464,7 @@ const GovtKhata = {
       where.push("k.village_id = ?");
       params.push(village_id);
     }
+
     if (khata_no) {
       where.push("k.khata_no = ?");
       params.push(khata_no);
@@ -472,68 +473,113 @@ const GovtKhata = {
     const whereSql = where.length ? `WHERE ${where.join(" And ")}` : "";
 
     const dataSql = `
+    SELECT
+      k.*,
+
+      COALESCE(
+        NULLIF(k.name_of_ror, ''),
+        pc.plot_name_of_ror
+      ) AS name_of_ror,
+
+      v.village_name,
+
+      v.tahasil AS tahasil,
+
+      IFNULL(pc.plot_count, 0) AS plot_count,
+
+      IFNULL(pc.total_areas, 0) AS total_areas,
+
+      IFNULL(pc.acquired_areas, 0) AS acquired_areas,
+
+      pc.plot_numbers,
+
+      IFNULL(kdc.khata_document_count, 0) AS khata_document_count,
+
+      IFNULL(kmdc.khata_map_document_count, 0) AS khata_map_document_count
+
+    FROM govt_khata k
+
+    LEFT JOIN villages v
+      ON v.id = k.village_id
+
+    LEFT JOIN (
       SELECT
-        k.*,
-        COALESCE(NULLIF(k.name_of_ror, ''), pc.plot_name_of_ror) AS name_of_ror,
-        v.village_name,
-        IFNULL(pc.plot_count, 0) AS plot_count,
-        pc.plot_numbers,
-        IFNULL(kdc.khata_document_count, 0) AS khata_document_count,
-        IFNULL(kmdc.khata_map_document_count, 0) AS khata_map_document_count
-        FROM govt_khata k
-        LEFT JOIN villages v ON v.id = k.village_id
-        LEFT JOIN (
-          SELECT
-            project_id,
-            type,
-            khata_no,
-            COUNT(*) AS plot_count,
-            GROUP_CONCAT(
-              DISTINCT NULLIF(TRIM(name_of_ror), '')
-              ORDER BY name_of_ror
-              SEPARATOR ', '
-            ) AS plot_name_of_ror,
-            GROUP_CONCAT(
-              DISTINCT NULLIF(TRIM(plot_no), '')
-              ORDER BY CAST(plot_no AS UNSIGNED), plot_no
-              SEPARATOR ', '
-            ) AS plot_numbers
-          FROM govt_plots
-          WHERE is_deleted = 0
-          GROUP BY project_id, type, khata_no
-        ) pc
-          ON pc.project_id = k.project_id
-        AND pc.type = k.type
-        AND pc.khata_no = k.khata_no
+        project_id,
+        type,
+        khata_no,
 
-        LEFT JOIN (
-          SELECT khata_id, COUNT(*) AS khata_document_count
-          FROM khata_documents
-          GROUP BY khata_id
-        ) kdc ON kdc.khata_id = k.id
+        COUNT(*) AS plot_count,
 
-        LEFT JOIN (
-          SELECT khata_id, COUNT(*) AS khata_map_document_count
-          FROM khata_map_documents
-          GROUP BY khata_id
-        ) kmdc ON kmdc.khata_id = k.id
+        SUM(
+           COALESCE(total_area_acres, 0)
+        ) AS total_areas,
 
-        ${whereSql}
-        ORDER BY k.id DESC
-        LIMIT ? OFFSET ?
-    `;
+        SUM(
+          COALESCE(proposed_area_acres, 0)
+        ) AS acquired_areas,
 
-    const countSql = `SELECT COUNT(*) AS total
-      FROM govt_khata k
-      LEFT JOIN villages v ON v.id = k.village_id
-      ${whereSql}
-    `;
+        GROUP_CONCAT(
+          DISTINCT NULLIF(TRIM(name_of_ror), '')
+          ORDER BY name_of_ror
+          SEPARATOR ', '
+        ) AS plot_name_of_ror,
+
+        GROUP_CONCAT(
+          DISTINCT NULLIF(TRIM(plot_no), '')
+          ORDER BY CAST(plot_no AS UNSIGNED), plot_no
+          SEPARATOR ', '
+        ) AS plot_numbers
+
+      FROM govt_plots
+
+      WHERE is_deleted = 0
+
+      GROUP BY project_id, type, khata_no
+    ) pc
+      ON pc.project_id = k.project_id
+      AND pc.type = k.type
+      AND pc.khata_no = k.khata_no
+
+    LEFT JOIN (
+      SELECT
+        khata_id,
+        COUNT(*) AS khata_document_count
+      FROM khata_documents
+      GROUP BY khata_id
+    ) kdc
+      ON kdc.khata_id = k.id
+
+    LEFT JOIN (
+      SELECT
+        khata_id,
+        COUNT(*) AS khata_map_document_count
+      FROM khata_map_documents
+      GROUP BY khata_id
+    ) kmdc
+      ON kmdc.khata_id = k.id
+
+    ${whereSql}
+
+    ORDER BY k.id DESC
+
+    LIMIT ? OFFSET ?
+  `;
+
+    const countSql = `
+    SELECT COUNT(*) AS total
+    FROM govt_khata k
+    LEFT JOIN villages v
+      ON v.id = k.village_id
+    ${whereSql}
+  `;
 
     const [rows] = await db.query(dataSql, [...params, limit, offset]);
+
     const normalizedRows = rows.map((row) => ({
       ...row,
       name_of_ror: row.name_of_ror || null,
       plot_numbers: row.plot_numbers || null,
+
       plot_no_list: row.plot_numbers
         ? row.plot_numbers
             .split(",")
@@ -541,6 +587,7 @@ const GovtKhata = {
             .filter(Boolean)
         : [],
     }));
+
     const [countRows] = await db.query(countSql, params);
 
     return {
