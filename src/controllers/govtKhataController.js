@@ -245,10 +245,16 @@ const updateGovtKhata = async (req, res) => {
       null,
     );
 
-    console.error("Edit Govt Khata Error:", err);
+    if (err.code === "ER_DATA_TOO_LONG") {
+      return res.status(400).json({
+        success: false,
+        message: "Field data is too long.",
+      });
+    }
+
     return res.status(500).json({
       success: false,
-      message: "Server error",
+      message: "Failed to update government Khata",
     });
   }
 };
