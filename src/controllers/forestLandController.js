@@ -32,7 +32,9 @@ const hasAnyDocuments = (value) => normalizeDocumentList(value).length > 0;
 
 const buildDocumentValue = (files, field, existingValue = null) => {
   const existingDocs = normalizeDocumentList(existingValue);
-  const newDocs = (files[field] || []).map((file) => file.filename).filter(Boolean);
+  const newDocs = (files[field] || [])
+    .map((file) => file.filename)
+    .filter(Boolean);
 
   const merged = [...new Set([...existingDocs, ...newDocs])];
   return merged.length ? JSON.stringify(merged) : null;
@@ -60,8 +62,7 @@ const stageDocumentMimeTypes = {
   ".docx":
     "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
   ".xls": "application/vnd.ms-excel",
-  ".xlsx":
-    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+  ".xlsx": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
   ".jpg": "image/jpeg",
   ".jpeg": "image/jpeg",
   ".png": "image/png",
@@ -70,7 +71,8 @@ const stageDocumentMimeTypes = {
 const STAGE_DOCUMENT_CONFIG = {
   stage0: {
     folder: "stage0",
-    getter: (forestProjectId) => ForestLand.getStage0ByProjectId(forestProjectId),
+    getter: (forestProjectId) =>
+      ForestLand.getStage0ByProjectId(forestProjectId),
     fields: [
       "dgps_document",
       "orsac_document",
@@ -90,7 +92,8 @@ const STAGE_DOCUMENT_CONFIG = {
   },
   stage1: {
     folder: "stage1",
-    getter: (forestProjectId) => ForestLand.getStage1ByProjectId(forestProjectId),
+    getter: (forestProjectId) =>
+      ForestLand.getStage1ByProjectId(forestProjectId),
     fields: [
       "stage1_approval_document",
       "stage1_conditions_document",
@@ -106,7 +109,8 @@ const STAGE_DOCUMENT_CONFIG = {
   },
   stage2: {
     folder: "stage2",
-    getter: (forestProjectId) => ForestLand.getStage2ByProjectId(forestProjectId),
+    getter: (forestProjectId) =>
+      ForestLand.getStage2ByProjectId(forestProjectId),
     fields: [
       "environmental_document",
       "nbwl_document",
@@ -131,11 +135,20 @@ const STAGE_DOCUMENT_CONFIG = {
 };
 
 const resolveStageKey = (value = "") =>
-  value.toString().toLowerCase().replace(/[^a-z0-9]/g, "");
+  value
+    .toString()
+    .toLowerCase()
+    .replace(/[^a-z0-9]/g, "");
 
 const getBaseUrl = (req) => `${req.protocol}://${req.get("host")}`;
 
-const buildStageDocumentUrls = (req, stage, forestProjectId, field, fileName) => {
+const buildStageDocumentUrls = (
+  req,
+  stage,
+  forestProjectId,
+  field,
+  fileName,
+) => {
   const encodedFileName = encodeURIComponent(fileName);
   const basePath = `${getBaseUrl(req)}/api/forestland/stage-document/${stage}/${forestProjectId}/${field}/${encodedFileName}`;
 
@@ -172,7 +185,8 @@ const serveForestStageDocument = async (req, res) => {
     if (!forest_project_id || !field || !fileName || fileName.includes("..")) {
       return res.status(400).json({
         success: false,
-        message: "Valid stage, forest_project_id, field, and fileName are required",
+        message:
+          "Valid stage, forest_project_id, field, and fileName are required",
       });
     }
 
@@ -207,7 +221,12 @@ const serveForestStageDocument = async (req, res) => {
       });
     }
 
-    const filePath = path.join(process.cwd(), "uploads", config.folder, fileName);
+    const filePath = path.join(
+      process.cwd(),
+      "uploads",
+      config.folder,
+      fileName,
+    );
     if (!fs.existsSync(filePath)) {
       return res.status(404).json({
         success: false,
@@ -257,7 +276,12 @@ const streamForestStageFileByFolder = async (req, res, disposition) => {
       });
     }
 
-    const filePath = path.join(process.cwd(), "uploads", config.folder, fileName);
+    const filePath = path.join(
+      process.cwd(),
+      "uploads",
+      config.folder,
+      fileName,
+    );
     if (!fs.existsSync(filePath)) {
       return res.status(404).json({
         success: false,
@@ -268,11 +292,11 @@ const streamForestStageFileByFolder = async (req, res, disposition) => {
     const ext = path.extname(fileName).toLowerCase();
     res.setHeader(
       "Content-Type",
-      stageDocumentMimeTypes[ext] || "application/octet-stream"
+      stageDocumentMimeTypes[ext] || "application/octet-stream",
     );
     res.setHeader(
       "Content-Disposition",
-      `${disposition}; filename="${fileName}"`
+      `${disposition}; filename="${fileName}"`,
     );
 
     return fs.createReadStream(filePath).pipe(res);
@@ -292,7 +316,12 @@ const viewForestStageDocument = async (req, res) =>
   streamForestStageFileByFolder(req, res, "inline");
 
 const normalizeHeaderKey = (key) =>
-  key?.toString().replace(/\r?\n/g, " ").replace(/\s+/g, " ").trim().toLowerCase();
+  key
+    ?.toString()
+    .replace(/\r?\n/g, " ")
+    .replace(/\s+/g, " ")
+    .trim()
+    .toLowerCase();
 
 const toTrimmedString = (value) =>
   value === null || value === undefined ? "" : value.toString().trim();
@@ -370,7 +399,8 @@ const uploadForestLandSchedule = async (req, res) => {
     if (!project_master_id || !schedule_type) {
       return res.status(400).json({
         success: false,
-        message: "project_id (or project_master_id) and schedule_type (or type) are required",
+        message:
+          "project_id (or project_master_id) and schedule_type (or type) are required",
       });
     }
 
@@ -395,7 +425,8 @@ const uploadForestLandSchedule = async (req, res) => {
       cleanupUploadedFile();
       return res.status(400).json({
         success: false,
-        message: "Invalid Excel format. Maximum 2 sheets are allowed inside file.",
+        message:
+          "Invalid Excel format. Maximum 2 sheets are allowed inside file.",
       });
     }
 
@@ -412,7 +443,9 @@ const uploadForestLandSchedule = async (req, res) => {
     }
 
     const normalizeCompareKey = (key) =>
-      normalizeHeaderKey(key)?.replace(/[^a-z0-9]+/g, " ").trim();
+      normalizeHeaderKey(key)
+        ?.replace(/[^a-z0-9]+/g, " ")
+        .trim();
     const isHeaderLikeValue = (value, ...expectedLabels) => {
       const normalizedValue = normalizeCompareKey(value);
       if (!normalizedValue) return false;
@@ -433,7 +466,11 @@ const uploadForestLandSchedule = async (req, res) => {
       for (const key of Object.keys(row)) {
         if (normalizedKeys.includes(normalizeCompareKey(key))) {
           const value = row[key];
-          if (value !== undefined && value !== null && `${value}`.trim() !== "") {
+          if (
+            value !== undefined &&
+            value !== null &&
+            `${value}`.trim() !== ""
+          ) {
             return value;
           }
         }
@@ -447,7 +484,11 @@ const uploadForestLandSchedule = async (req, res) => {
         const normalized = normalizeCompareKey(key);
         if (normalized === target || normalized.startsWith(`${target} `)) {
           const value = row[key];
-          if (value !== undefined && value !== null && `${value}`.trim() !== "") {
+          if (
+            value !== undefined &&
+            value !== null &&
+            `${value}`.trim() !== ""
+          ) {
             return value;
           }
         }
@@ -464,7 +505,14 @@ const uploadForestLandSchedule = async (req, res) => {
     const parsedRows = rawRows
       .map((row) => {
         const totalAreaHa = toNumberOrNull(
-          get(row, "FA01", "NFA02", "CAA01", "total area (ha)", "total area ha"),
+          get(
+            row,
+            "FA01",
+            "NFA02",
+            "CAA01",
+            "total area (ha)",
+            "total area ha",
+          ),
         );
         const totalAreaAcre = toNumberOrNull(
           get(row, "total area (in acres)", "total area (acre)"),
@@ -485,7 +533,14 @@ const uploadForestLandSchedule = async (req, res) => {
 
         return {
           district: get(row, "FD01", "NFD01", "CAD01", "district"),
-          ri_circle: get(row,  "FD02", "NFD02", "CAD02", "ri circle", "ri_circle"),
+          ri_circle: get(
+            row,
+            "FD02",
+            "NFD02",
+            "CAD02",
+            "ri circle",
+            "ri_circle",
+          ),
           tahasil: get(row, "NFD03", "CAD03", "tahasil", "tehasil"),
           village: get(
             row,
@@ -497,7 +552,13 @@ const uploadForestLandSchedule = async (req, res) => {
             "mauza",
             "name of village",
           ),
-          forest_division: get(row, "FD03", "CA04", "forest division", "forest_division"),
+          forest_division: get(
+            row,
+            "FD03",
+            "CA04",
+            "forest division",
+            "forest_division",
+          ),
           forest_range: get(row, "FD04", "forest range", "forest_range"),
           khata_no: get(
             row,
@@ -527,7 +588,13 @@ const uploadForestLandSchedule = async (req, res) => {
             "forest_category",
           ),
           ownership: get(row, "NFO01", "CAO01", "ownership"),
-          fra_allotted: get(row, "NFA01", "fra allotted", "fra_allotted", "land allotted through fra"),
+          fra_allotted: get(
+            row,
+            "NFA01",
+            "fra allotted",
+            "fra_allotted",
+            "land allotted through fra",
+          ),
           total_area_ha:
             totalAreaHa !== null
               ? totalAreaHa
@@ -543,19 +610,29 @@ const uploadForestLandSchedule = async (req, res) => {
           digital_area_ha: toNumberOrNull(
             get(row, "digital area (ha)", "digital_area_ha", "digital area ha"),
           ),
-          ca_area_ha: toNumberOrNull(get(row, "CA02", "ca area (ha)", "ca_area_ha")),
+          ca_area_ha: toNumberOrNull(
+            get(row, "CA02", "ca area (ha)", "ca_area_ha"),
+          ),
           patch_name: get(row, "CA03", "patch name", "patch_name"),
           remarks: get(row, "FA03", "NFA04", "CA05", "remarks", "remark"),
         };
       })
       .map((row) => ({
         ...row,
-        district: typeof row.district === "string" ? row.district.trim() : row.district,
-        ri_circle: typeof row.ri_circle === "string" ? row.ri_circle.trim() : row.ri_circle,
-        tahasil: typeof row.tahasil === "string" ? row.tahasil.trim() : row.tahasil,
-        village: typeof row.village === "string" ? row.village.trim() : row.village,
-        khata_no: typeof row.khata_no === "string" ? row.khata_no.trim() : row.khata_no,
-        plot_no: typeof row.plot_no === "string" ? row.plot_no.trim() : row.plot_no,
+        district:
+          typeof row.district === "string" ? row.district.trim() : row.district,
+        ri_circle:
+          typeof row.ri_circle === "string"
+            ? row.ri_circle.trim()
+            : row.ri_circle,
+        tahasil:
+          typeof row.tahasil === "string" ? row.tahasil.trim() : row.tahasil,
+        village:
+          typeof row.village === "string" ? row.village.trim() : row.village,
+        khata_no:
+          typeof row.khata_no === "string" ? row.khata_no.trim() : row.khata_no,
+        plot_no:
+          typeof row.plot_no === "string" ? row.plot_no.trim() : row.plot_no,
       }))
       .filter((row) =>
         Object.values(row).some(
@@ -567,10 +644,29 @@ const uploadForestLandSchedule = async (req, res) => {
           !isHeaderLikeValue(row.district, "district") &&
           !isHeaderLikeValue(row.ri_circle, "ri circle", "ri_circle") &&
           !isHeaderLikeValue(row.tahasil, "tahasil", "tehasil") &&
-          !isHeaderLikeValue(row.village, "village", "mouza", "mauza", "name of village") &&
-          !isHeaderLikeValue(row.forest_division, "forest division", "forest_division") &&
-          !isHeaderLikeValue(row.forest_range, "forest range", "forest_range") &&
-          !isHeaderLikeValue(row.khata_no, "khata no", "khata_no", "khata no.") &&
+          !isHeaderLikeValue(
+            row.village,
+            "village",
+            "mouza",
+            "mauza",
+            "name of village",
+          ) &&
+          !isHeaderLikeValue(
+            row.forest_division,
+            "forest division",
+            "forest_division",
+          ) &&
+          !isHeaderLikeValue(
+            row.forest_range,
+            "forest range",
+            "forest_range",
+          ) &&
+          !isHeaderLikeValue(
+            row.khata_no,
+            "khata no",
+            "khata_no",
+            "khata no.",
+          ) &&
           !isHeaderLikeValue(row.plot_no, "plot no", "plot_no", "plot no.") &&
           !isHeaderLikeValue(row.kisam, "kisam", "kissam") &&
           !isHeaderLikeValue(
@@ -744,10 +840,11 @@ const forestLandList = async (req, res) => {
     project_master_id = project_master_id || project_id;
     schedule_type = schedule_type || type;
 
-    if (!project_master_id || !schedule_type ) {
+    if (!project_master_id || !schedule_type) {
       return res.status(400).json({
         success: false,
-        message: "project_id (or project_master_id) and schedule_type (or type) are required",
+        message:
+          "project_id (or project_master_id) and schedule_type (or type) are required",
       });
     }
 
@@ -800,8 +897,9 @@ const forestLandDocumentList = async (req, res) => {
       name: r.original_filename,
       download_name: r.filename,
       uploadedAt: r.created_at,
-      documentUrl: `${req.protocol}://${req.get("host")}${req.get("host").includes("localhost") ? "" : "/api"
-        }/uploads/forest_land_excels/${r.filename}`,
+      documentUrl: `${req.protocol}://${req.get("host")}${
+        req.get("host").includes("localhost") ? "" : "/api"
+      }/uploads/forest_land_excels/${r.filename}`,
     }));
 
     return res.status(200).json({
@@ -891,7 +989,6 @@ const forestLandDocumentDelete = async (req, res) => {
   }
 };
 
-
 const updateForestLand = async (req, res) => {
   const userId = req.user?.id || null;
   const { id } = req.params;
@@ -948,7 +1045,7 @@ const updateForestLand = async (req, res) => {
       "success",
       "Forest land updated successfully",
       body,
-      updatedData
+      updatedData,
     );
 
     res.status(200).json({
@@ -963,7 +1060,7 @@ const updateForestLand = async (req, res) => {
       "failure",
       err.message,
       req.body || {},
-      null
+      null,
     );
 
     console.error(err);
@@ -994,7 +1091,7 @@ const deleteForestLand = async (req, res) => {
       "success",
       "Forest land deleted successfully",
       { id },
-      null
+      null,
     );
 
     res.status(200).json({
@@ -1008,7 +1105,7 @@ const deleteForestLand = async (req, res) => {
       "failure",
       err.message,
       { id },
-      null
+      null,
     );
 
     console.error(err);
@@ -1115,7 +1212,6 @@ const deleteForestLand = async (req, res) => {
 //   }
 // };
 
-
 // const addForestProject = async (req, res) => {
 //   const userId = req.user?.id;
 
@@ -1173,10 +1269,10 @@ const deleteForestLand = async (req, res) => {
 //   }
 // };
 
-
 const forestLandAbstract = async (req, res) => {
   try {
-    const project_master_id = req.query.project_master_id || req.query.project_id;
+    const project_master_id =
+      req.query.project_master_id || req.query.project_id;
 
     const rows = await ForestLand.getAbstract(project_master_id || null);
 
@@ -1208,22 +1304,14 @@ const forestLandAbstract = async (req, res) => {
 
     // Calculations (PURE NUMBERS)
     const totalProjectArea = {
-      total:
-        buckets.FOREST_AREA.total +
-        buckets.NON_FOREST_AREA.total,
-      proposed:
-        buckets.FOREST_AREA.proposed +
-        buckets.NON_FOREST_AREA.proposed,
-      digital:
-        buckets.FOREST_AREA.digital +
-        buckets.NON_FOREST_AREA.digital,
+      total: buckets.FOREST_AREA.total + buckets.NON_FOREST_AREA.total,
+      proposed: buckets.FOREST_AREA.proposed + buckets.NON_FOREST_AREA.proposed,
+      digital: buckets.FOREST_AREA.digital + buckets.NON_FOREST_AREA.digital,
     };
 
     const totalLandUnderFD = {
       total:
-        totalProjectArea.total +
-        buckets.CA_LAND.total +
-        buckets.ACA_LAND.total,
+        totalProjectArea.total + buckets.CA_LAND.total + buckets.ACA_LAND.total,
       proposed:
         totalProjectArea.proposed +
         buckets.CA_LAND.proposed +
@@ -1284,7 +1372,6 @@ const forestLandAbstract = async (req, res) => {
     });
   }
 };
-
 
 // const addForestProject = async (req, res) => {
 //   try {
@@ -1348,6 +1435,12 @@ const addForestProjectWithEds = async (req, res) => {
     const body = req.body || {};
     const files = req.files || [];
 
+    // console.log("========== FOREST EDS DEBUG ==========");
+    // console.log("REQ BODY:", body);
+    // console.log("REQ FILES:", files);
+    // console.log("FILES LENGTH:", files.length);
+    // console.log("======================================");
+
     const edsFlag = Number(body.eds_flag) || 0;
 
     const master = await ForestLand.createForestProject({
@@ -1375,10 +1468,13 @@ const addForestProjectWithEds = async (req, res) => {
 
     const masterId = master.id;
 
-    // Helper function to safely parse integer fields without converting 0 to null/empty string
     const parseInteger = (val) => {
-      if (val === "" || val === null || val === undefined) return null;
+      if (val === "" || val === null || val === undefined) {
+        return null;
+      }
+
       const parsed = parseInt(val, 10);
+
       return isNaN(parsed) ? null : parsed;
     };
 
@@ -1388,9 +1484,19 @@ const addForestProjectWithEds = async (req, res) => {
           ? JSON.parse(body.eds_list)
           : body.eds_list;
 
+      // console.log("EDS LIST:", edsList);
+      // console.log("EDS COUNT:", edsList.length);
+
       for (let i = 0; i < edsList.length; i++) {
         const eds = edsList[i];
         const fileObj = files[i];
+
+        // console.log("---------- EDS ITEM ----------");
+        // console.log("INDEX:", i);
+        // console.log("EDS:", eds);
+        // console.log("FILE OBJECT:", fileObj);
+        // console.log("FILE NAME:", fileObj?.filename);
+        // console.log("------------------------------");
 
         await ForestLand.createEds({
           project_master_id: masterId,
@@ -1398,11 +1504,12 @@ const addForestProjectWithEds = async (req, res) => {
           issuing_authority: eds.issuing_authority || null,
           eds_issue_date: eds.eds_issue_date || null,
           eds_due_date: eds.eds_due_date || null,
-          // Safe integer parsing prevents 0 from coercing into '' or null
           total_issues: parseInteger(eds.total_issues),
           issues_closed: parseInteger(eds.issues_closed),
           issues_pending: parseInteger(eds.issues_pending),
+
           eds_reply_document: fileObj?.filename || null,
+
           eds_status: eds.eds_status || null,
         });
       }
@@ -1415,6 +1522,7 @@ const addForestProjectWithEds = async (req, res) => {
     });
   } catch (err) {
     console.error("EDS Error:", err);
+
     return res.status(500).json({
       success: false,
       message: err.message || "Server error",
@@ -1493,7 +1601,7 @@ const getForestProjectWithEds = async (req, res) => {
     const { projectId } = req.params;
 
     const data = await ForestLand.getProjectWithEds(projectId);
-    console.log(data)
+    // console.log(data);
 
     if (!data) {
       return res.status(404).json({
@@ -1517,11 +1625,7 @@ const getForestProjectWithEds = async (req, res) => {
 
 const forestProjectList = async (req, res) => {
   try {
-    let {
-      page = 1,
-      limit = 10,
-      project_id
-    } = req.query;
+    let { page = 1, limit = 10, project_id } = req.query;
 
     page = parseInt(page);
     limit = parseInt(limit);
@@ -1531,14 +1635,15 @@ const forestProjectList = async (req, res) => {
       page,
       limit,
       offset,
-      project_id
+      project_id,
     });
 
     const data = result.data.map((r) => ({
       ...r,
       eds_document_url: r.eds_document_path
-        ? `${req.protocol}://${req.get("host")}${req.get("host").includes("localhost") ? "" : "/api"
-        }/${r.eds_document_path}`
+        ? `${req.protocol}://${req.get("host")}${
+            req.get("host").includes("localhost") ? "" : "/api"
+          }/${r.eds_document_path}`
         : null,
     }));
 
@@ -1582,30 +1687,69 @@ const updateForestProject = async (req, res) => {
         : Number(existing.eds_flag || 0);
 
     const payload = {
-      proposal_no: body.proposal_no !== undefined ? body.proposal_no : existing.proposal_no,
-      project_name: body.project_name !== undefined ? body.project_name : existing.project_name,
-      project_category: body.project_category !== undefined ? body.project_category : existing.project_category,
-      project_sub_category: body.project_sub_category !== undefined ? body.project_sub_category : existing.project_sub_category,
-      project_nature: body.project_nature !== undefined ? body.project_nature : existing.project_nature,
-      user_agency: body.user_agency !== undefined ? body.user_agency : existing.user_agency,
+      proposal_no:
+        body.proposal_no !== undefined
+          ? body.proposal_no
+          : existing.proposal_no,
+      project_name:
+        body.project_name !== undefined
+          ? body.project_name
+          : existing.project_name,
+      project_category:
+        body.project_category !== undefined
+          ? body.project_category
+          : existing.project_category,
+      project_sub_category:
+        body.project_sub_category !== undefined
+          ? body.project_sub_category
+          : existing.project_sub_category,
+      project_nature:
+        body.project_nature !== undefined
+          ? body.project_nature
+          : existing.project_nature,
+      user_agency:
+        body.user_agency !== undefined
+          ? body.user_agency
+          : existing.user_agency,
       state: body.state !== undefined ? body.state : existing.state,
       district: body.district !== undefined ? body.district : existing.district,
       tahasil: body.tahasil !== undefined ? body.tahasil : existing.tahasil,
       mouza: body.mouza !== undefined ? body.mouza : existing.mouza,
-      range_division: body.range_division !== undefined ? body.range_division : existing.range_division,
-      forest_type: body.forest_type !== undefined ? body.forest_type : existing.forest_type,
-      total_project_area_ha: body.total_project_area_ha !== undefined ? body.total_project_area_ha : existing.total_project_area_ha,
-      forest_area_ha: body.forest_area_ha !== undefined ? body.forest_area_ha : existing.forest_area_ha,
-      non_forest_area_ha: body.non_forest_area_ha !== undefined ? body.non_forest_area_ha : existing.non_forest_area_ha,
-      project_status: body.project_status !== undefined ? body.project_status : existing.project_status,
-      current_stage: body.current_stage !== undefined ? body.current_stage : existing.current_stage,
+      range_division:
+        body.range_division !== undefined
+          ? body.range_division
+          : existing.range_division,
+      forest_type:
+        body.forest_type !== undefined
+          ? body.forest_type
+          : existing.forest_type,
+      total_project_area_ha:
+        body.total_project_area_ha !== undefined
+          ? body.total_project_area_ha
+          : existing.total_project_area_ha,
+      forest_area_ha:
+        body.forest_area_ha !== undefined
+          ? body.forest_area_ha
+          : existing.forest_area_ha,
+      non_forest_area_ha:
+        body.non_forest_area_ha !== undefined
+          ? body.non_forest_area_ha
+          : existing.non_forest_area_ha,
+      project_status:
+        body.project_status !== undefined
+          ? body.project_status
+          : existing.project_status,
+      current_stage:
+        body.current_stage !== undefined
+          ? body.current_stage
+          : existing.current_stage,
       eds_flag: edsFlag,
       eds_document_path: existing.eds_document_path || null,
     };
 
     const updatedProject = await ForestLand.updateForestProject(
       masterProjectId,
-      payload
+      payload,
     );
 
     // Delete existing EDS rows before re-inserting updated set
@@ -1662,7 +1806,7 @@ const updateForestProject = async (req, res) => {
       "success",
       "Forest project updated",
       body,
-      updatedProject
+      updatedProject,
     );
 
     res.status(200).json({
@@ -1679,7 +1823,7 @@ const updateForestProject = async (req, res) => {
       "failure",
       err.message,
       req.body,
-      null
+      null,
     );
 
     res.status(500).json({
@@ -1712,7 +1856,7 @@ const deleteForestProject = async (req, res) => {
       "success",
       "Forest project deleted",
       { masterProjectId },
-      null
+      null,
     );
 
     res.status(200).json({
@@ -1728,7 +1872,7 @@ const deleteForestProject = async (req, res) => {
       "failed",
       "Forest project deleted",
       { masterProjectId },
-      null
+      null,
     );
 
     res.status(500).json({
@@ -1759,8 +1903,7 @@ const addStage0 = async (req, res) => {
     const caPlanning = Number(body.ca_ca_planning) || 0;
     const proposalSubmitted = Number(body.proposal_submitted) || 0;
 
-    const stageStatus =
-      proposalSubmitted === 1 ? "Ready" : "Ongoing";
+    const stageStatus = proposalSubmitted === 1 ? "Ready" : "Ongoing";
 
     const requireFile = (condition, field, message) => {
       if (condition && !hasUploadedDocuments(files, field)) {
@@ -1768,80 +1911,84 @@ const addStage0 = async (req, res) => {
       }
     };
 
-    requireFile(dgpsSurveyDone === 1, "dgps_document", "DGPS document required");
+    requireFile(
+      dgpsSurveyDone === 1,
+      "dgps_document",
+      "DGPS document required",
+    );
 
     requireFile(orsacAuth === 1, "orsac_document", "ORSAC document required");
 
     requireFile(
       treeEnum === 1,
       "tree_enumeration_document",
-      "Tree enumeration document required"
+      "Tree enumeration document required",
     );
 
     requireFile(
       adminDocs === 1,
       "administrative_document",
-      "Administrative document required"
+      "Administrative document required",
     );
 
     requireFile(
       legalLease === 1,
       "legal_lease_document",
-      "Legal & Lease document required"
+      "Legal & Lease document required",
     );
 
     requireFile(
       technicalData === 1,
       "technical_document",
-      "Technical document required"
+      "Technical document required",
     );
 
     requireFile(
       body.forest_land_details === "Uploaded",
       "forest_land_details_document",
-      "Forest land details document required"
+      "Forest land details document required",
     );
 
     requireFile(
       caPlanning === 1,
       "ca_ca_document",
-      "CA/CA Planning document required"
+      "CA/CA Planning document required",
     );
 
     requireFile(
       body.fra_records === "Completed",
       "fra_document",
-      "FRA document required"
+      "FRA document required",
     );
 
     requireFile(
       body.environmental_statutory === "Cleared",
       "environmental_document",
-      "Environmental document required"
+      "Environmental document required",
     );
 
     requireFile(
       body.wildlife_safeguards === "Completed",
       "wildlife_document",
-      "Wildlife document required"
+      "Wildlife document required",
     );
 
     requireFile(
       body.maps_spatial_evidence === "Authenticated",
       "maps_document",
-      "Maps document required"
+      "Maps document required",
     );
 
     requireFile(
       body.financial_undertakings === "Submitted",
       "financial_document",
-      "Financial document required"
+      "Financial document required",
     );
 
     requireFile(
       proposalSubmitted === 1,
       "proposal_document",
-      "Proposal document required"
+      "Proposal document required",
     );
 
     const payload = {
@@ -1857,11 +2004,14 @@ const addStage0 = async (req, res) => {
       tree_enumeration_done: treeEnum,
       tree_enumeration_document: buildDocumentValue(
         files,
-        "tree_enumeration_document"
+        "tree_enumeration_document",
       ),
 
       administrative_documents: adminDocs,
-      administrative_document: buildDocumentValue(files, "administrative_document"),
+      administrative_document: buildDocumentValue(
+        files,
+        "administrative_document",
+      ),
 
       legal_lease_documents: legalLease,
       legal_lease_document: buildDocumentValue(files, "legal_lease_document"),
@@ -1872,7 +2022,7 @@ const addStage0 = async (req, res) => {
       forest_land_details: body.forest_land_details || null,
       forest_land_details_document: buildDocumentValue(
         files,
-        "forest_land_details_document"
+        "forest_land_details_document",
       ),
 
       ca_ca_planning: caPlanning,
@@ -1882,7 +2032,10 @@ const addStage0 = async (req, res) => {
       fra_document: buildDocumentValue(files, "fra_document"),
 
       environmental_statutory: body.environmental_statutory || null,
-      environmental_document: buildDocumentValue(files, "environmental_document"),
+      environmental_document: buildDocumentValue(
+        files,
+        "environmental_document",
+      ),
 
       wildlife_safeguards: body.wildlife_safeguards || null,
       wildlife_document: buildDocumentValue(files, "wildlife_document"),
@@ -1936,8 +2089,7 @@ const addStage1 = async (req, res) => {
 
     const eligibleForStage2 = stage1Accepted === 1 ? 1 : 0;
 
-    const stage1Status =
-      stage1Accepted === 1 ? "Completed" : "Pending";
+    const stage1Status = stage1Accepted === 1 ? "Completed" : "Pending";
 
     const requireFile = (condition, field, message) => {
       if (condition && !hasUploadedDocuments(files, field)) {
@@ -1948,71 +2100,77 @@ const addStage1 = async (req, res) => {
     requireFile(
       body.stage1_approval_letter === "Uploaded",
       "stage1_approval_document",
-      "Stage-1 approval document required"
+      "Stage-1 approval document required",
     );
 
     requireFile(
       conditionsExtracted === 1,
       "stage1_conditions_document",
-      "Stage-1 conditions document required"
+      "Stage-1 conditions document required",
     );
 
     requireFile(
       caLandHandedOver === 1,
       "ca_land_document",
-      "CA land document required"
+      "CA land document required",
     );
 
     requireFile(
       body.fra_compliance === "Complied",
       "fra_document",
-      "FRA document required"
+      "FRA document required",
     );
 
     requireFile(
       body.npv_payment === "Paid",
       "npv_document",
-      "NPV payment document required"
+      "NPV payment document required",
     );
 
     requireFile(
       body.ca_payment === "Paid",
       "ca_payment_document",
-      "CA payment document required"
+      "CA payment document required",
     );
 
     requireFile(
       body.aca_payment === "Paid",
       "aca_payment_document",
-      "ACA payment document required"
+      "ACA payment document required",
     );
 
     requireFile(
       body.wildlife_payment === "Paid",
       "wildlife_payment_document",
-      "Wildlife payment document required"
+      "Wildlife payment document required",
     );
 
     requireFile(
       body.technical_compliance === "Completed",
       "technical_document",
-      "Technical compliance document required"
+      "Technical compliance document required",
     );
 
     requireFile(
       stage1Accepted === 1,
       "stage1_acceptance_document",
-      "Stage-1 acceptance document required"
+      "Stage-1 acceptance document required",
     );
 
     const payload = {
       forest_project_id: body.forest_project_id,
 
       stage1_approval_letter: body.stage1_approval_letter || null,
-      stage1_approval_document: buildDocumentValue(files, "stage1_approval_document"),
+      stage1_approval_document: buildDocumentValue(
+        files,
+        "stage1_approval_document",
+      ),
 
       stage1_conditions_extracted: conditionsExtracted,
-      stage1_conditions_document: buildDocumentValue(files, "stage1_conditions_document"),
+      stage1_conditions_document: buildDocumentValue(
+        files,
+        "stage1_conditions_document",
+      ),
 
       ca_land_handed_over: caLandHandedOver,
       ca_land_document: buildDocumentValue(files, "ca_land_document"),
@@ -2030,7 +2188,10 @@ const addStage1 = async (req, res) => {
       aca_payment_document: buildDocumentValue(files, "aca_payment_document"),
 
       wildlife_payment: body.wildlife_payment || null,
-      wildlife_payment_document: buildDocumentValue(files, "wildlife_payment_document"),
+      wildlife_payment_document: buildDocumentValue(
+        files,
+        "wildlife_payment_document",
+      ),
 
       technical_compliance: body.technical_compliance || null,
       technical_document: buildDocumentValue(files, "technical_document"),
@@ -2038,7 +2199,7 @@ const addStage1 = async (req, res) => {
       stage1_compliance_accepted: stage1Accepted,
       stage1_acceptance_document: buildDocumentValue(
         files,
-        "stage1_acceptance_document"
+        "stage1_acceptance_document",
       ),
 
       eligible_for_stage2: eligibleForStage2,
@@ -2076,11 +2237,9 @@ const addStage2 = async (req, res) => {
     const stage2Letter = Number(body.stage2_approval_letter) || 0;
     const mapsApproved = Number(body.final_maps_approved) || 0;
 
-    const stage2Status =
-      stage2Letter === 1 ? "Granted" : "Not Granted";
+    const stage2Status = stage2Letter === 1 ? "Granted" : "Not Granted";
 
-    const eligiblePostClearance =
-      stage2Status === "Granted" ? 1 : 0;
+    const eligiblePostClearance = stage2Status === "Granted" ? 1 : 0;
 
     const requireFile = (condition, field, message) => {
       if (condition && !hasUploadedDocuments(files, field)) {
@@ -2091,44 +2250,47 @@ const addStage2 = async (req, res) => {
     requireFile(
       body.environmental_clearance === "Obtained",
       "environmental_document",
-      "Environmental clearance document required"
+      "Environmental clearance document required",
     );
 
     requireFile(
       body.nbwl_clearance === "Obtained",
       "nbwl_document",
-      "NBWL document required"
+      "NBWL document required",
     );
 
     requireFile(
       body.final_ca_execution === "Completed",
       "final_ca_document",
-      "Final CA document required"
+      "Final CA document required",
     );
 
     requireFile(
       mapsApproved === 1,
       "final_maps_document",
-      "Final maps document required"
+      "Final maps document required",
     );
 
     requireFile(
       body.final_technical_approval === "Completed",
       "final_technical_document",
-      "Final technical document required"
+      "Final technical document required",
     );
 
     requireFile(
       stage2Letter === 1,
       "stage2_approval_document",
-      "Stage-II approval document required"
+      "Stage-II approval document required",
     );
 
     const payload = {
       forest_project_id: body.forest_project_id,
 
       environmental_clearance: body.environmental_clearance || null,
-      environmental_document: buildDocumentValue(files, "environmental_document"),
+      environmental_document: buildDocumentValue(
+        files,
+        "environmental_document",
+      ),
 
       nbwl_clearance: body.nbwl_clearance || null,
       nbwl_document: buildDocumentValue(files, "nbwl_document"),
@@ -2139,19 +2301,22 @@ const addStage2 = async (req, res) => {
       final_maps_approved: mapsApproved,
       final_maps_document: buildDocumentValue(files, "final_maps_document"),
 
-      final_technical_approval:
-        body.final_technical_approval || null,
-      final_technical_document: buildDocumentValue(files, "final_technical_document"),
+      final_technical_approval: body.final_technical_approval || null,
+      final_technical_document: buildDocumentValue(
+        files,
+        "final_technical_document",
+      ),
 
       stage2_approval_letter: stage2Letter,
-      stage2_approval_document: buildDocumentValue(files, "stage2_approval_document"),
+      stage2_approval_document: buildDocumentValue(
+        files,
+        "stage2_approval_document",
+      ),
 
       stage2_approval_date: body.stage2_approval_date || null,
 
-      approved_forest_area_ha:
-        body.approved_forest_area_ha || null,
-      approved_non_forest_area_ha:
-        body.approved_non_forest_area_ha || null,
+      approved_forest_area_ha: body.approved_forest_area_ha || null,
+      approved_non_forest_area_ha: body.approved_non_forest_area_ha || null,
 
       stage2_status: stage2Status,
       eligible_post_clearance: eligiblePostClearance,
@@ -2201,41 +2366,38 @@ const addPostClearance = async (req, res) => {
     requireFile(
       started === 1,
       "ca_plantation_started_document",
-      "CA plantation started document required"
+      "CA plantation started document required",
     );
 
     requireFile(
       completed === 1,
       "ca_plantation_completed_document",
-      "CA plantation completed document required"
+      "CA plantation completed document required",
     );
 
     requireFile(
       survival === 1,
       "survival_report_document",
-      "Survival report document required"
+      "Survival report document required",
     );
 
     requireFile(
       wildlife === 1,
       "wildlife_mitigation_document",
-      "Wildlife mitigation document required"
+      "Wildlife mitigation document required",
     );
 
     requireFile(
       safety === 1,
       "safety_zone_document",
-      "Safety zone document required"
+      "Safety zone document required",
     );
 
     if (periodic === 1 && !body.periodic_compliance_type) {
       throw new Error("Periodic compliance type required");
     }
 
-    if (
-      body.inspection_observations === "Open" &&
-      !body.inspection_remarks
-    ) {
+    if (body.inspection_observations === "Open" && !body.inspection_remarks) {
       throw new Error("Inspection remarks required when Open");
     }
 
@@ -2253,22 +2415,25 @@ const addPostClearance = async (req, res) => {
       ca_plantation_started: started,
       ca_plantation_started_document: buildDocumentValue(
         files,
-        "ca_plantation_started_document"
+        "ca_plantation_started_document",
       ),
 
       ca_plantation_completed: completed,
       ca_plantation_completed_document: buildDocumentValue(
         files,
-        "ca_plantation_completed_document"
+        "ca_plantation_completed_document",
       ),
 
       survival_report_submitted: survival,
-      survival_report_document: buildDocumentValue(files, "survival_report_document"),
+      survival_report_document: buildDocumentValue(
+        files,
+        "survival_report_document",
+      ),
 
       wildlife_mitigation: wildlife,
       wildlife_mitigation_document: buildDocumentValue(
         files,
-        "wildlife_mitigation_document"
+        "wildlife_mitigation_document",
       ),
 
       safety_zone_maintained: safety,
@@ -2355,19 +2520,19 @@ const updateStage0 = async (req, res) => {
 
     const stageStatus = proposalSubmitted === 1 ? "Ready" : "Ongoing";
 
-   const resolveFile = (field, existingValue) => {
-  let existingDocs = normalizeDocumentList(existingValue);
+    const resolveFile = (field, existingValue) => {
+      let existingDocs = normalizeDocumentList(existingValue);
 
-  const incomingExisting = req.body[`${field}_existing`];
+      const incomingExisting = req.body[`${field}_existing`];
 
-  if (incomingExisting) {
-    try {
-      existingDocs = JSON.parse(incomingExisting);
-    } catch {}
-  }
+      if (incomingExisting) {
+        try {
+          existingDocs = JSON.parse(incomingExisting);
+        } catch {}
+      }
 
-  return buildDocumentValue(files, field, existingDocs);
-};
+      return buildDocumentValue(files, field, existingDocs);
+    };
 
     const requireFile = (condition, fileValue, message) => {
       if (condition && !hasAnyDocuments(fileValue)) {
@@ -2375,89 +2540,127 @@ const updateStage0 = async (req, res) => {
       }
     };
 
-    const dgpsDocument = resolveFile("dgps_document", existingData.dgps_document);
+    const dgpsDocument = resolveFile(
+      "dgps_document",
+      existingData.dgps_document,
+    );
     const orsacDocument = resolveFile(
       "orsac_document",
-      existingData.orsac_document
+      existingData.orsac_document,
     );
     const treeEnumerationDocument = resolveFile(
       "tree_enumeration_document",
-      existingData.tree_enumeration_document
+      existingData.tree_enumeration_document,
     );
     const administrativeDocument = resolveFile(
       "administrative_document",
-      existingData.administrative_document
+      existingData.administrative_document,
     );
     const legalLeaseDocument = resolveFile(
       "legal_lease_document",
-      existingData.legal_lease_document
+      existingData.legal_lease_document,
     );
     const technicalDocument = resolveFile(
       "technical_document",
-      existingData.technical_document
+      existingData.technical_document,
     );
     const forestLandDetailsDocument = resolveFile(
       "forest_land_details_document",
-      existingData.forest_land_details_document
+      existingData.forest_land_details_document,
     );
-    const caCaDocument = resolveFile("ca_ca_document", existingData.ca_ca_document);
+    const caCaDocument = resolveFile(
+      "ca_ca_document",
+      existingData.ca_ca_document,
+    );
     const fraDocument = resolveFile("fra_document", existingData.fra_document);
     const environmentalDocument = resolveFile(
       "environmental_document",
-      existingData.environmental_document
+      existingData.environmental_document,
     );
     const wildlifeDocument = resolveFile(
       "wildlife_document",
-      existingData.wildlife_document
+      existingData.wildlife_document,
     );
-    const mapsDocument = resolveFile("maps_document", existingData.maps_document);
+    const mapsDocument = resolveFile(
+      "maps_document",
+      existingData.maps_document,
+    );
     const financialDocument = resolveFile(
       "financial_document",
-      existingData.financial_document
+      existingData.financial_document,
     );
     const proposalDocument = resolveFile(
       "proposal_document",
-      existingData.proposal_document
+      existingData.proposal_document,
     );
 
     requireFile(dgpsSurveyDone === 1, dgpsDocument, "DGPS document required");
     requireFile(orsacAuth === 1, orsacDocument, "ORSAC document required");
-    requireFile(treeEnum === 1, treeEnumerationDocument, "Tree enumeration document required");
-    requireFile(adminDocs === 1, administrativeDocument, "Administrative document required");
-    requireFile(legalLease === 1, legalLeaseDocument, "Legal & Lease document required");
-    requireFile(technicalData === 1, technicalDocument, "Technical document required");
     requireFile(
-      (body.forest_land_details || existingData.forest_land_details) === "Uploaded",
-      forestLandDetailsDocument,
-      "Forest land details document required"
+      treeEnum === 1,
+      treeEnumerationDocument,
+      "Tree enumeration document required",
     );
-    requireFile(caPlanning === 1, caCaDocument, "CA/CA Planning document required");
+    requireFile(
+      adminDocs === 1,
+      administrativeDocument,
+      "Administrative document required",
+    );
+    requireFile(
+      legalLease === 1,
+      legalLeaseDocument,
+      "Legal & Lease document required",
+    );
+    requireFile(
+      technicalData === 1,
+      technicalDocument,
+      "Technical document required",
+    );
+    requireFile(
+      (body.forest_land_details || existingData.forest_land_details) ===
+        "Uploaded",
+      forestLandDetailsDocument,
+      "Forest land details document required",
+    );
+    requireFile(
+      caPlanning === 1,
+      caCaDocument,
+      "CA/CA Planning document required",
+    );
     requireFile(
       (body.fra_records || existingData.fra_records) === "Completed",
       fraDocument,
-      "FRA document required"
+      "FRA document required",
     );
     requireFile(
-      (body.environmental_statutory || existingData.environmental_statutory) === "Cleared",
+      (body.environmental_statutory || existingData.environmental_statutory) ===
+        "Cleared",
       environmentalDocument,
-      "Environmental document required"
+      "Environmental document required",
     );
     requireFile(
-      (body.wildlife_safeguards || existingData.wildlife_safeguards) === "Completed",
+      (body.wildlife_safeguards || existingData.wildlife_safeguards) ===
+        "Completed",
       wildlifeDocument,
-      "Wildlife document required"
+      "Wildlife document required",
     );
     requireFile(
-      (body.maps_spatial_evidence || existingData.maps_spatial_evidence) === "Authenticated",
+      (body.maps_spatial_evidence || existingData.maps_spatial_evidence) ===
+        "Authenticated",
       mapsDocument,
-      "Maps document required"
+      "Maps document required",
     );
     requireFile(
-      (body.financial_undertakings || existingData.financial_undertakings) === "Submitted",
+      (body.financial_undertakings || existingData.financial_undertakings) ===
+        "Submitted",
       financialDocument,
-      "Financial document required"
+      "Financial document required",
     );
-    requireFile(proposalSubmitted === 1, proposalDocument, "Proposal document required");
+    requireFile(
+      proposalSubmitted === 1,
+      proposalDocument,
+      "Proposal document required",
+    );
 
     const payload = {
       forest_project_id: forestProjectId,
@@ -2485,7 +2688,9 @@ const updateStage0 = async (req, res) => {
       ca_ca_planning: caPlanning,
       ca_ca_document: caCaDocument,
       fra_records:
-        body.fra_records !== undefined ? body.fra_records : existingData.fra_records,
+        body.fra_records !== undefined
+          ? body.fra_records
+          : existingData.fra_records,
       fra_document: fraDocument,
       environmental_statutory:
         body.environmental_statutory !== undefined
@@ -2584,75 +2789,91 @@ const updateStage1 = async (req, res) => {
 
     const stage1ApprovalDocument = resolveFile(
       "stage1_approval_document",
-      existingData.stage1_approval_document
+      existingData.stage1_approval_document,
     );
     const stage1ConditionsDocument = resolveFile(
       "stage1_conditions_document",
-      existingData.stage1_conditions_document
+      existingData.stage1_conditions_document,
     );
-    const caLandDocument = resolveFile("ca_land_document", existingData.ca_land_document);
+    const caLandDocument = resolveFile(
+      "ca_land_document",
+      existingData.ca_land_document,
+    );
     const fraDocument = resolveFile("fra_document", existingData.fra_document);
     const npvDocument = resolveFile("npv_document", existingData.npv_document);
     const caPaymentDocument = resolveFile(
       "ca_payment_document",
-      existingData.ca_payment_document
+      existingData.ca_payment_document,
     );
     const acaPaymentDocument = resolveFile(
       "aca_payment_document",
-      existingData.aca_payment_document
+      existingData.aca_payment_document,
     );
     const wildlifeDocument = resolveFile(
       "wildlife_payment_document",
-      existingData.wildlife_payment_document
+      existingData.wildlife_payment_document,
     );
-    const technicalDocument = resolveFile("technical_document", existingData.technical_document);
+    const technicalDocument = resolveFile(
+      "technical_document",
+      existingData.technical_document,
+    );
     const stage1AcceptanceDocument = resolveFile(
       "stage1_acceptance_document",
-      existingData.stage1_acceptance_document
+      existingData.stage1_acceptance_document,
     );
 
     requireFile(
-      (body.stage1_approval_letter || existingData.stage1_approval_letter) === "Uploaded",
+      (body.stage1_approval_letter || existingData.stage1_approval_letter) ===
+        "Uploaded",
       stage1ApprovalDocument,
-      "Stage-1 approval document required"
+      "Stage-1 approval document required",
     );
     requireFile(
       conditionsExtracted === 1,
       stage1ConditionsDocument,
-      "Stage-1 conditions document required"
+      "Stage-1 conditions document required",
     );
-    requireFile(caLandHandedOver === 1, caLandDocument, "CA land document required");
+    requireFile(
+      caLandHandedOver === 1,
+      caLandDocument,
+      "CA land document required",
+    );
     requireFile(
       (body.fra_compliance || existingData.fra_compliance) === "Complied",
       fraDocument,
-      "FRA document required"
+      "FRA document required",
     );
     requireFile(
       (body.npv_payment || existingData.npv_payment) === "Paid",
       npvDocument,
-      "NPV payment document required"
+      "NPV payment document required",
     );
     requireFile(
       (body.ca_payment || existingData.ca_payment) === "Paid",
       caPaymentDocument,
-      "CA payment document required"
+      "CA payment document required",
     );
     requireFile(
       (body.aca_payment || existingData.aca_payment) === "Paid",
       acaPaymentDocument,
-      "ACA payment document required"
+      "ACA payment document required",
     );
     requireFile(
       (body.wildlife_payment || existingData.wildlife_payment) === "Paid",
       wildlifeDocument,
-      "Wildlife payment document required"
+      "Wildlife payment document required",
     );
     requireFile(
-      (body.technical_compliance || existingData.technical_compliance) === "Completed",
+      (body.technical_compliance || existingData.technical_compliance) ===
+        "Completed",
       technicalDocument,
-      "Technical compliance document required"
+      "Technical compliance document required",
     );
-    requireFile(stage1Accepted === 1, stage1AcceptanceDocument, "Stage-1 acceptance document required");
+    requireFile(
+      stage1Accepted === 1,
+      stage1AcceptanceDocument,
+      "Stage-1 acceptance document required",
+    );
 
     const payload = {
       forest_project_id: forestProjectId,
@@ -2666,13 +2887,24 @@ const updateStage1 = async (req, res) => {
       ca_land_handed_over: caLandHandedOver,
       ca_land_document: caLandDocument,
       fra_compliance:
-        body.fra_compliance !== undefined ? body.fra_compliance : existingData.fra_compliance,
+        body.fra_compliance !== undefined
+          ? body.fra_compliance
+          : existingData.fra_compliance,
       fra_document: fraDocument,
-      npv_payment: body.npv_payment !== undefined ? body.npv_payment : existingData.npv_payment,
+      npv_payment:
+        body.npv_payment !== undefined
+          ? body.npv_payment
+          : existingData.npv_payment,
       npv_document: npvDocument,
-      ca_payment: body.ca_payment !== undefined ? body.ca_payment : existingData.ca_payment,
+      ca_payment:
+        body.ca_payment !== undefined
+          ? body.ca_payment
+          : existingData.ca_payment,
       ca_payment_document: caPaymentDocument,
-      aca_payment: body.aca_payment !== undefined ? body.aca_payment : existingData.aca_payment,
+      aca_payment:
+        body.aca_payment !== undefined
+          ? body.aca_payment
+          : existingData.aca_payment,
       aca_payment_document: acaPaymentDocument,
       wildlife_payment:
         body.wildlife_payment !== undefined
@@ -2748,39 +2980,62 @@ const updateStage2 = async (req, res) => {
 
     const environmentalDocument = resolveFile(
       "environmental_document",
-      existingData.environmental_document
+      existingData.environmental_document,
     );
-    const nbwlDocument = resolveFile("nbwl_document", existingData.nbwl_document);
-    const finalCaDocument = resolveFile("final_ca_document", existingData.final_ca_document);
-    const finalMapsDocument = resolveFile("final_maps_document", existingData.final_maps_document);
-    const technicalDocument = resolveFile("final_technical_document", existingData.final_technical_document);
+    const nbwlDocument = resolveFile(
+      "nbwl_document",
+      existingData.nbwl_document,
+    );
+    const finalCaDocument = resolveFile(
+      "final_ca_document",
+      existingData.final_ca_document,
+    );
+    const finalMapsDocument = resolveFile(
+      "final_maps_document",
+      existingData.final_maps_document,
+    );
+    const technicalDocument = resolveFile(
+      "final_technical_document",
+      existingData.final_technical_document,
+    );
     const stage2ApprovalDocument = resolveFile(
       "stage2_approval_document",
-      existingData.stage2_approval_document
+      existingData.stage2_approval_document,
     );
 
     requireFile(
-      (body.environmental_clearance || existingData.environmental_clearance) === "Obtained",
+      (body.environmental_clearance || existingData.environmental_clearance) ===
+        "Obtained",
       environmentalDocument,
-      "Environmental clearance document required"
+      "Environmental clearance document required",
     );
     requireFile(
       (body.nbwl_clearance || existingData.nbwl_clearance) === "Obtained",
       nbwlDocument,
-      "NBWL document required"
+      "NBWL document required",
     );
     requireFile(
-      (body.final_ca_execution || existingData.final_ca_execution) === "Completed",
+      (body.final_ca_execution || existingData.final_ca_execution) ===
+        "Completed",
       finalCaDocument,
-      "Final CA document required"
+      "Final CA document required",
     );
-    requireFile(mapsApproved === 1, finalMapsDocument, "Final maps document required");
     requireFile(
-      (body.final_technical_approval || existingData.final_technical_approval) === "Completed",
-      technicalDocument,
-      "Final technical document required"
+      mapsApproved === 1,
+      finalMapsDocument,
+      "Final maps document required",
     );
-    requireFile(stage2Letter === 1, stage2ApprovalDocument, "Stage-II approval document required");
+    requireFile(
+      (body.final_technical_approval ||
+        existingData.final_technical_approval) === "Completed",
+      technicalDocument,
+      "Final technical document required",
+    );
+    requireFile(
+      stage2Letter === 1,
+      stage2ApprovalDocument,
+      "Stage-II approval document required",
+    );
 
     const payload = {
       forest_project_id: forestProjectId,
@@ -2857,7 +3112,8 @@ const updatePostClearance = async (req, res) => {
       });
     }
 
-    const existing = await ForestLand.getPostClearanceByProjectId(forestProjectId);
+    const existing =
+      await ForestLand.getPostClearanceByProjectId(forestProjectId);
     const isNewRecord = !existing;
     const existingData = existing || {};
 
@@ -2897,29 +3153,51 @@ const updatePostClearance = async (req, res) => {
 
     const startedDoc = resolveFile(
       "ca_plantation_started_document",
-      existingData.ca_plantation_started_document
+      existingData.ca_plantation_started_document,
     );
     const completedDoc = resolveFile(
       "ca_plantation_completed_document",
-      existingData.ca_plantation_completed_document
+      existingData.ca_plantation_completed_document,
     );
     const survivalDoc = resolveFile(
       "survival_report_document",
-      existingData.survival_report_document
+      existingData.survival_report_document,
     );
     const wildlifeDoc = resolveFile(
       "wildlife_mitigation_document",
-      existingData.wildlife_mitigation_document
+      existingData.wildlife_mitigation_document,
     );
-    const safetyDoc = resolveFile("safety_zone_document", existingData.safety_zone_document);
+    const safetyDoc = resolveFile(
+      "safety_zone_document",
+      existingData.safety_zone_document,
+    );
 
-    requireFile(started === 1, startedDoc, "CA plantation started document required");
-    requireFile(completed === 1, completedDoc, "CA plantation completed document required");
-    requireFile(survival === 1, survivalDoc, "Survival report document required");
-    requireFile(wildlife === 1, wildlifeDoc, "Wildlife mitigation document required");
+    requireFile(
+      started === 1,
+      startedDoc,
+      "CA plantation started document required",
+    );
+    requireFile(
+      completed === 1,
+      completedDoc,
+      "CA plantation completed document required",
+    );
+    requireFile(
+      survival === 1,
+      survivalDoc,
+      "Survival report document required",
+    );
+    requireFile(
+      wildlife === 1,
+      wildlifeDoc,
+      "Wildlife mitigation document required",
+    );
     requireFile(safety === 1, safetyDoc, "Safety zone document required");
 
-    if (periodic === 1 && !(body.periodic_compliance_type || existingData.periodic_compliance_type)) {
+    if (
+      periodic === 1 &&
+      !(body.periodic_compliance_type || existingData.periodic_compliance_type)
+    ) {
       throw new Error("Periodic compliance type required");
     }
 
@@ -2929,7 +3207,7 @@ const updatePostClearance = async (req, res) => {
         : existingData.inspection_observations;
     const inspectionRemarks =
       inspectionObservations === "Open"
-        ? (body.inspection_remarks || existingData.inspection_remarks)
+        ? body.inspection_remarks || existingData.inspection_remarks
         : null;
 
     if (inspectionObservations === "Open" && !inspectionRemarks) {
@@ -2956,7 +3234,8 @@ const updatePostClearance = async (req, res) => {
       periodic_compliance_submitted: periodic,
       periodic_compliance_type:
         periodic === 1
-          ? body.periodic_compliance_type || existingData.periodic_compliance_type
+          ? body.periodic_compliance_type ||
+            existingData.periodic_compliance_type
           : null,
       inspection_observations: inspectionObservations,
       inspection_remarks: inspectionRemarks,
@@ -2982,7 +3261,6 @@ const updatePostClearance = async (req, res) => {
     });
   }
 };
-
 
 const getStageStatus = async (req, res) => {
   try {
@@ -3059,7 +3337,7 @@ const getStage0 = async (req, res) => {
       req,
       "stage0",
       forest_project_id,
-      data
+      data,
     );
 
     return res.status(200).json({
@@ -3099,7 +3377,7 @@ const getStage1 = async (req, res) => {
       req,
       "stage1",
       forest_project_id,
-      data
+      data,
     );
 
     return res.status(200).json({
@@ -3139,7 +3417,7 @@ const getStage2 = async (req, res) => {
       req,
       "stage2",
       forest_project_id,
-      data
+      data,
     );
 
     return res.status(200).json({
@@ -3166,9 +3444,8 @@ const getPostClearance = async (req, res) => {
       });
     }
 
-    const data = await ForestLand.getPostClearanceByProjectId(
-      forest_project_id
-    );
+    const data =
+      await ForestLand.getPostClearanceByProjectId(forest_project_id);
 
     if (!data) {
       return res.status(404).json({
@@ -3181,7 +3458,7 @@ const getPostClearance = async (req, res) => {
       req,
       "postclearance",
       forest_project_id,
-      data
+      data,
     );
 
     return res.status(200).json({

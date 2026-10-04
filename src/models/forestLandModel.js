@@ -620,20 +620,22 @@ const ForestLand = {
 
     const [edsRows] = await db.query(
       `SELECT
-        id,
-        project_master_id,
-        eds_ref_no,
-        issuing_authority,
-        DATE_FORMAT(eds_issue_date, '%Y-%m-%d') AS eds_issue_date,
-        DATE_FORMAT(eds_due_date, '%Y-%m-%d') AS eds_due_date,
-        total_issues,
-        issues_closed,
-        issues_pending,
-        is_deleted
-     FROM forest_eds_master
-     WHERE project_master_id = ?
-       AND is_deleted = 0
-     ORDER BY id ASC`,
+    id,
+    project_master_id,
+    eds_ref_no,
+    issuing_authority,
+    DATE_FORMAT(eds_issue_date, '%Y-%m-%d') AS eds_issue_date,
+    DATE_FORMAT(eds_due_date, '%Y-%m-%d') AS eds_due_date,
+    total_issues,
+    issues_closed,
+    issues_pending,
+    eds_reply_document,
+    eds_status,
+    is_deleted
+ FROM forest_eds_master
+ WHERE project_master_id = ?
+   AND is_deleted = 0
+ ORDER BY id ASC`,
       [master.id],
     );
 
