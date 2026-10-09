@@ -23,6 +23,7 @@ const {
   updatePlotPayment,
   markPaymentCompleted,
   downloadPlotDocument,
+  deletePrivatePlotPermanently,
 } = require("../controllers/plotController");
 // const { addGovtPlot } = require("../controllers/govtPlotController");
 
@@ -59,6 +60,8 @@ router.put("/paymentCompleted", markPaymentCompleted);
 //   ]),
 //   addGovtPlot
 // );
+
+router.delete("/deletePrivatePlotPermanently/:id", deletePrivatePlotPermanently);
 
 router.delete("/truncate-db", async (req, res) => {
   try {

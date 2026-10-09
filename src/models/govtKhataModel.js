@@ -16,7 +16,7 @@ const getCaseDetailsValue = (row) => {
 };
 
 const GovtKhata = {
-  async upsertFromExcel(rows, villageMap, project_id, type, connection = db) {
+  async upsertFromExcel(rows, villageMap, project_id, type) {
     const khataMap = new Map();
     const normalizeCompareKey = (key) =>
       key
@@ -247,7 +247,7 @@ const GovtKhata = {
     //   [values]
     // );
 
-    await connection.query(
+    await db.query(
       `
       INSERT INTO govt_khata
         (project_id, type, khata_no, village_id,
@@ -268,7 +268,7 @@ const GovtKhata = {
     );
 
     //Update unique_id (derived field)
-    await connection.query(
+    await db.query(
       `
       UPDATE govt_khata g
       JOIN projects p ON p.id = g.project_id
@@ -284,7 +284,7 @@ const GovtKhata = {
     const resultMap = {};
 
     for (const v of values) {
-      const [rows] = await connection.query(
+      const [rows] = await db.query(
         `
         SELECT id
         FROM govt_khata
@@ -304,8 +304,8 @@ const GovtKhata = {
     return resultMap;
   },
 
-  async deleteByProjectAndType(project_id, type, connection = db) {
-    const [result] = await connection.query(
+  async deleteByProjectAndType(project_id, type) {
+    const [result] = await db.query(
       `
       DELETE FROM govt_khata
       WHERE project_id = ?
@@ -493,6 +493,8 @@ const GovtKhata = {
 
       pc.plot_numbers,
 
+      pc.present_status AS present_status_from_plots,
+
       IFNULL(kdc.khata_document_count, 0) AS khata_document_count,
 
       IFNULL(kmdc.khata_map_document_count, 0) AS khata_map_document_count
@@ -511,7 +513,7 @@ const GovtKhata = {
         COUNT(*) AS plot_count,
 
         SUM(
-           COALESCE(total_area_acres, 0)
+          COALESCE(total_area_acres, 0)
         ) AS total_areas,
 
         SUM(
@@ -528,10 +530,14 @@ const GovtKhata = {
           DISTINCT NULLIF(TRIM(plot_no), '')
           ORDER BY CAST(plot_no AS UNSIGNED), plot_no
           SEPARATOR ', '
-        ) AS plot_numbers
+        ) AS plot_numbers,
+
+        GROUP_CONCAT(
+          DISTINCT NULLIF(TRIM(present_status), '')
+          SEPARATOR ', '
+        ) AS present_status
 
       FROM govt_plots
-
       WHERE is_deleted = 0
 
       GROUP BY project_id, type, khata_no
@@ -577,6 +583,7 @@ const GovtKhata = {
 
     const normalizedRows = rows.map((row) => ({
       ...row,
+      present_status: row.present_status_from_plots || null,
       name_of_ror: row.name_of_ror || null,
       plot_numbers: row.plot_numbers || null,
 

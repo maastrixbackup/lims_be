@@ -112,152 +112,163 @@ const syncKhataFromPlot = async (plotData, previousPlot = null) => {
 
 const uploadPlots = async (req, res) => {
   const userId = req.user.id;
+
   try {
     const { project_id, type } = req.body;
+
     if (!project_id) {
       return res.status(400).json({
         success: false,
-        message: "Project ID is required for uploading plots",
+        message: "Project ID is required.",
       });
     }
+
     if (!type) {
       return res.status(400).json({
         success: false,
-        message: "Type is required",
+        message: "Type is required.",
       });
     }
+
     if (!req.file) {
-      return res
-        .status(400)
-        .json({ success: false, message: "File is required" });
+      return res.status(400).json({
+        success: false,
+        message: "Please upload an Excel file.",
+      });
     }
 
-    // Read Excel file
-
+    // Read the uploaded Excel file
     const workbook = xlsx.readFile(req.file.path);
     const sheetName = workbook.SheetNames[0];
-    const data = xlsx.utils.sheet_to_json(workbook.Sheets[sheetName], {
-      defval: null,
-    });
 
-    if (!data.length) {
+    if (!sheetName) {
       fs.unlinkSync(req.file.path);
-      return res
-        .status(400)
-        .json({ success: false, message: "Excel file is empty" });
+
+      return res.status(400).json({
+        success: false,
+        message: "No worksheet found in the uploaded Excel file.",
+      });
     }
 
-    // const requiredColumns = {
-    //   "LA Case File No.": [],
-    //   "LO1-Name of Recorded Tenant (RT)": ["Name of Tenant"],
-    //   "LO2-Name of Present Tenant(s)": ["Name of Tenant"],
-    //   "Name of Village": ["name of village"],
-    //   "Village Code": [],
-    //   "Name of the Tahasil": ["Tahasil/Thana"],
-    //   "Name of the R.I. Circle": [],
-    //   "Thana No.": ["Thana no"],
-    //   "Khata No.": ["Khata No"],
-    //   "Plot No.": [],
-    //   "Kissam of the Land": ["Kissam"],
-    //   "LO12-Category of Land": [],
-    //   "LA1-Land Area (Total Area in Acres)": ["ROR Area In Ha."],
-    //   "LA2-Land Area (Total Area in Ha.)": ["Area occupied in Ha."],
-    //   "Land Area (Total Acquired Area in Acres)": [],
-    //   "Land Area (Total Acquired Area in Ha.)": [],
-    // }; //These are required fields but These columns are set to null in the table because there are some blank values in the Excel file.
-
-    // const excelColumns = Object.keys(data[0]).map((col) =>
-    //   col.trim().toLowerCase(),
-    // );
-
-    // // Detect missing required columns (considering aliases)
-    // const missingColumns = Object.keys(requiredColumns).filter((mainCol) => {
-    //   const mainLower = mainCol.trim().toLowerCase();
-    //   const aliases = (requiredColumns[mainCol] || []).map((a) =>
-    //     a.trim().toLowerCase(),
-    //   );
-    //   const allOptions = [mainLower, ...aliases];
-    //   return !allOptions.some((option) => excelColumns.includes(option));
-    // });
-
-    // if (missingColumns.length > 0) {
-    //   fs.unlinkSync(req.file.path);
-    //   return res.status(400).json({
-    //     success: false,
-    //     message: `Invalid Excel format. Missing columns: ${missingColumns.join(
-    //       ", ",
-    //     )}`,
-    //   });
-    // }
-
-    const insertedVillages = await Village.insertVillagesFromExcel(
-      data,
-      project_id,
-      type,
+    // Convert the first worksheet into JSON rows
+    const rawData = xlsx.utils.sheet_to_json(
+      workbook.Sheets[sheetName],
+      {
+        defval: null,
+      }
     );
 
-    const insertedPlots = await Plot.bulkInsert(data, project_id, type);
+    // Helper: check whether a value is present
+    const hasValue = (value) => {
+      return (
+        value !== null &&
+        value !== undefined &&
+        String(value).trim() !== ""
+      );
+    };
 
-    await Khata.insertKhatasFromExcel(data, project_id, type);
+    /*
+     * Excel field mapping:
+     * LD02 = Village
+     * LD06 = Khata No.
+     * LD07 = Plot No.
+     *
+     * OR logic:
+     * Keep the row if AT LEAST ONE of these
+     * three fields contains a value.
+     *
+     * Skip the row only when all three are empty.
+     */
+    const data = rawData.filter((row) => {
+      return (
+        hasValue(row.LD02) ||
+        hasValue(row.LD06) ||
+        hasValue(row.LD07)
+      );
+    });
 
+    // Debug information
+    console.log("========== EXCEL UPLOAD DEBUG ==========");
+    console.log("Uploaded file:", req.file.originalname);
+    console.log("Worksheet:", sheetName);
+    console.log("Raw rows:", rawData.length);
+    console.log("Rows after filtering:", data.length);
+    console.log("Skipped rows:", rawData.length - data.length);
+    console.log("=========================================");
+
+    // No valid rows found
+    if (data.length === 0) {
+      fs.unlinkSync(req.file.path);
+
+      return res.status(400).json({
+        success: false,
+        message:
+          "No valid land records found. At least one of Village (LD02), Khata No. (LD06), or Plot No. (LD07) must contain a value.",
+      });
+    }
+
+    // Insert villages
+    const insertedVillages =
+      await Village.insertVillagesFromExcel(
+        data,
+        project_id,
+        type
+      );
+
+    // Insert plots
+    const insertedPlots = await Plot.bulkInsert(
+      data,
+      project_id,
+      type
+    );
+
+    // Insert khatas
+    await Khata.insertKhatasFromExcel(
+      data,
+      project_id,
+      type
+    );
+
+    // Save uploaded document information
     await Plot.insertDocument({
       project_id,
       type,
-      filename: req.file.filename,
-      original_filename: req.file.originalname,
-      file_path: `uploads/excels/${req.file.filename}`,
+      file_name: req.file.filename,
+      original_name: req.file.originalname,
       uploaded_by: userId,
     });
 
+    // Log upload action
     await logAction(
       userId,
-      "plot excel upload",
-      "success",
-      "Plots inserted successfully",
-      { project_id },
-      null,
+      "UPLOAD",
+      `Uploaded land Excel file: ${req.file.originalname}`
     );
+
+    // Success response
     return res.status(201).json({
       success: true,
-      message:
-        insertedPlots > 0
-          ? "Plots inserted successfully"
-          : "No new plots inserted",
+      message: "Land Excel file uploaded successfully.",
+      data: {
+        totalRawRows: rawData.length,
+        validRows: data.length,
+        skippedRows: rawData.length - data.length,
+        insertedVillages,
+        insertedPlots,
+      },
     });
   } catch (err) {
-    await logAction(
-      userId,
-      "plot excel upload",
-      "failure",
-      err.message,
-      null,
-      null,
-    );
-    console.error("Upload Plots Error:", {
-      message: err.message,
-      stack: err.stack,
-      code: err.code || null,
-      sqlMessage: err.sqlMessage || null,
-      sqlState: err.sqlState || null,
-      project_id: req.body?.project_id || null,
-      type: req.body?.type || null,
-      file: req.file
-        ? {
-            originalname: req.file.originalname,
-            filename: req.file.filename,
-            path: req.file.path,
-          }
-        : null,
-    });
-    // return res.status(500).json({ success: false, message: "Server error" });
+    console.error("Upload plots error:", err);
+
     return res.status(500).json({
       success: false,
-      message: err.sqlMessage || err.message,
-      sqlState: err.sqlState,
-      sqlCode: err.code,
+      message: "Failed to upload land records.",
+      error: err.message,
     });
   }
 };
+
+
 
 const plotList = async (req, res) => {
   try {
@@ -1087,23 +1098,29 @@ const paymentReady = async (req, res) => {
         });
       }
 
-      const khata = await Khata.getKhataByNumber(plot.khata_no);
+      // Fetch unique_id / case file number directly from plot
+      let unique_id = plot.la_case_file_no || plot.unique_id;
 
-      if (!khata) {
-        return res.status(400).json({
-          success: false,
-          message: `Khata not found for Khata No. ${plot.khata_no}`,
-        });
+      // Fallback to Khata table if not directly present in plot
+      if (!unique_id) {
+        const khata = await Khata.getKhataByNumber(plot.khata_no);
+
+        if (!khata) {
+          return res.status(400).json({
+            success: false,
+            message: `Khata not found for Khata No. ${plot.khata_no}`,
+          });
+        }
+
+        unique_id = khata.unique_id || khata.la_case_file_no;
       }
 
-      if (!khata.unique_id) {
+      if (!unique_id) {
         return res.status(400).json({
           success: false,
-          message: `Unique ID not found for Khata No. ${plot.khata_no}`,
+          message: `Unique ID / Case File No. not found for plot ${plot_id} or Khata No. ${plot.khata_no}`,
         });
       }
-
-      const unique_id = khata.unique_id;
 
       const tenants = plot.name_of_present_tenant
         ? plot.name_of_present_tenant

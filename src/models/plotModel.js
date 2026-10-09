@@ -1805,6 +1805,11 @@ const Plot = {
     return result.insertId;
   },
 
+  async deletePermanently(id) {
+    const [result] = await db.query("DELETE FROM plots WHERE id = ?", [id]);
+    return result.affectedRows > 0;
+  },
+
   async findAllDocuments({ project_id, type }) {
     let sql = `
       SELECT
@@ -2947,10 +2952,9 @@ const Plot = {
     });
 
     // fetch inserted record
-    const [rows] = await db.query(
-      `SELECT * FROM plot_payments WHERE id = ?`,
-      [result.insertId],
-    );
+    const [rows] = await db.query(`SELECT * FROM plot_payments WHERE id = ?`, [
+      result.insertId,
+    ]);
 
     console.log("PAYMENT INSERTED ROW:", rows[0]);
 
