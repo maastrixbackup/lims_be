@@ -151,19 +151,14 @@ const uploadPlots = async (req, res) => {
     }
 
     // Convert the first worksheet into JSON rows
-    const rawData = xlsx.utils.sheet_to_json(
-      workbook.Sheets[sheetName],
-      {
-        defval: null,
-      }
-    );
+    const rawData = xlsx.utils.sheet_to_json(workbook.Sheets[sheetName], {
+      defval: null,
+    });
 
     // Helper: check whether a value is present
     const hasValue = (value) => {
       return (
-        value !== null &&
-        value !== undefined &&
-        String(value).trim() !== ""
+        value !== null && value !== undefined && String(value).trim() !== ""
       );
     };
 
@@ -180,11 +175,7 @@ const uploadPlots = async (req, res) => {
      * Skip the row only when all three are empty.
      */
     const data = rawData.filter((row) => {
-      return (
-        hasValue(row.LD02) ||
-        hasValue(row.LD06) ||
-        hasValue(row.LD07)
-      );
+      return hasValue(row.LD02) || hasValue(row.LD06) || hasValue(row.LD07);
     });
 
     // Debug information
@@ -208,26 +199,17 @@ const uploadPlots = async (req, res) => {
     }
 
     // Insert villages
-    const insertedVillages =
-      await Village.insertVillagesFromExcel(
-        data,
-        project_id,
-        type
-      );
+    const insertedVillages = await Village.insertVillagesFromExcel(
+      data,
+      project_id,
+      type,
+    );
 
     // Insert plots
-    const insertedPlots = await Plot.bulkInsert(
-      data,
-      project_id,
-      type
-    );
+    const insertedPlots = await Plot.bulkInsert(data, project_id, type);
 
     // Insert khatas
-    await Khata.insertKhatasFromExcel(
-      data,
-      project_id,
-      type
-    );
+    await Khata.insertKhatasFromExcel(data, project_id, type);
 
     // Save uploaded document information
     await Plot.insertDocument({
@@ -242,7 +224,7 @@ const uploadPlots = async (req, res) => {
     await logAction(
       userId,
       "UPLOAD",
-      `Uploaded land Excel file: ${req.file.originalname}`
+      `Uploaded land Excel file: ${req.file.originalname}`,
     );
 
     // Success response
@@ -267,8 +249,6 @@ const uploadPlots = async (req, res) => {
     });
   }
 };
-
-
 
 const plotList = async (req, res) => {
   try {
@@ -741,6 +721,26 @@ const createPlot = async (req, res) => {
       safeRequestPayload.la_case_file_no,
       safeRequestPayload.plot_no,
     );
+    if (!existingPlot) {
+      const deletedPlot = await Plot.findDeletedByCaseAndPlot(
+        safeRequestPayload.project_id,
+        safeRequestPayload.type,
+        safeRequestPayload.la_case_file_no,
+        safeRequestPayload.plot_no,
+      );
+
+      if (deletedPlot) {
+        return res.status(409).json({
+          success: false,
+          inRecycleBin: true,
+          message:
+            "A plot with the same LA Case File No. and Plot No. already exists in the Recycle Bin. Please restore it or permanently delete it before creating a new plot.",
+          data: {
+            deleted_plot_id: deletedPlot.id,
+          },
+        });
+      }
+    }
     let plot, message;
     if (existingPlot) {
       plot = await Plot.updateByCaseAndPlot(
@@ -1771,6 +1771,33 @@ const markPaymentCompleted = async (req, res) => {
   }
 };
 
+const deletePrivatePlotPermanently = async (req, res) => {
+  try {
+    const { id } = req.params;
+    if (!id || !Number.isInteger(Number(id)) || Number(id) <= 0) {
+      return res
+        .status(400)
+        .json({ success: false, message: "A valid plot ID is required." });
+    }
+    const deleted = await Plot.deletePermanently(Number(id));
+    if (!deleted) {
+      return res
+        .status(404)
+        .json({ success: false, message: "Private plot not found." });
+    }
+    return res.status(200).json({
+      success: true,
+      message: "Private plot permanently deleted successfully.",
+    });
+  } catch (error) {
+    console.error("Permanent private plot deletion error:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Failed to permanently delete private plot.",
+    });
+  }
+};
+
 module.exports = {
   uploadPlots,
   plotList,
@@ -1788,4 +1815,5 @@ module.exports = {
   updatePlotPayment,
   markPaymentCompleted,
   downloadPlotDocument,
+  deletePrivatePlotPermanently,
 };

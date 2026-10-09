@@ -2556,6 +2556,24 @@ const Plot = {
     return result.affectedRows > 0;
   },
 
+  async findDeletedByCaseAndPlot(project_id, type, la_case_file_no, plot_no) {
+    const [rows] = await db.query(
+      `
+      SELECT id
+      FROM plots
+      WHERE project_id = ?
+        AND type = ?
+        AND la_case_file_no = ?
+        AND plot_no <=> ?
+        AND is_deleted = 1
+      LIMIT 1
+    `,
+      [project_id, type, la_case_file_no, plot_no],
+    );
+
+    return rows[0] || null;
+  },
+
   async update(id, plotData) {
     const {
       project_id,
